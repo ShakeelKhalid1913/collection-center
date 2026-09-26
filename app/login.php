@@ -85,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-arrow-right"></i> Continue to dashboard</button>
             </form>
+            <?= software_credit_footer() ?>
         </div>
     </section>
 </div>

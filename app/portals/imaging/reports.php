@@ -18,6 +18,7 @@ $doc = <<<HTML
     <p class="mt-4 text-sm"><strong>Findings:</strong> Heart size normal. Lungs clear.</p>
     <p class="mt-2 text-sm"><strong>Impression:</strong> Normal study.</p>
     <p class="mt-8 text-sm font-semibold">Dr. Imran Sheikh — Radiologist</p>
+    ' . software_credit_footer(true) . '
 </div>
 HTML;
 
@@ -25,4 +26,4 @@ $content = page_header('Radiology Report', 'Print · PDF · WhatsApp');
 $content .= report_actions($patient['phone'], '/portals/imaging/reports.php');
 $content .= '<div class="mt-4">' . $doc . '</div>';
 
-render_page('Reports', 'imaging', 'reports', $content);
+render_page('Reports', 'imaging', 'reports', $content, true);

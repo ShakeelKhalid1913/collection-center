@@ -27,6 +27,7 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('More', [
                 nav_item("{$base}/receipts.php", 'Receipts', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/reports.php", 'Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
+                nav_item("{$base}/branding.php", 'Header / Footer', $activeKey, 'branding', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
             ]),
         ],
@@ -60,7 +61,7 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Settings', [
                 nav_item("{$base}/settings/profile.php", 'Lab Profile', $activeKey, 'settings-profile', null, 'fa-solid fa-hospital'),
-                nav_item("{$base}/settings/report-template.php", 'Report Header/Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
+                nav_item("{$base}/settings/report-template.php", 'Header / Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users'),
             ]),
         ],
@@ -95,6 +96,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/users.php", 'Users & Permissions', $activeKey, 'users', null, 'fa-solid fa-user-shield'),
                 nav_item("{$base}/tests.php", 'Tests Catalog', $activeKey, 'tests', null, 'fa-solid fa-flask'),
                 nav_item("{$base}/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-stacked'),
+                nav_item("{$base}/branding.php", 'Client Branding', $activeKey, 'branding', null, 'fa-solid fa-heading'),
             ]),
             nav_group('', [nav_item("{$base}/settings.php", 'System Settings', $activeKey, 'settings', null, 'fa-solid fa-sliders')]),
         ],
@@ -103,7 +105,7 @@ function portal_nav(string $portal, string $activeKey): string
     return implode('', $menus[$portal] ?? []);
 }
 
-function render_layout(string $title, string $portal, string $activeKey, string $content): void
+function render_layout(string $title, string $portal, string $activeKey, string $content, bool $hideAppCredit = false): void
 {
     $user = current_user();
     $portalLabel = PORTALS[$portal]['label'] ?? ucfirst($portal);
@@ -116,7 +118,15 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     $branchHint = e($user['branch_id'] ?? 'ORG-001');
 
     $logo = brand_logo('brand-logo brand-logo--sidebar');
-    $wa = floating_whatsapp_button('+92 306 5193582');
+    $wa = floating_whatsapp_button('+92 306 5193582'); // CLIENT lab WhatsApp only
+
+    // Hide page credit on receipt/report preview — credit lives inside the print box only
+    $appCredit = $hideAppCredit ? '' : (
+        '<footer class="software-credit-bar software-credit-bar--app no-print">' .
+        '<p class="software-credit">Software created by <strong>Shakeel Khalid</strong>' .
+        ' · <a href="https://wa.me/923283070070" target="_blank" rel="noopener">WhatsApp 0328-3070070</a></p>' .
+        '</footer>'
+    );
 
     echo '<!DOCTYPE html><html lang="en" class="h-full"><head>';
     render_head($pageTitle . ' · ' . $portalLabel);
@@ -163,6 +173,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
 
         <main class="app-main">
             {$content}
+            {$appCredit}
         </main>
     </div>
 </div>
@@ -171,8 +182,8 @@ HTML;
     echo '<script src="/assets/js/app.js"></script></body></html>';
 }
 
-function render_page(string $title, string $portal, string $activeKey, string $content): void
+function render_page(string $title, string $portal, string $activeKey, string $content, bool $hideAppCredit = false): void
 {
     require_auth($portal);
-    render_layout($title, $portal, $activeKey, $content);
+    render_layout($title, $portal, $activeKey, $content, $hideAppCredit);
 }

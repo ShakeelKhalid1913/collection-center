@@ -206,9 +206,8 @@ if (!empty($_SESSION['user'])) {
             <div class="lp-wrap lp-footer__bottom-inner">
                 <p>&copy; <?= date('Y') ?> Health LMS Pro. All rights reserved.</p>
                 <p class="lp-footer__credit">
-                    Software by <strong>Shakeel Khalid</strong>
-                    · <a href="tel:03283070070">03283070070</a>
-                    · <a href="mailto:shakeelkhalid786@gmail.com">shakeelkhalid786@gmail.com</a>
+                    Software created by <strong>Shakeel Khalid</strong>
+                    · <a href="https://wa.me/923283070070" target="_blank" rel="noopener">WhatsApp 0328-3070070</a>
                 </p>
             </div>
         </div>

@@ -9,13 +9,17 @@ require_once __DIR__ . '/../../includes/components.php';
 $entries = mock('mock_lab_entries');
 $rows = [];
 foreach (array_slice($entries, 0, 12) as $e) {
+    $labQ = urlencode($e['lab_no']);
     $rows[] = [
         e($e['lab_no']),
         e($e['patient']),
         e($e['tests']),
         status_badge($e['status']),
         e(format_money((float) $e['amount'])),
-        btn_secondary('/portals/collection-center/lab-entries/history.php', 'View'),
+        '<div class="flex flex-wrap gap-2">' .
+        btn_secondary('/portals/collection-center/receipts.php?lab_no=' . $labQ, 'Receipt') .
+        btn_secondary('/portals/collection-center/reports/preview.php?lab_no=' . $labQ, 'Report') .
+        '</div>',
     ];
 }
 
@@ -41,7 +45,7 @@ $content .= '</div>';
 
 $content .= '<div class="mt-4">' . card(
     panel_head('Recent entries') .
-    data_table(['Lab No', 'Patient', 'Tests', 'Status', 'Amount', 'Action'], $rows),
+    data_table(['Lab No', 'Patient', 'Tests', 'Status', 'Amount', 'Actions'], $rows),
     'overflow-hidden'
 ) . '</div>';
 

@@ -21,9 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $catalog = resolve_catalog_from_post($_POST);
     $doctor = resolve_doctor_name($_POST['doctor_id'] ?? '');
-    if (!empty($_POST['ext_doctor'])) {
-        $doctor = trim($_POST['ext_doctor']);
-    }
 
     $res = lab_repo()->create([
         'patient_id' => $patientId ?: 'WALK-IN',
@@ -44,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     if ($res['success']) {
-        header('Location: /portals/collection-center/lab-entries/history.php?created=1');
+        header('Location: /portals/collection-center/entry-done.php?lab_no=' . urlencode($res['lab_no']));
         exit;
     }
     $message = flash_error('Could not save lab entry.');
@@ -81,13 +78,12 @@ $content .= card(
     select_field('Patient', 'patient_id', $patientOpts) .
     form_field('Or scan / enter patient ID', 'patient_scan', 'text', null, 'P-xxxxx', true) .
     select_field('Referring doctor', 'doctor_id', $doctorOpts) .
-    form_field('External referral', 'ext_doctor', 'text', null, 'Outside doctor name', true) .
     select_field('Route to', 'route_id', $routeOpts, 'RT-MAIN') .
     select_field('Priority', 'priority', [
         'Normal' => 'Normal',
         'Urgent' => 'Urgent (same day)',
         'STAT' => 'STAT / Critical',
-    ]) .
+    ], 'Normal', true) .
     select_field('Sample status', 'sample_status', [
         'pending' => 'Pending collection',
         'collected' => 'Collected now',
@@ -108,8 +104,7 @@ $content .= card(
     panel_head('Discount & payment') .
     '<div class="p-4 sm:p-6">' . billing_panel() . '</div>' .
     '<div class="sticky-actions">' .
-    btn_submit('Save entry & print receipt') .
-    btn_secondary('/portals/collection-center/receipts.php', 'Receipt preview') .
+    btn_submit('Save & preview receipt / report') .
     '</div>'
 );
 

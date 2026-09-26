@@ -445,6 +445,60 @@ textarea::placeholder {
   }
 }
 
+/* Vendor credit — Shakeel / WhatsApp (app + print) */
+.software-credit-bar {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.software-credit-bar--app {
+  margin-top: 2.5rem;
+}
+
+.software-credit {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #64748b;
+  text-align: center;
+}
+
+.software-credit strong {
+  color: #334155;
+  font-weight: 600;
+}
+
+.software-credit a {
+  color: #0f766e;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.software-credit a:hover {
+  text-decoration: underline;
+}
+
+.software-credit--print {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #94a3b8;
+  font-size: 0.65rem;
+  color: #475569;
+  text-align: center;
+}
+
+.software-credit--print a {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+.login-software-credit {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+
 /* ——— Components ——— */
 .field {
   display: block;

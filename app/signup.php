@@ -122,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-user-check"></i> Register Account</button>
             </form>
+            <?= software_credit_footer() ?>
         </div>
     </section>
 </div>

@@ -180,8 +180,16 @@ function billing_panel(): string
     HTML;
 }
 
-function report_actions(string $patientPhone, string $reportUrl = '/portals/main-lab/reports/preview.php'): string
+function report_actions(string $patientPhone, string $reportUrl = ''): string
 {
+    if ($reportUrl === '') {
+        $portal = current_portal();
+        $reportUrl = $portal === 'collection-center'
+            ? '/portals/collection-center/reports/preview.php'
+            : ($portal === 'imaging'
+                ? '/portals/imaging/reports.php'
+                : '/portals/main-lab/reports/preview.php');
+    }
     $waPhone = preg_replace('/\D/', '', $patientPhone);
     if (str_starts_with($waPhone, '0')) {
         $waPhone = '92' . substr($waPhone, 1);
@@ -198,74 +206,3 @@ function report_actions(string $patientPhone, string $reportUrl = '/portals/main
     HTML;
 }
 
-function render_report_document(array $settings, array $patient, array $resultLines): string
-{
-    $logoImg = brand_logo('brand-logo brand-logo--report');
-    $name = e($settings['name']);
-    $header = e($settings['header']);
-    $address = e($settings['address']);
-    $phone = e($settings['phone']);
-    $footer = e($settings['footer']);
-    $pname = e($patient['name']);
-    $pid = e($patient['id']);
-    $page = e((string) $patient['age']);
-    $pgender = e($patient['gender']);
-    $pphone = e($patient['phone']);
-
-    $rows = '';
-    foreach ($resultLines as $line) {
-        $flag = ($line['flag'] ?? '') === 'critical'
-            ? '<span class="font-bold text-black">HIGH</span>'
-            : e($line['flag'] ?? '—');
-        $rows .= '<tr class="border-b border-black">
-            <td class="py-2 pr-4 text-sm">' . e($line['test']) . '</td>
-            <td class="py-2 pr-4 text-sm font-semibold">' . e($line['result']) . '</td>
-            <td class="py-2 pr-4 text-sm">' . e($line['unit']) . '</td>
-            <td class="py-2 pr-4 text-sm">' . e($line['range']) . '</td>
-            <td class="py-2 text-sm">' . $flag . '</td>
-        </tr>';
-    }
-
-    return <<<HTML
-    <div class="print-area mx-auto max-w-3xl border-2 border-black bg-white p-6 text-black sm:p-8">
-        <div class="border-b-2 border-black pb-4">
-            <div class="flex items-start justify-between gap-4">
-                <div class="h-14 w-14 overflow-hidden border-2 border-black">{$logoImg}</div>
-                <div class="text-right text-sm leading-snug">
-                    <p class="text-lg font-bold">{$name}</p>
-                    <p>{$header}</p>
-                    <p>{$address}</p>
-                    <p>{$phone}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-4 grid gap-2 border border-black p-4 text-sm sm:grid-cols-2">
-            <p><strong>Patient:</strong> {$pname}</p>
-            <p><strong>Patient ID:</strong> {$pid}</p>
-            <p><strong>Age / Sex:</strong> {$page} / {$pgender}</p>
-            <p><strong>Phone:</strong> {$pphone}</p>
-            <p><strong>Lab No:</strong> L-2026-0891</p>
-            <p><strong>Report Date:</strong> 16 Sep 2026</p>
-        </div>
-
-        <table class="mt-6 w-full border-collapse text-left">
-            <thead>
-                <tr class="border-b-2 border-black">
-                    <th class="pb-2 text-xs font-bold uppercase">Test</th>
-                    <th class="pb-2 text-xs font-bold uppercase">Result</th>
-                    <th class="pb-2 text-xs font-bold uppercase">Unit</th>
-                    <th class="pb-2 text-xs font-bold uppercase">Reference</th>
-                    <th class="pb-2 text-xs font-bold uppercase">Flag</th>
-                </tr>
-            </thead>
-            <tbody>{$rows}</tbody>
-        </table>
-
-        <div class="mt-8 border-t border-black pt-4 text-sm">
-            <p class="font-semibold">Verified by: Dr. Imran Sheikh (Pathologist)</p>
-            <p class="mt-4 text-xs leading-relaxed">{$footer}</p>
-        </div>
-    </div>
-    HTML;
-}

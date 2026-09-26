@@ -172,7 +172,9 @@ CREATE TABLE IF NOT EXISTS lab_settings (
     email           VARCHAR(255),
     header_text     TEXT,
     footer_text     TEXT,
-    logo_text       VARCHAR(32)
+    logo_text       VARCHAR(32),
+    bill_header_text TEXT,
+    bill_footer_text TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS collection_centers (

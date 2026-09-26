@@ -26,8 +26,8 @@ class PatientRepository
     public function findById(string $id): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM patients WHERE id = :id OR patient_no = :id LIMIT 1",
-            ['id' => $id]
+            "SELECT * FROM patients WHERE id = :id OR patient_no = :patient_no LIMIT 1",
+            ['id' => $id, 'patient_no' => $id]
         );
     }
 

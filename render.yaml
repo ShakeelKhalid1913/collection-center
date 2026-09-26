@@ -1,8 +1,10 @@
 # Health LMS Pro — Render Blueprint
-# Links to the existing "mysql" env group from render-examples/mysql.
 #
-# Deploy: New → Blueprint → this repo, OR New → Web Service with Dockerfile
-# and attach env group "mysql" manually.
+# DB_HOST must be the MySQL private service INTERNAL hostname from
+# Dashboard → mysql service → Connect → Internal (e.g. mysql-xxxx),
+# NOT the bare word "mysql".
+#
+# Same region as MySQL (Oregon). Free web services can SEND private traffic.
 
 services:
   - type: web
@@ -14,20 +16,15 @@ services:
     dockerContext: .
     healthCheckPath: /
     envVars:
-      # Import MYSQL_USER / MYSQL_PASSWORD / MYSQL_DATABASE / etc. from Blueprint
       - fromGroup: mysql
-      # Private service hostname = service name on Render
+      # Override these in the dashboard with Connect → Internal values
       - key: DB_HOST
-        value: mysql
+        sync: false
       - key: DB_PORT
         value: "3306"
       - key: DB_NAME
         value: mysql
       - key: DB_USER
         value: mysql
-      # Password comes from env group (MYSQL_PASSWORD). Also set DB_PASS explicitly
-      # in the Render dashboard if your group uses a different key name.
       - key: DB_PASS
         sync: false
-
-    # After first deploy, open /database/setup.php once to create tables + seed users.

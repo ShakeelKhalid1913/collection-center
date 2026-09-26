@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/documents.php';
 
 // Database & Repositories
 require_once __DIR__ . '/../database/Database.php';
@@ -232,6 +233,7 @@ function mock(string $key): array
             ], lab_repo()->getAll());
 
         case 'mock_tests':
+            $orgId = current_user()['organization_id'] ?? 'ORG-001';
             return array_map(fn($t) => [
                 'code' => $t['code'],
                 'name' => $t['name'],
@@ -240,7 +242,7 @@ function mock(string $key): array
                 'sample' => $t['sample_type'] ?? 'Blood',
                 'unit' => $t['unit'] ?? '—',
                 'range' => $t['normal_range'] ?? '—',
-            ], test_repo()->getTests());
+            ], test_repo()->getTests($orgId));
 
         case 'mock_packages':
             return array_map(fn($pkg) => [
@@ -273,16 +275,7 @@ function mock(string $key): array
             ], result_repo()->getImagingScans());
 
         case 'mock_lab_settings':
-            $set = setting_repo()->getSettings();
-            return [
-                'name' => $set['lab_name'] ?? 'Health LMS Pro Diagnostics',
-                'address' => $set['address'] ?? '',
-                'phone' => $set['phone'] ?? '',
-                'email' => $set['email'] ?? '',
-                'header' => $set['header_text'] ?? '',
-                'footer' => $set['footer_text'] ?? '',
-                'logo_text' => $set['logo_text'] ?? 'HLP',
-            ];
+            return branding_settings();
 
         case 'mock_collection_centers':
             return result_repo()->getCollectionCenters();

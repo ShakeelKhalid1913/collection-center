@@ -27,6 +27,14 @@ class ResultRepository
         );
     }
 
+    public function getResultsByLabNo(string $labNo): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM results WHERE lab_no = :lab_no ORDER BY created_at ASC",
+            ['lab_no' => $labNo]
+        );
+    }
+
     public function getUnverifiedResults(): array
     {
         return $this->db->fetchAll(
@@ -43,7 +51,10 @@ class ResultRepository
 
     public function findResult(string $id): ?array
     {
-        return $this->db->fetchOne("SELECT * FROM results WHERE id = :id OR lab_no = :id LIMIT 1", ['id' => $id]);
+        return $this->db->fetchOne(
+            "SELECT * FROM results WHERE id = :id OR lab_no = :lab_no LIMIT 1",
+            ['id' => $id, 'lab_no' => $id]
+        );
     }
 
     public function saveResultEntry(string $id, array $data): bool
@@ -113,8 +124,8 @@ class ResultRepository
     public function findImagingScan(string $scanNo): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM imaging_scans WHERE scan_no = :scan_no OR id = :scan_no LIMIT 1",
-            ['scan_no' => $scanNo]
+            "SELECT * FROM imaging_scans WHERE scan_no = :scan_no OR id = :id LIMIT 1",
+            ['scan_no' => $scanNo, 'id' => $scanNo]
         );
     }
 

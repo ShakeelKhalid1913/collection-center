@@ -14,6 +14,26 @@ function brand_logo(string $class = 'brand-logo', string $alt = 'Health LMS Pro'
     return '<img src="/assets/logo.png" alt="' . e($alt) . '" class="' . e($class) . '" width="128" height="128" decoding="async">';
 }
 
+/**
+ * Vendor credit — Shakeel only (NOT the client lab WhatsApp).
+ * One WhatsApp only: 0328-3070070
+ */
+function software_credit_footer(bool $compact = false): string
+{
+    $wa = 'https://wa.me/923283070070';
+    $line = 'Software created by <strong>Shakeel Khalid</strong>'
+        . ' · <a href="' . e($wa) . '" target="_blank" rel="noopener">WhatsApp 0328-3070070</a>';
+
+    if ($compact) {
+        return '<p class="software-credit software-credit--print">' . $line . '</p>';
+    }
+
+    return '<footer class="software-credit-bar">'
+        . '<p class="software-credit">' . $line . '</p>'
+        . '</footer>';
+}
+
+
 function nav_item(string $href, string $label, string $activeKey, string $key, ?string $badge = null, string $icon = 'fa-solid fa-circle'): string
 {
     $active = $activeKey === $key ? ' is-active' : '';

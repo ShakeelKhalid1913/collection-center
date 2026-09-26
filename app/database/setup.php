@@ -86,6 +86,20 @@ function runSetup(): array
             ['TST-09', 'TFT', 'Thyroid Profile (T3/T4/TSH)', 'Hormones', 3200.00, 'Blood', '—', '—'],
             ['TST-10', 'UDR', 'Urine Complete (DR)', 'Clinical Pathology', 500.00, 'Urine', '—', '—'],
             ['TST-11', 'CXR', 'Chest X-Ray PA', 'Radiology', 1800.00, '—', '—', '—'],
+            ['TST-12', 'UA', 'Uric Acid', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '3.5–7.2'],
+            ['TST-13', 'CREAT', 'Creatinine', 'Biochemistry', 550.00, 'Blood', 'mg/dL', '0.6–1.3'],
+            ['TST-14', 'UREA', 'Blood Urea', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '15–40'],
+            ['TST-15', 'HBA1C', 'HbA1c', 'Biochemistry', 1800.00, 'Blood', '%', '4.0–5.6'],
+            ['TST-16', 'CRP', 'C-Reactive Protein', 'Immunology', 1200.00, 'Blood', 'mg/L', '<5'],
+            ['TST-17', 'VITD', 'Vitamin D (25-OH)', 'Hormones', 3500.00, 'Blood', 'ng/mL', '30–100'],
+            ['TST-18', 'B12', 'Vitamin B12', 'Hormones', 2800.00, 'Blood', 'pg/mL', '200–900'],
+            ['TST-19', 'SGPT', 'SGPT (ALT)', 'Biochemistry', 450.00, 'Blood', 'U/L', '7–56'],
+            ['TST-20', 'SGOT', 'SGOT (AST)', 'Biochemistry', 450.00, 'Blood', 'U/L', '10–40'],
+            ['TST-21', 'BIL', 'Bilirubin Total', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '0.1–1.2'],
+            ['TST-22', 'CHOL', 'Cholesterol Total', 'Biochemistry', 600.00, 'Blood', 'mg/dL', '<200'],
+            ['TST-23', 'TG', 'Triglycerides', 'Biochemistry', 600.00, 'Blood', 'mg/dL', '<150'],
+            ['TST-24', 'WBC', 'White Blood Cell Count', 'Hematology', 400.00, 'Blood', '10³/µL', '4–11'],
+            ['TST-25', 'PLT', 'Platelet Count', 'Hematology', 400.00, 'Blood', '10³/µL', '150–450'],
         ];
         foreach ($tests as $tRow) {
             $stmtTest->execute($tRow);
@@ -167,6 +181,8 @@ function runSetup(): array
             "ALTER TABLE imaging_scans ADD COLUMN clinical_notes TEXT NULL",
             "ALTER TABLE imaging_scans ADD COLUMN findings TEXT NULL",
             "ALTER TABLE imaging_scans ADD COLUMN impression TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN bill_header_text TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN bill_footer_text TEXT NULL",
         ] as $alter) {
             try {
                 $pdo->exec($alter);
@@ -174,6 +190,13 @@ function runSetup(): array
                 // Column already exists
             }
         }
+
+        // Re-seed expanded tests (INSERT IGNORE) so existing DBs get Uric Acid etc.
+        $stmtTestExtra = $pdo->prepare("INSERT IGNORE INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?)");
+        foreach ($tests as $tRow) {
+            $stmtTestExtra->execute($tRow);
+        }
+        $logs[] = "Catalog synced (incl. Uric Acid and common biochemistry tests).";
 
         $logs[] = "All tables & seed data inserted successfully!";
         return ['success' => true, 'logs' => $logs];
