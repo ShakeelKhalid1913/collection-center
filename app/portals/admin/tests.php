@@ -8,23 +8,28 @@ require_once __DIR__ . '/../../includes/components.php';
 
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $category = $_POST['category'] ?? '';
-    if (!isset(TEST_DEPARTMENTS[$category])) {
-        $message = flash_error('Please select a valid department / category.');
+    $category = trim($_POST['category'] ?? '');
+    // Department is optional — empty is allowed
+    if ($category !== '' && !isset(TEST_DEPARTMENTS[$category])) {
+        $message = flash_error('Please select a valid department, or leave it blank.');
     } else {
         $res = test_repo()->createTest([
             'code' => $_POST['code'] ?? '',
             'name' => $_POST['name'] ?? '',
-            'category' => $category,
+            'category' => $category !== '' ? $category : 'General',
             'price' => (float)($_POST['price'] ?? 0),
             'sample' => $_POST['sample'] ?? 'Blood',
             'unit' => $_POST['unit'] ?? '—',
             'range' => $_POST['range'] ?? '—',
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
-        $message = $res['success'] ? flash_success('Test added under ' . $category . '.') : flash_error($res['error'] ?? 'Failed.');
+        $message = $res['success']
+            ? flash_success('Test added' . ($category !== '' ? ' under ' . $category : '') . '.')
+            : flash_error($res['error'] ?? 'Failed.');
     }
 }
+
+$deptOpts = ['' => '— Optional: select department —'] + TEST_DEPARTMENTS;
 
 $rows = [];
 foreach (mock('mock_tests') as $t) {
@@ -33,14 +38,14 @@ foreach (mock('mock_tests') as $t) {
 
 $content = page_header(
     'Tests Catalog',
-    'Add tests under departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology.'
+    'Departments (optional): Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology, Microbiology.'
 );
 $content .= $message;
 $content .= card(
     '<form method="post" class="grid gap-3 p-4 sm:grid-cols-3 sm:p-6 border-b border-slate-200">' .
-    form_field('Code', 'code', 'text', null, 'e.g. UA') .
-    form_field('Name', 'name', 'text', null, 'e.g. Uric Acid') .
-    select_field('Department / Category', 'category', TEST_DEPARTMENTS, 'Biochemistry') .
+    form_field('Code', 'code', 'text', null, 'e.g. C/S') .
+    form_field('Name', 'name', 'text', null, 'e.g. Culture & Sensitivity') .
+    select_field('Department / Category', 'category', $deptOpts, '', true) .
     form_field('Price', 'price', 'number', '0') .
     form_field('Sample', 'sample', 'text', 'Blood') .
     form_field('Unit', 'unit', 'text', '—', '', true) .

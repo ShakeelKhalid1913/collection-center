@@ -30,7 +30,7 @@ const APP_NAME = 'Health LMS Pro';
 
 /**
  * Primary lab departments (test categories) — client-defined.
- * Used when adding tests and grouping the catalog picker.
+ * Optional when adding a test; used to group / filter the catalog.
  */
 const TEST_DEPARTMENTS = [
     'Hematology' => 'Hematology',
@@ -38,6 +38,7 @@ const TEST_DEPARTMENTS = [
     'Biochemistry' => 'Biochemistry',
     'Special Chemistry' => 'Special Chemistry',
     'Histopathology' => 'Histopathology',
+    'Microbiology' => 'Microbiology',
 ];
 
 function test_departments(): array

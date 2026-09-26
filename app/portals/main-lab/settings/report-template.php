@@ -11,29 +11,26 @@ $orgId = current_user()['organization_id'] ?? 'ORG-001';
 $s = branding_settings($orgId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $ok = setting_repo()->save([
-        'name' => $_POST['name'] ?? $s['name'],
-        'phone' => $_POST['phone'] ?? $s['phone'],
-        'email' => $_POST['email'] ?? $s['email'],
-        'address' => $_POST['address'] ?? $s['address'],
-        'header' => $_POST['header'] ?? '',
-        'footer' => $_POST['footer'] ?? '',
-        'logo_text' => $_POST['logo'] ?? 'HLP',
-        'bill_header' => $_POST['bill_header'] ?? '',
-        'bill_footer' => $_POST['bill_footer'] ?? '',
-    ], $orgId);
-    $message = $ok ? flash_success('Header / footer branding saved for bills and reports.') : flash_error('Could not save.');
+    $result = save_branding_request($orgId);
+    $message = $result['ok'] ? flash_success($result['message']) : flash_error($result['message']);
     $s = branding_settings($orgId);
 }
 
-$content = page_header('Header / Footer Branding', 'Per-lab letterhead for printable bills and pathology reports.');
+$content = page_header(
+    'Header / Footer',
+    'Lab letterhead for bills and reports (same settings as Admin → Client Branding).'
+);
 $content .= $message;
+$content .= '<div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">'
+    . '<strong>Same branding for everyone.</strong> Not a separate staff letterhead — edits here update the shared lab header/footer used on all printouts.'
+    . '</div>';
 $content .= card(
-    '<form method="post" class="space-y-4 p-4 sm:p-6">' .
+    '<form method="post" enctype="multipart/form-data" class="space-y-4 p-4 sm:p-6">' .
     form_field('Lab name', 'name', 'text', $s['name']) .
     form_field('Address', 'address', 'text', $s['address']) .
     form_field('Phone', 'phone', 'text', $s['phone']) .
     form_field('Email', 'email', 'email', $s['email']) .
+    branding_header_image_field($s) .
     form_field('Report header', 'header', 'text', $s['header']) .
     form_field('Report footer', 'footer', 'text', $s['footer']) .
     form_field('Bill header (optional)', 'bill_header', 'text', $s['bill_header'], '', true) .

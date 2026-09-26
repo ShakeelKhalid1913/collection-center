@@ -102,6 +102,9 @@ function runSetup(): array
             ['TST-25', 'PLT', 'Platelet Count', 'Hematology', 400.00, 'Blood', '10³/µL', '150–450'],
             ['TST-26', 'PAP', 'Pap Smear', 'Histopathology', 2500.00, 'Slide', '—', '—'],
             ['TST-27', 'BIOPSY', 'Tissue Biopsy (routine)', 'Histopathology', 4500.00, 'Tissue', '—', '—'],
+            ['TST-28', 'C/S', 'Culture & Sensitivity', 'Microbiology', 2200.00, 'Swab/Fluid', '—', '—'],
+            ['TST-29', 'BLOOD-C', 'Blood Culture', 'Microbiology', 3500.00, 'Blood', '—', '—'],
+            ['TST-30', 'AFB', 'AFB Smear', 'Microbiology', 800.00, 'Sputum', '—', '—'],
         ];
         foreach ($tests as $tRow) {
             $stmtTest->execute($tRow);
@@ -185,6 +188,9 @@ function runSetup(): array
             "ALTER TABLE imaging_scans ADD COLUMN impression TEXT NULL",
             "ALTER TABLE lab_settings ADD COLUMN bill_header_text TEXT NULL",
             "ALTER TABLE lab_settings ADD COLUMN bill_footer_text TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image LONGBLOB NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
         ] as $alter) {
             try {
                 $pdo->exec($alter);
@@ -202,7 +208,7 @@ function runSetup(): array
         // Align old category names to client departments
         $pdo->exec("UPDATE tests SET category = 'Special Chemistry' WHERE category IN ('Hormones','Immunology')");
         $pdo->exec("UPDATE tests SET category = 'Chemistry' WHERE category IN ('Clinical Pathology')");
-        $logs[] = "Catalog synced (departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology).";
+        $logs[] = "Catalog synced (departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology, Microbiology).";
 
         $logs[] = "All tables & seed data inserted successfully!";
         return ['success' => true, 'logs' => $logs];

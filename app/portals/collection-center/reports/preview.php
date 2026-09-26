@@ -15,11 +15,11 @@ $content = page_header(
     'Report Preview',
     'Collection Center print/PDF preview — uses lab branding header, address & footer. Optional CNIC / blood group / email only if entered.'
 );
-$content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl);
+$content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
 $content .= '<div class="mt-6 no-print flex flex-wrap gap-2">' .
     btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode((string)($ctx['entry']['lab_no'] ?? '')), 'Receipt') .
     btn_secondary('/portals/collection-center/branding.php', 'Edit header / footer') .
     '</div>';
-$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry']) . '</div>';
+$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT') . '</div>';
 
 render_page('Report Preview', 'collection-center', 'reports', $content, true);

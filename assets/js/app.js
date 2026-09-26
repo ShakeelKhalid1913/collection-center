@@ -91,16 +91,111 @@
 
   function initCatalogSearch() {
     const input = document.querySelector('[data-catalog-search]');
-    if (!input) return;
-    input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
+    const deptSelect = document.querySelector('[data-catalog-dept]');
+    if (!input && !deptSelect) return;
+
+    function applyFilters() {
+      const q = (input?.value || '').trim().toLowerCase();
+      const dept = (deptSelect?.value || '').trim().toLowerCase();
+
       document.querySelectorAll('[data-catalog-item]').forEach((item) => {
         const name = item.getAttribute('data-name') || '';
-        item.style.display = !q || name.includes(q) ? '' : 'none';
+        const itemDept = (item.getAttribute('data-dept') || '').toLowerCase();
+        const matchQ = !q || name.includes(q);
+        // Packages (empty data-dept) always show unless searching excludes them
+        const matchDept = !dept || itemDept === '' || itemDept === dept;
+        item.style.display = matchQ && matchDept ? '' : 'none';
+      });
+
+      document.querySelectorAll('[data-catalog-section]').forEach((section) => {
+        const sectionDept = (section.getAttribute('data-dept') || '').toLowerCase();
+        // Hide whole department section if filter is set and doesn't match
+        if (dept && sectionDept && sectionDept !== dept && sectionDept !== 'other') {
+          section.style.display = 'none';
+          return;
+        }
+        if (dept && sectionDept === 'other') {
+          section.style.display = 'none';
+          return;
+        }
+        // Packages section (data-dept="") — keep visible
+        const visibleItem = Array.from(section.querySelectorAll('[data-catalog-item]')).some(
+          (el) => el.style.display !== 'none'
+        );
+        section.style.display = visibleItem || sectionDept === '' ? '' : 'none';
+      });
+    }
+
+    input?.addEventListener('input', applyFilters);
+    deptSelect?.addEventListener('change', applyFilters);
+  }
+
+  function loadHtml2Pdf() {
+    return new Promise((resolve, reject) => {
+      if (window.html2pdf) {
+        resolve(window.html2pdf);
+        return;
+      }
+      const existing = document.querySelector('script[data-html2pdf]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(window.html2pdf));
+        existing.addEventListener('error', reject);
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      s.async = true;
+      s.dataset.html2pdf = '1';
+      s.onload = () => resolve(window.html2pdf);
+      s.onerror = () => reject(new Error('Could not load PDF library'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function initPdfDownload() {
+    document.querySelectorAll('[data-download-pdf]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const area = document.querySelector('.print-area');
+        const status = btn.parentElement?.querySelector('[data-pdf-status]');
+        if (!area) {
+          if (status) status.textContent = 'Nothing to export on this page.';
+          return;
+        }
+
+        const filename = (btn.getAttribute('data-pdf-name') || 'lab-report') + '.pdf';
+        btn.disabled = true;
+        if (status) status.textContent = 'Preparing PDF…';
+
+        try {
+          const html2pdf = await loadHtml2Pdf();
+          await html2pdf()
+            .set({
+              margin: [8, 8, 8, 8],
+              filename,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true, logging: false },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+            })
+            .from(area)
+            .save();
+          if (status) status.textContent = 'Downloaded.';
+          setTimeout(() => {
+            if (status) status.textContent = '';
+          }, 2500);
+        } catch (err) {
+          console.error(err);
+          if (status) status.textContent = 'PDF failed — use Print → Save as PDF.';
+          // Fallback
+          window.print();
+        } finally {
+          btn.disabled = false;
+        }
       });
     });
   }
 
   initBilling();
   initCatalogSearch();
+  initPdfDownload();
 })();

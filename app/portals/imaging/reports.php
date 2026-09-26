@@ -23,7 +23,7 @@ $doc = <<<HTML
 HTML;
 
 $content = page_header('Radiology Report', 'Print · PDF · WhatsApp');
-$content .= report_actions($patient['phone'], '/portals/imaging/reports.php');
+$content .= report_actions($patient['phone'], '/portals/imaging/reports.php', 'radiology-report');
 $content .= '<div class="mt-4">' . $doc . '</div>';
 
 render_page('Reports', 'imaging', 'reports', $content, true);

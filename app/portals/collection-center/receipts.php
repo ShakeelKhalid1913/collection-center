@@ -19,7 +19,7 @@ $content = page_header(
     'Printable cash receipt with your lab header / footer.',
     btn_secondary($reportUrl, 'Open report preview')
 );
-$content .= report_actions($patient['phone'] ?? '', $reportUrl);
+$content .= report_actions($patient['phone'] ?? '', $reportUrl, 'receipt-' . ($entry['lab_no'] ?? 'bill'));
 $content .= '<div class="mt-4">' . render_receipt_document($settings, $entry, $patient) . '</div>';
 
 render_page('Receipts', 'collection-center', 'receipts', $content, true);

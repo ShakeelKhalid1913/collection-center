@@ -1040,6 +1040,372 @@ textarea::placeholder {
   }
 }
 
+/* ——— Clinical lab report (Infinity-style layout) ——— */
+.lab-report {
+  --lr-ink: #0f172a;
+  --lr-muted: #475569;
+  --lr-line: #94a3b8;
+  --lr-accent: #1e3a5f;
+  position: relative;
+  max-width: 52rem;
+  margin: 0 auto;
+  background: #fff;
+  color: var(--lr-ink);
+  font-family: "Source Sans 3", "Segoe UI", Calibri, Arial, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border: 1px solid #cbd5e1;
+  padding: 1.25rem 1.5rem 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.lab-report__header {
+  border-bottom: 1px solid var(--lr-line);
+  padding-bottom: 0.75rem;
+}
+
+.lab-letterhead-image {
+  width: 100%;
+  margin: 0 0 0.75rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.lab-letterhead-image__img {
+  display: block;
+  width: 100%;
+  max-height: 7.5rem;
+  height: auto;
+  object-fit: contain;
+  object-position: center top;
+}
+
+.branding-header-preview {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.branding-header-preview__img {
+  display: block;
+  width: 100%;
+  max-height: 6rem;
+  object-fit: contain;
+  object-position: center top;
+  background: #f8fafc;
+}
+
+.lab-doc-brand--image {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.lab-doc-brand__text--under-image .lab-doc-brand__contact {
+  text-align: center;
+}
+
+.lab-report__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.lab-report__logo {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.lab-report__logo .brand-logo--report {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lab-report__lab-name {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--lr-accent);
+  text-transform: uppercase;
+}
+
+.lab-report__tagline {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--lr-muted);
+}
+
+.lab-report__id-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 0.65rem;
+}
+
+.lab-report__id-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.lab-report__id-block--right {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.lab-report__id-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lr-muted);
+}
+
+.lab-report__barcode {
+  font-family: "Libre Barcode 39", cursive;
+  font-size: 2rem;
+  line-height: 1;
+  color: #000;
+  letter-spacing: 0.02em;
+}
+
+.lab-report__id-code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-report__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.5rem;
+  padding: 0.35rem 0 0.65rem;
+}
+
+.lab-report__row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.35rem;
+  padding: 0.12rem 0;
+  align-items: baseline;
+}
+
+.lab-report__lbl {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 0.78rem;
+}
+
+.lab-report__val {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.lab-report__val--strong {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lab-report__title-wrap {
+  margin-top: 0.35rem;
+  text-align: center;
+}
+
+.lab-report__title {
+  display: inline-block;
+  margin: 0;
+  padding: 0.4rem 1.75rem;
+  border: 1.5px solid #1e293b;
+  background: #f1f5f9;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.lab-report__body {
+  padding: 1rem 0 0.5rem;
+}
+
+.lab-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.lab-report__table thead th {
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  border-bottom: 2px solid #1e293b;
+  padding: 0.4rem 0.5rem 0.45rem 0;
+}
+
+.lab-report__table tbody td {
+  padding: 0.45rem 0.5rem 0.45rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.lab-report__result {
+  font-weight: 700;
+}
+
+.lab-report__flag {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lab-report__empty {
+  text-align: center;
+  color: var(--lr-muted);
+  padding: 1.25rem 0 !important;
+}
+
+.lab-report__side-note {
+  display: none;
+}
+
+.lab-report__footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lr-line);
+}
+
+.lab-report__disclaimer {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  color: var(--lr-muted);
+  line-height: 1.4;
+}
+
+.lab-report__lab-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: #334155;
+}
+
+.lab-report__contact-bar {
+  margin-top: 0.65rem;
+  padding: 0.45rem 0.6rem;
+  background: #334155;
+  color: #f8fafc !important;
+  font-size: 0.7rem;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.lab-report__bottom-line {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.45rem;
+  font-size: 0.65rem;
+  color: var(--lr-muted);
+}
+
+.lab-report .software-credit--print {
+  border-top: none;
+  margin-top: 0.35rem;
+  padding-top: 0;
+}
+
+/* Receipt polish */
+.lab-receipt {
+  max-width: 24rem;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  padding: 1.25rem;
+  font-family: "Source Sans 3", "Segoe UI", Calibri, Arial, sans-serif;
+  color: #0f172a;
+}
+
+.lab-doc-brand {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  border-bottom: 1px solid #94a3b8;
+  padding-bottom: 0.75rem;
+}
+
+.lab-doc-brand__logo {
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+}
+
+.lab-doc-brand__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lab-doc-brand__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e3a5f;
+}
+
+.lab-doc-brand__tag,
+.lab-doc-brand__contact {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.lab-receipt__heading {
+  margin: 0.85rem 0;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lab-receipt__body p,
+.lab-receipt__totals p {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.35rem 0;
+  font-size: 0.875rem;
+}
+
+.lab-receipt__body span,
+.lab-receipt__totals span {
+  color: #64748b;
+}
+
+.lab-receipt__totals {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #94a3b8;
+}
+
+.lab-receipt__footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -1055,15 +1421,36 @@ textarea::placeholder {
     left: 0;
     top: 0;
     width: 100%;
+    max-width: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.4in 0.5in !important;
   }
 
   .no-print {
     display: none !important;
   }
 
-  .print-area * {
+  .lab-letterhead-image__img {
+    max-height: 1.6in;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report__contact-bar {
+    background: #334155 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report__title {
+    background: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report__barcode {
     color: #000 !important;
-    background: #fff !important;
-    box-shadow: none !important;
   }
 }

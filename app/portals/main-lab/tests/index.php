@@ -8,14 +8,14 @@ require_once __DIR__ . '/../../../includes/components.php';
 
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $category = $_POST['category'] ?? '';
-    if (!isset(TEST_DEPARTMENTS[$category])) {
-        $message = flash_error('Please select a valid department.');
+    $category = trim($_POST['category'] ?? '');
+    if ($category !== '' && !isset(TEST_DEPARTMENTS[$category])) {
+        $message = flash_error('Please select a valid department, or leave it blank.');
     } else {
         $res = test_repo()->createTest([
             'code' => $_POST['code'] ?? '',
             'name' => $_POST['name'] ?? '',
-            'category' => $category,
+            'category' => $category !== '' ? $category : 'General',
             'price' => (float)($_POST['price'] ?? 0),
             'sample' => $_POST['sample'] ?? 'Blood',
             'unit' => $_POST['unit'] ?? '—',
@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$deptOpts = ['' => '— Optional: select department —'] + TEST_DEPARTMENTS;
+
 $rows = [];
 foreach (mock('mock_tests') as $t) {
     if ($t['category'] === 'Radiology') {
@@ -34,13 +36,16 @@ foreach (mock('mock_tests') as $t) {
     $rows[] = [e($t['code']), e($t['name']), e($t['category']), e(format_money((float) $t['price'])), e($t['sample']), e($t['range'])];
 }
 
-$content = page_header('Tests', 'Departments: Hematology · Chemistry · Biochemistry · Special Chemistry · Histopathology.');
+$content = page_header(
+    'Tests',
+    'Departments (optional filter): Hematology · Chemistry · Biochemistry · Special Chemistry · Histopathology · Microbiology.'
+);
 $content .= $message;
 $content .= card(
     '<form method="post" class="grid gap-3 p-4 sm:grid-cols-3 sm:p-6 border-b border-slate-200">' .
     form_field('Code', 'code', 'text', null, 'UA') .
     form_field('Name', 'name', 'text', null, 'Uric Acid') .
-    select_field('Department', 'category', TEST_DEPARTMENTS, 'Biochemistry') .
+    select_field('Department', 'category', $deptOpts, '', true) .
     form_field('Price', 'price', 'number', '0') .
     form_field('Sample', 'sample', 'text', 'Blood') .
     form_field('Normal range', 'range', 'text', '—', '', true) .

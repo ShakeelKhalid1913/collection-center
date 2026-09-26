@@ -17,10 +17,48 @@ class SettingRepository
 
     public function getSettings(string $orgId = 'ORG-001'): array
     {
-        return $this->db->fetchOne(
-            "SELECT * FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+        // Avoid loading LONGBLOB on every page — only mime + has flag.
+        try {
+            $row = $this->db->fetchOne(
+                "SELECT organization_id, lab_name, address, phone, email,
+                        header_text, footer_text, logo_text,
+                        bill_header_text, bill_footer_text,
+                        header_image_mime,
+                        header_image_ver,
+                        CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image
+                 FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+                ['org_id' => $orgId]
+            );
+            return $row ?: [];
+        } catch (\Throwable $ignored) {
+            $row = $this->db->fetchOne(
+                "SELECT * FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+                ['org_id' => $orgId]
+            ) ?: [];
+            if ($row !== []) {
+                $row['has_header_image'] = !empty($row['header_image']) || !empty($row['header_image_mime']);
+                unset($row['header_image']);
+            }
+            return $row;
+        }
+    }
+
+    /**
+     * @return array{data: string, mime: string}|null
+     */
+    public function getHeaderImage(string $orgId = 'ORG-001'): ?array
+    {
+        $row = $this->db->fetchOne(
+            "SELECT header_image, header_image_mime FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
             ['org_id' => $orgId]
-        ) ?: [];
+        );
+        if ($row === null || empty($row['header_image'])) {
+            return null;
+        }
+        return [
+            'data' => $row['header_image'],
+            'mime' => $row['header_image_mime'] ?: 'image/png',
+        ];
     }
 
     public function save(array $data, string $orgId = 'ORG-001'): bool
@@ -40,26 +78,75 @@ class SettingRepository
         ];
 
         if ($existing === []) {
-            return $this->db->execute(
+            $ok = $this->db->execute(
                 "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text)
                  VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text)",
                 $payload
             );
+        } else {
+            $ok = $this->db->execute(
+                "UPDATE lab_settings SET
+                    lab_name = :lab_name,
+                    address = :address,
+                    phone = :phone,
+                    email = :email,
+                    header_text = :header_text,
+                    footer_text = :footer_text,
+                    logo_text = :logo_text,
+                    bill_header_text = :bill_header_text,
+                    bill_footer_text = :bill_footer_text
+                 WHERE organization_id = :org_id",
+                $payload
+            );
         }
 
+        if (!$ok) {
+            return false;
+        }
+
+        if (!empty($data['clear_header_image'])) {
+            return $this->clearHeaderImage($orgId);
+        }
+
+        if (array_key_exists('header_image', $data) && $data['header_image'] !== null) {
+            return $this->saveHeaderImage($orgId, (string)$data['header_image'], (string)($data['header_image_mime'] ?? 'image/png'));
+        }
+
+        return true;
+    }
+
+    public function saveHeaderImage(string $orgId, string $binary, string $mime): bool
+    {
+        try {
+            return $this->db->execute(
+                "UPDATE lab_settings SET
+                    header_image = :img,
+                    header_image_mime = :mime,
+                    header_image_ver = COALESCE(header_image_ver, 0) + 1
+                 WHERE organization_id = :org_id",
+                [
+                    'img' => $binary,
+                    'mime' => $mime,
+                    'org_id' => $orgId,
+                ]
+            );
+        } catch (\Throwable $ignored) {
+            return $this->db->execute(
+                "UPDATE lab_settings SET header_image = :img, header_image_mime = :mime WHERE organization_id = :org_id",
+                [
+                    'img' => $binary,
+                    'mime' => $mime,
+                    'org_id' => $orgId,
+                ]
+            );
+        }
+    }
+
+    public function clearHeaderImage(string $orgId): bool
+    {
         return $this->db->execute(
-            "UPDATE lab_settings SET
-                lab_name = :lab_name,
-                address = :address,
-                phone = :phone,
-                email = :email,
-                header_text = :header_text,
-                footer_text = :footer_text,
-                logo_text = :logo_text,
-                bill_header_text = :bill_header_text,
-                bill_footer_text = :bill_footer_text
-             WHERE organization_id = :org_id",
-            $payload
+            "UPDATE lab_settings SET header_image = NULL, header_image_mime = NULL WHERE organization_id = :org_id",
+            ['org_id' => $orgId]
         );
     }
 }

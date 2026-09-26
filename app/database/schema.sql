@@ -174,7 +174,10 @@ CREATE TABLE IF NOT EXISTS lab_settings (
     footer_text     TEXT,
     logo_text       VARCHAR(32),
     bill_header_text TEXT,
-    bill_footer_text TEXT
+    bill_footer_text TEXT,
+    header_image     LONGBLOB NULL,
+    header_image_mime VARCHAR(64) NULL,
+    header_image_ver INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS collection_centers (
