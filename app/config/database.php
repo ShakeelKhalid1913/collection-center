@@ -6,24 +6,28 @@ declare(strict_types=1);
  * MariaDB Database Configuration
  * Supports DB_* and Render MySQL Blueprint MYSQL_* env vars.
  */
-function env_db(string $key, ?string $default = null): ?string
-{
-    $v = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
-    if ($v === false || $v === null || $v === '') {
-        return $default;
+if (!function_exists('env_db')) {
+    function env_db(string $key, ?string $default = null): ?string
+    {
+        $v = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+        if ($v === false || $v === null || $v === '') {
+            return $default;
+        }
+        return (string)$v;
     }
-    return (string)$v;
 }
 
-function env_db_first(array $keys, ?string $default = null): ?string
-{
-    foreach ($keys as $key) {
-        $v = env_db($key);
-        if ($v !== null && $v !== '') {
-            return $v;
+if (!function_exists('env_db_first')) {
+    function env_db_first(array $keys, ?string $default = null): ?string
+    {
+        foreach ($keys as $key) {
+            $v = env_db($key);
+            if ($v !== null && $v !== '') {
+                return $v;
+            }
         }
+        return $default;
     }
-    return $default;
 }
 
 return [
