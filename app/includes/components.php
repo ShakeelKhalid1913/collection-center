@@ -107,7 +107,7 @@ function filter_bar(array $fields, string $applyLabel = 'Apply filters'): string
 
 function catalog_picker(string $mode = 'pathology'): string
 {
-    $search = '<div class="mb-3"><input type="search" id="catalog-search" class="field" placeholder="Search test / package by name or code…" data-catalog-search></div>';
+    $search = '<div class="mb-3"><input type="search" id="catalog-search" class="field" placeholder="Search test / package by name, code, or department…" data-catalog-search></div>';
 
     $packages = '';
     foreach (mock('mock_packages') as $pkg) {
@@ -121,12 +121,18 @@ function catalog_picker(string $mode = 'pathology'): string
             . '</label>';
     }
 
-    $tests = '';
+    // Group by department for easier selection
+    $byDept = [];
+    foreach (array_keys(TEST_DEPARTMENTS) as $dept) {
+        $byDept[$dept] = '';
+    }
+    $other = '';
+
     foreach (mock('mock_tests') as $t) {
         if ($mode === 'pathology' && $t['category'] === 'Radiology') {
             continue;
         }
-        $tests .= '<label class="catalog-item" data-catalog-item data-name="' . e(strtolower($t['name'] . ' ' . $t['code'] . ' ' . $t['category'])) . '">'
+        $item = '<label class="catalog-item" data-catalog-item data-name="' . e(strtolower($t['name'] . ' ' . $t['code'] . ' ' . $t['category'])) . '">'
             . '<input type="checkbox" name="tests[]" value="' . e($t['name']) . '" class="catalog-check" data-price="' . (int) $t['price'] . '" data-code="' . e($t['code']) . '">'
             . '<span class="catalog-item__body">'
             . '<span class="catalog-item__title">' . e($t['name']) . ' <span class="catalog-code">' . e($t['code']) . '</span></span>'
@@ -134,11 +140,29 @@ function catalog_picker(string $mode = 'pathology'): string
             . '</span>'
             . '<span class="catalog-item__price">' . e(format_money((float) $t['price'])) . '</span>'
             . '</label>';
+
+        $cat = $t['category'] ?? '';
+        if (isset($byDept[$cat])) {
+            $byDept[$cat] .= $item;
+        } else {
+            $other .= $item;
+        }
+    }
+
+    $deptSections = '';
+    foreach ($byDept as $dept => $html) {
+        if ($html === '') {
+            continue;
+        }
+        $deptSections .= '<div class="catalog-section mt-4"><p class="catalog-section__title">' . e($dept) . '</p><div class="catalog-list">' . $html . '</div></div>';
+    }
+    if ($other !== '') {
+        $deptSections .= '<div class="catalog-section mt-4"><p class="catalog-section__title">Other</p><div class="catalog-list">' . $other . '</div></div>';
     }
 
     return $search
         . '<div class="catalog-section"><p class="catalog-section__title">Packages</p><div class="catalog-list">' . $packages . '</div></div>'
-        . '<div class="catalog-section mt-4"><p class="catalog-section__title">Individual tests</p><div class="catalog-list">' . $tests . '</div></div>';
+        . $deptSections;
 }
 
 function billing_panel(): string

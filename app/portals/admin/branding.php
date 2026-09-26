@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $content = page_header(
     'Client Branding',
-    'Configure each lab’s custom header & footer for bills and reports (module for client customization).'
+    'Report & bill settings: lab name, address, header and footer for printable reports and cash receipts.'
 );
 $content .= $message;
 $content .= card(

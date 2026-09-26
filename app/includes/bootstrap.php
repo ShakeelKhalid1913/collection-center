@@ -29,6 +29,23 @@ use App\Repositories\SettingRepository;
 const APP_NAME = 'Health LMS Pro';
 
 /**
+ * Primary lab departments (test categories) — client-defined.
+ * Used when adding tests and grouping the catalog picker.
+ */
+const TEST_DEPARTMENTS = [
+    'Hematology' => 'Hematology',
+    'Chemistry' => 'Chemistry',
+    'Biochemistry' => 'Biochemistry',
+    'Special Chemistry' => 'Special Chemistry',
+    'Histopathology' => 'Histopathology',
+];
+
+function test_departments(): array
+{
+    return TEST_DEPARTMENTS;
+}
+
+/**
  * Three main staff user types (client):
  * Diagnostic Center · Laboratory · Collection Center
  * Admin remains for system management only.

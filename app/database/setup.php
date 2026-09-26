@@ -83,23 +83,25 @@ function runSetup(): array
             ['TST-06', 'LFT', 'Liver Function Test', 'Biochemistry', 2800.00, 'Blood', '—', '—'],
             ['TST-07', 'RFT', 'Renal Function Test', 'Biochemistry', 2500.00, 'Blood', '—', '—'],
             ['TST-08', 'LIPID', 'Lipid Profile', 'Biochemistry', 2200.00, 'Blood', '—', '—'],
-            ['TST-09', 'TFT', 'Thyroid Profile (T3/T4/TSH)', 'Hormones', 3200.00, 'Blood', '—', '—'],
-            ['TST-10', 'UDR', 'Urine Complete (DR)', 'Clinical Pathology', 500.00, 'Urine', '—', '—'],
+            ['TST-09', 'TFT', 'Thyroid Profile (T3/T4/TSH)', 'Special Chemistry', 3200.00, 'Blood', '—', '—'],
+            ['TST-10', 'UDR', 'Urine Complete (DR)', 'Chemistry', 500.00, 'Urine', '—', '—'],
             ['TST-11', 'CXR', 'Chest X-Ray PA', 'Radiology', 1800.00, '—', '—', '—'],
             ['TST-12', 'UA', 'Uric Acid', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '3.5–7.2'],
             ['TST-13', 'CREAT', 'Creatinine', 'Biochemistry', 550.00, 'Blood', 'mg/dL', '0.6–1.3'],
             ['TST-14', 'UREA', 'Blood Urea', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '15–40'],
-            ['TST-15', 'HBA1C', 'HbA1c', 'Biochemistry', 1800.00, 'Blood', '%', '4.0–5.6'],
-            ['TST-16', 'CRP', 'C-Reactive Protein', 'Immunology', 1200.00, 'Blood', 'mg/L', '<5'],
-            ['TST-17', 'VITD', 'Vitamin D (25-OH)', 'Hormones', 3500.00, 'Blood', 'ng/mL', '30–100'],
-            ['TST-18', 'B12', 'Vitamin B12', 'Hormones', 2800.00, 'Blood', 'pg/mL', '200–900'],
+            ['TST-15', 'HBA1C', 'HbA1c', 'Special Chemistry', 1800.00, 'Blood', '%', '4.0–5.6'],
+            ['TST-16', 'CRP', 'C-Reactive Protein', 'Special Chemistry', 1200.00, 'Blood', 'mg/L', '<5'],
+            ['TST-17', 'VITD', 'Vitamin D (25-OH)', 'Special Chemistry', 3500.00, 'Blood', 'ng/mL', '30–100'],
+            ['TST-18', 'B12', 'Vitamin B12', 'Special Chemistry', 2800.00, 'Blood', 'pg/mL', '200–900'],
             ['TST-19', 'SGPT', 'SGPT (ALT)', 'Biochemistry', 450.00, 'Blood', 'U/L', '7–56'],
             ['TST-20', 'SGOT', 'SGOT (AST)', 'Biochemistry', 450.00, 'Blood', 'U/L', '10–40'],
             ['TST-21', 'BIL', 'Bilirubin Total', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '0.1–1.2'],
-            ['TST-22', 'CHOL', 'Cholesterol Total', 'Biochemistry', 600.00, 'Blood', 'mg/dL', '<200'],
-            ['TST-23', 'TG', 'Triglycerides', 'Biochemistry', 600.00, 'Blood', 'mg/dL', '<150'],
+            ['TST-22', 'CHOL', 'Cholesterol Total', 'Chemistry', 600.00, 'Blood', 'mg/dL', '<200'],
+            ['TST-23', 'TG', 'Triglycerides', 'Chemistry', 600.00, 'Blood', 'mg/dL', '<150'],
             ['TST-24', 'WBC', 'White Blood Cell Count', 'Hematology', 400.00, 'Blood', '10³/µL', '4–11'],
             ['TST-25', 'PLT', 'Platelet Count', 'Hematology', 400.00, 'Blood', '10³/µL', '150–450'],
+            ['TST-26', 'PAP', 'Pap Smear', 'Histopathology', 2500.00, 'Slide', '—', '—'],
+            ['TST-27', 'BIOPSY', 'Tissue Biopsy (routine)', 'Histopathology', 4500.00, 'Tissue', '—', '—'],
         ];
         foreach ($tests as $tRow) {
             $stmtTest->execute($tRow);
@@ -196,7 +198,11 @@ function runSetup(): array
         foreach ($tests as $tRow) {
             $stmtTestExtra->execute($tRow);
         }
-        $logs[] = "Catalog synced (incl. Uric Acid and common biochemistry tests).";
+
+        // Align old category names to client departments
+        $pdo->exec("UPDATE tests SET category = 'Special Chemistry' WHERE category IN ('Hormones','Immunology')");
+        $pdo->exec("UPDATE tests SET category = 'Chemistry' WHERE category IN ('Clinical Pathology')");
+        $logs[] = "Catalog synced (departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology).";
 
         $logs[] = "All tables & seed data inserted successfully!";
         return ['success' => true, 'logs' => $logs];
