@@ -198,6 +198,16 @@ textarea::placeholder {
   font-size: 0.875rem;
 }
 
+.alert-success {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-size: 0.875rem;
+}
+
 /* ——— App shell ——— */
 .app-sidebar {
   background: var(--surface);

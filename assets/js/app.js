@@ -36,6 +36,7 @@
     const discountEl = root.querySelector('[data-discount]');
     const discountPctEl = root.querySelector('[data-discount-pct]');
     const paidEl = root.querySelector('[data-paid]');
+    const amountInput = root.querySelector('[data-amount-input]');
     const checks = document.querySelectorAll('.catalog-check');
 
     let syncing = false;
@@ -71,6 +72,7 @@
 
       if (subtotalEl) subtotalEl.textContent = money(sub);
       if (totalEl) totalEl.textContent = money(total);
+      if (amountInput) amountInput.value = String(total);
       if (remainingEl) {
         remainingEl.textContent = money(remaining);
         remainingEl.classList.toggle('text-amber-700', remaining > 0);
