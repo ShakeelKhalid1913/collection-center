@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'phone' => $_POST['phone'] ?? '',
             'age' => (int)($_POST['age'] ?? 0),
             'gender' => $_POST['gender'] ?? 'Female',
+            'doctor' => trim($_POST['doctor'] ?? ''),
+            'referring_doctor' => trim($_POST['doctor'] ?? ''),
+            'address' => trim($_POST['address'] ?? ''),
             'branch' => 'LAB-01',
             'created_by' => current_user()['id'] ?? null,
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
@@ -39,6 +42,10 @@ $content .= card(
     form_field('Mobile', 'phone') .
     form_field('Age', 'age', 'number') .
     select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male']) .
+    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Walk-in / Self', true) .
+    '<div class="sm:col-span-2">' .
+    form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .
+    '</div>' .
     '<div class="sm:col-span-2">' . btn_submit('Save') . '</div></form>'
 );
 

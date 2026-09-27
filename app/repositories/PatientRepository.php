@@ -76,6 +76,8 @@ class PatientRepository
             $dob = null;
         }
 
+        $doctor = $data['referring_doctor'] ?? $data['doctor'] ?? '';
+
         $ok = $this->db->execute($sql, [
             'id' => $id,
             'org_id' => $data['organization_id'] ?? 'ORG-001',
@@ -94,7 +96,7 @@ class PatientRepository
             'gender' => $data['gender'] ?? 'Male',
             'address' => $data['address'] ?? '',
             'city' => $data['city'] ?? '',
-            'emergency_name' => $data['emergency_name'] ?? '',
+            'emergency_name' => $doctor !== '' ? $doctor : ($data['emergency_name'] ?? ''),
             'emergency_phone' => $data['emergency_phone'] ?? '',
             'notes' => $data['notes'] ?? $data['internal_notes'] ?? '',
             'patient_type' => $data['patient_type'] ?? $data['ptype'] ?? 'Walk-in',
@@ -102,6 +104,12 @@ class PatientRepository
             'branch' => $data['branch'] ?? 'CC-01',
             'created_by' => $data['created_by'] ?? null,
         ]);
+
+        if ($ok && $doctor !== '') {
+            try {
+                $this->db->execute("UPDATE patients SET referring_doctor = :doc WHERE id = :id", ['doc' => $doctor, 'id' => $id]);
+            } catch (\PDOException $ignored) {}
+        }
 
         return ['success' => $ok, 'id' => $id, 'patient_no' => $patientNo];
     }

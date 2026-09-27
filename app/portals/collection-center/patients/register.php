@@ -21,6 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'blood_group' => $_POST['blood_group'] ?? '',
             'email' => $_POST['email'] ?? '',
             'dob' => $_POST['dob'] ?? null,
+            'doctor' => trim($_POST['doctor'] ?? ''),
+            'referring_doctor' => trim($_POST['doctor'] ?? ''),
             'address' => $_POST['address'] ?? '',
             'city' => $_POST['city'] ?? '',
             'notes' => $_POST['notes'] ?? '',
@@ -62,6 +64,7 @@ $form = '<form method="post">' . card(
     form_field('CNIC / B-Form / Passport', 'cnic', 'text', null, 'xxxxx-xxxxxxx-x', true) .
     select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field('Email', 'email', 'email', null, '', true) .
+    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Self', true) .
     '<div class="sm:col-span-2 lg:col-span-3">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .
     '</div>' .

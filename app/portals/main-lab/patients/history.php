@@ -82,13 +82,18 @@ $content .= <<<HTML
 </div>
 HTML;
 
+$docDisplay = e($selectedPatient['referring_doctor'] ?? $selectedPatient['doctor'] ?? $selectedPatient['emergency_name'] ?? '—');
+$addrDisplay = e($selectedPatient['address'] ?? '—');
+
 // Patient Summary Card
 $content .= <<<HTML
-<div class="mb-4 grid gap-3 sm:grid-cols-4 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+<div class="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm">
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Patient Name</span><strong class="text-slate-900 text-base">{$patientName}</strong></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">MR Number</span><strong class="text-teal-800 font-mono text-base">{$mrNo}</strong></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Phone</span><span class="text-slate-800 font-mono">{$phone}</span></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Age / Gender</span><span class="text-slate-800">{$ageGender}</span></div>
+    <div><span class="text-slate-500 block text-xs font-semibold uppercase">Doctor</span><span class="text-slate-800 font-medium">{$docDisplay}</span></div>
+    <div><span class="text-slate-500 block text-xs font-semibold uppercase">Address</span><span class="text-slate-800 truncate block" title="{$addrDisplay}">{$addrDisplay}</span></div>
 </div>
 HTML;
 

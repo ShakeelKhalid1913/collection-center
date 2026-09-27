@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS patients (
     gender          VARCHAR(16),
     address         TEXT,
     city            VARCHAR(64),
+    referring_doctor VARCHAR(255),
     emergency_name  VARCHAR(255),
     emergency_phone VARCHAR(32),
     photo_path      VARCHAR(512),

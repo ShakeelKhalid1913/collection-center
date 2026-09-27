@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'cnic' => $_POST['cnic'] ?? '',
             'blood_group' => $_POST['blood_group'] ?? '',
             'email' => $_POST['email'] ?? '',
+            'doctor' => resolve_doctor_name($_POST['doctor_id'] ?? ''),
             'address' => $_POST['address'] ?? '',
             'notes' => $_POST['notes'] ?? '',
             'branch' => 'CC-01',
