@@ -8,12 +8,14 @@ require_once __DIR__ . '/../../../includes/components.php';
 
 $rows = [];
 foreach (mock('mock_results_pending') as $r) {
+    $actions = '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($r['lab_no']) . '" class="btn btn-primary text-xs mr-2"><i class="fa-solid fa-pen-to-square mr-1"></i> Enter Results</a>';
+    $actions .= '<a href="/portals/main-lab/reports/preview.php?lab_no=' . urlencode($r['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> View Report</a>';
     $rows[] = [
         e($r['lab_no']),
         e($r['patient']),
         e($r['test']),
         e($r['due'] ?? 'Today'),
-        btn_primary('/portals/main-lab/results/entry.php?id=' . urlencode($r['id']), 'Enter'),
+        $actions,
     ];
 }
 

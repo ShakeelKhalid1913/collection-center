@@ -72,11 +72,13 @@ $content .= $message;
 $content .= '<form method="post"><div class="grid gap-5 xl:grid-cols-3">';
 $content .= '<div class="xl:col-span-2 space-y-5">';
 
+$selectedPatientId = trim((string)($_GET['patient_id'] ?? ''));
+
 $content .= card(
     panel_head('Patient & referral') .
     '<div class="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">' .
-    select_field('Patient', 'patient_id', $patientOpts) .
-    form_field('Or scan / enter patient ID', 'patient_scan', 'text', null, 'P-xxxxx', true) .
+    select_field('Patient', 'patient_id', $patientOpts, $selectedPatientId) .
+    form_field('Or scan / enter patient ID', 'patient_scan', 'text', $selectedPatientId, 'P-xxxxx / MR-xxxxx', true) .
     select_field('Referring doctor', 'doctor_id', $doctorOpts) .
     select_field('Route to', 'route_id', $routeOpts, 'RT-MAIN') .
     select_field('Priority', 'priority', [

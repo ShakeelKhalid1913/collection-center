@@ -11,7 +11,12 @@ $ctx = load_document_context($labNo !== '' ? $labNo : null);
 $previewUrl = '/portals/main-lab/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 
 $content = page_header('Report Preview', 'High-contrast layout for print and PDF export.');
+$content .= '<div class="no-print mb-4 flex flex-wrap gap-2 items-center justify-between">';
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
-$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT', $ctx['signatories'] ?? []) . '</div>';
+if ($labNo !== '') {
+    $content .= '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($labNo) . '" class="btn btn-primary"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Test Results for this Patient</a>';
+}
+$content .= '</div>';
+$content .= '<div class="mt-4">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT', $ctx['signatories'] ?? []) . '</div>';
 
 render_page('Report Preview', 'main-lab', 'reports-generate', $content, true);

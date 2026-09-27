@@ -87,6 +87,32 @@ class LabEntryRepository
         return ['success' => $ok, 'lab_no' => $labNo, 'id' => $id];
     }
 
+    public function getByPatientId(string $patientId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM lab_entries WHERE patient_id = :pid ORDER BY created_at DESC",
+            ['pid' => $patientId]
+        );
+    }
+
+    public function updateEntry(string $labNo, array $data): bool
+    {
+        $fields = [];
+        $params = ['lab_no' => $labNo];
+        $allowed = ['tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes'];
+        foreach ($allowed as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "{$f} = :{$f}";
+                $params[$f] = $data[$f];
+            }
+        }
+        if (empty($fields)) return true;
+        return $this->db->execute(
+            "UPDATE lab_entries SET " . implode(', ', $fields) . " WHERE lab_no = :lab_no",
+            $params
+        );
+    }
+
     public function updateStatus(string $labNo, string $status, ?string $sampleStatus = null): bool
     {
         if ($sampleStatus !== null) {

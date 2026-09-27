@@ -20,8 +20,8 @@ foreach (mock('mock_patients') as $p) {
         e($p['branch'] ?? '—'),
         e(format_date($p['registered'] ?? null)),
         '<div class="flex flex-wrap gap-2">' .
-        btn_secondary('/portals/collection-center/lab-entries/new.php', 'New entry') .
-        btn_secondary('/portals/collection-center/patients/register.php', 'Edit') .
+        '<a href="/portals/collection-center/lab-entries/new.php?patient_id=' . urlencode($p['id']) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Assign Tests</a>' .
+        '<a href="/portals/collection-center/patients/history.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
         '</div>',
     ];
 }

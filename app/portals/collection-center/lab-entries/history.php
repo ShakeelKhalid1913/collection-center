@@ -22,6 +22,7 @@ foreach (mock('mock_lab_entries') as $e) {
         e(format_money(max(0, (float) $e['amount'] - (float) $e['paid']))),
         e(format_date($e['date'])),
         '<div class="flex flex-wrap gap-2">' .
+        '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
         btn_secondary('/portals/collection-center/receipts.php?lab_no=' . $labQ, 'Receipt') .
         btn_secondary('/portals/collection-center/reports/preview.php?lab_no=' . $labQ, 'Report') .
         '</div>',

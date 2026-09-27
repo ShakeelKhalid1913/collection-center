@@ -24,8 +24,8 @@ foreach (mock('mock_lab_entries') as $e) {
         e(format_money($remaining)),
         e(format_date($e['date'])),
         '<div class="flex flex-wrap gap-2">' .
-        link_action('Collect sample') . ' · ' .
-        link_action('Edit') .
+        '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . urlencode($e['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
+        btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode($e['lab_no']), 'Receipt') .
         '</div>',
     ];
 }
