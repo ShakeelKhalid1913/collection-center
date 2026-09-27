@@ -12,6 +12,6 @@ $previewUrl = '/portals/main-lab/reports/preview.php' . ($labNo !== '' ? '?lab_n
 
 $content = page_header('Report Preview', 'High-contrast layout for print and PDF export.');
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
-$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT') . '</div>';
+$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT', $ctx['signatories'] ?? []) . '</div>';
 
 render_page('Report Preview', 'main-lab', 'reports-generate', $content, true);

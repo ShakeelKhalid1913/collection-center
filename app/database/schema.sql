@@ -81,6 +81,32 @@ CREATE TABLE IF NOT EXISTS tests (
     INDEX idx_tests_category (category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS test_parameters (
+    id              VARCHAR(64) PRIMARY KEY,
+    test_id         VARCHAR(64) NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    unit            VARCHAR(32),
+    normal_value    VARCHAR(128),
+    reference_range VARCHAR(128),
+    sort_order      INT DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
+    INDEX idx_test_params_test (test_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS report_signatories (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL,
+    slot_number     INT NOT NULL DEFAULT 1,
+    name            VARCHAR(255) NOT NULL,
+    qualifications  TEXT,
+    designation     VARCHAR(255),
+    is_active       TINYINT(1) DEFAULT 1,
+    sort_order      INT DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_signatories_org (organization_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS packages (
     id              VARCHAR(64) PRIMARY KEY,
     organization_id VARCHAR(64) NOT NULL,

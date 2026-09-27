@@ -149,4 +149,43 @@ class SettingRepository
             ['org_id' => $orgId]
         );
     }
+    public function getSignatories(string $orgId = 'ORG-001'): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM report_signatories WHERE organization_id = :org_id AND is_active = 1 ORDER BY sort_order ASC",
+                ['org_id' => $orgId]
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    public function saveSignatories(string $orgId, array $signatories): bool
+    {
+        try {
+            $this->db->execute("DELETE FROM report_signatories WHERE organization_id = :org_id", ['org_id' => $orgId]);
+            foreach ($signatories as $index => $sig) {
+                if (empty($sig['name'])) {
+                    continue;
+                }
+                $this->db->execute(
+                    "INSERT INTO report_signatories (id, organization_id, slot_number, name, qualifications, designation, sort_order)
+                     VALUES (:id, :org_id, :slot, :name, :quals, :desig, :sort)",
+                    [
+                        'id' => 'SIG-' . bin2hex(random_bytes(4)),
+                        'org_id' => $orgId,
+                        'slot' => $index + 1,
+                        'name' => $sig['name'],
+                        'quals' => $sig['qualifications'] ?? '',
+                        'desig' => $sig['designation'] ?? '',
+                        'sort' => $index
+                    ]
+                );
+            }
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }

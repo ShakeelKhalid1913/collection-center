@@ -9,7 +9,7 @@ use PDOException;
 
 require_once __DIR__ . '/Database.php';
 
-function runSetup(): array
+function runSetup(): array  
 {
     $config = require __DIR__ . '/../config/database.php';
     $logs = [];
@@ -191,6 +191,9 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN header_image LONGBLOB NULL",
             "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
             "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
+            "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
+            "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
+            "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
         ] as $alter) {
             try {
                 $pdo->exec($alter);
@@ -198,6 +201,32 @@ function runSetup(): array
                 // Column already exists
             }
         }
+
+        // Ensure new tables exist on older DBs
+        $pdo->exec("CREATE TABLE IF NOT EXISTS test_parameters (
+            id              VARCHAR(64) PRIMARY KEY,
+            test_id         VARCHAR(64) NOT NULL,
+            name            VARCHAR(255) NOT NULL,
+            unit            VARCHAR(32),
+            normal_value    VARCHAR(128),
+            reference_range VARCHAR(128),
+            sort_order      INT DEFAULT 0,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_test_params_test (test_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS report_signatories (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL,
+            slot_number     INT NOT NULL DEFAULT 1,
+            name            VARCHAR(255) NOT NULL,
+            qualifications  TEXT,
+            designation     VARCHAR(255),
+            is_active       TINYINT(1) DEFAULT 1,
+            sort_order      INT DEFAULT 0,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_signatories_org (organization_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // Re-seed expanded tests (INSERT IGNORE) so existing DBs get Uric Acid etc.
         $stmtTestExtra = $pdo->prepare("INSERT IGNORE INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?)");

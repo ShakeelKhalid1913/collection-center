@@ -71,8 +71,8 @@ class TestRepository
             return ['success' => false, 'error' => 'Code and name are required.'];
         }
         $ok = $this->db->execute(
-            "INSERT INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range)
-             VALUES (:id, :org_id, :code, :name, :category, :price, :sample_type, :unit, :normal_range)",
+            "INSERT INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range, normal_value, reference_value, methodology)
+             VALUES (:id, :org_id, :code, :name, :category, :price, :sample_type, :unit, :normal_range, :normal_value, :reference_value, :methodology)",
             [
                 'id' => $id,
                 'org_id' => $data['organization_id'] ?? 'ORG-001',
@@ -83,6 +83,9 @@ class TestRepository
                 'sample_type' => $data['sample_type'] ?? $data['sample'] ?? 'Blood',
                 'unit' => $data['unit'] ?? '—',
                 'normal_range' => $data['normal_range'] ?? $data['range'] ?? '—',
+                'normal_value' => $data['normal_value'] ?? '',
+                'reference_value' => $data['reference_value'] ?? '',
+                'methodology' => $data['methodology'] ?? '',
             ]
         );
         return ['success' => $ok, 'id' => $id];
@@ -109,5 +112,78 @@ class TestRepository
             ]
         );
         return ['success' => $ok, 'id' => $id];
+    }
+
+    public function getParameters(string $testId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM test_parameters WHERE test_id = :test_id ORDER BY sort_order",
+            ['test_id' => $testId]
+        );
+    }
+
+    public function getParametersByTestIds(array $testIds): array
+    {
+        if ($testIds === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($testIds), '?'));
+        $rows = $this->db->fetchAll(
+            "SELECT * FROM test_parameters WHERE test_id IN ({$placeholders}) ORDER BY test_id, sort_order",
+            $testIds
+        );
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['test_id']][] = $row;
+        }
+        return $result;
+    }
+
+    public function saveParameters(string $testId, array $params): bool
+    {
+        $this->db->execute("DELETE FROM test_parameters WHERE test_id = :test_id", ['test_id' => $testId]);
+        foreach ($params as $i => $p) {
+            $id = 'PRM-' . bin2hex(random_bytes(4));
+            $this->db->execute(
+                "INSERT INTO test_parameters (id, test_id, name, unit, normal_value, reference_range, sort_order)
+                 VALUES (:id, :test_id, :name, :unit, :normal_value, :reference_range, :sort_order)",
+                [
+                    'id' => $id,
+                    'test_id' => $testId,
+                    'name' => $p['name'] ?? '',
+                    'unit' => $p['unit'] ?? '',
+                    'normal_value' => $p['normal_value'] ?? '',
+                    'reference_range' => $p['reference_range'] ?? '',
+                    'sort_order' => $i,
+                ]
+            );
+        }
+        return true;
+    }
+
+    public function deleteTest(string $testId): bool
+    {
+        return $this->db->execute("DELETE FROM tests WHERE id = :id", ['id' => $testId]);
+    }
+
+    public function updateTest(string $testId, array $data): bool
+    {
+        $sets = [];
+        $params = ['id' => $testId];
+        $allowed = ['code', 'name', 'category', 'price', 'sample_type', 'unit', 'normal_range', 'normal_value', 'reference_value', 'methodology'];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $data)) {
+                $sets[] = "{$field} = :{$field}";
+                $params[$field] = $data[$field];
+            }
+        }
+        if ($sets === []) return true;
+        return $this->db->execute("UPDATE tests SET " . implode(', ', $sets) . " WHERE id = :id", $params);
+    }
+
+    public function findById(string $testId): ?array
+    {
+        $row = $this->db->fetchOne("SELECT * FROM tests WHERE id = :id", ['id' => $testId]);
+        return $row ?: null;
     }
 }

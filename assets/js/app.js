@@ -195,7 +195,53 @@
     });
   }
 
+  function initTestParameters() {
+    const list = document.querySelector('[data-param-list]');
+    const addBtn = document.querySelector('[data-add-param]');
+    if (!list || !addBtn) return;
+
+    addBtn.addEventListener('click', () => {
+      const row = document.createElement('div');
+      row.className = 'grid gap-2 items-end';
+      row.style.gridTemplateColumns = '1fr 0.6fr 0.8fr 0.8fr auto';
+      row.innerHTML = `
+        <div>
+          <label class="field-label">Parameter Name</label>
+          <input type="text" name="param_name[]" class="field" placeholder="e.g. Hemoglobin" required>
+        </div>
+        <div>
+          <label class="field-label">Unit</label>
+          <input type="text" name="param_unit[]" class="field" placeholder="g/dL">
+        </div>
+        <div>
+          <label class="field-label">Normal Value</label>
+          <input type="text" name="param_normal[]" class="field" placeholder="13-17">
+        </div>
+        <div>
+          <label class="field-label">Reference Range</label>
+          <input type="text" name="param_range[]" class="field" placeholder="11.5-16.0">
+        </div>
+        <div class="flex items-end pb-1">
+          <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem;color:#dc2626" data-remove-param title="Remove">&times;</button>
+        </div>
+      `;
+      list.appendChild(row);
+      
+      row.querySelector('[data-remove-param]').addEventListener('click', () => {
+        row.remove();
+      });
+    });
+    
+    // Attach to any existing remove buttons (if pre-rendered in edit mode)
+    list.querySelectorAll('[data-remove-param]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.target.closest('div.grid').remove();
+      });
+    });
+  }
+
   initBilling();
   initCatalogSearch();
   initPdfDownload();
+  initTestParameters();
 })();

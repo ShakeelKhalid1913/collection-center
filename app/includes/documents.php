@@ -258,6 +258,7 @@ function load_document_context(?string $labNo): array
         'entry' => $entry,
         'lines' => $lines,
         'report_title' => $reportTitle,
+        'signatories' => setting_repo()->getSignatories($settings['organization_id'] ?? 'ORG-001'),
     ];
 }
 
@@ -328,10 +329,35 @@ function render_branded_footer(array $settings, bool $forBill = false): string
     return $labLine . software_credit_footer(true);
 }
 
+function render_report_signatories(array $signatories): string
+{
+    if (empty($signatories)) {
+        return '';
+    }
+    $html = '<div class="lab-report__signatories">';
+    foreach ($signatories as $sig) {
+        $name = e($sig['name']);
+        $quals = e($sig['qualifications'] ?? '');
+        $desig = e($sig['designation'] ?? '');
+        
+        $html .= '<div class="lab-report__signatory">';
+        $html .= '<div class="lab-report__signatory-name">' . $name . '</div>';
+        if ($quals !== '') {
+            $html .= '<div class="lab-report__signatory-quals">' . nl2br($quals) . '</div>';
+        }
+        if ($desig !== '') {
+            $html .= '<div class="lab-report__signatory-quals">' . $desig . '</div>';
+        }
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
 /**
  * Infinity-style clinical lab report.
  */
-function render_report_document(array $settings, array $patient, array $resultLines, ?array $entry = null, string $reportTitle = 'LABORATORY REPORT'): string
+function render_report_document(array $settings, array $patient, array $resultLines, ?array $entry = null, string $reportTitle = 'LABORATORY REPORT', array $signatories = []): string
 {
     $letterhead = render_letterhead_image($settings);
     $logoImg = brand_logo('brand-logo brand-logo--report');
@@ -410,6 +436,8 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $credit = software_credit_footer(true);
     $printStamp = e(date('h:i:s A'));
     $addrLine = trim($address . ($phone !== '' ? '  ·  ' . $phone : '') . ($email !== '' ? '  ·  ' . $email : ''));
+    
+    $signatoriesHtml = render_report_signatories($signatories);
 
     return <<<HTML
     <div class="print-area lab-report">
@@ -478,6 +506,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
         <footer class="lab-report__footer">
             <p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically verified report — not valid for legal proceedings unless stamped.</p>
             {$footerBlock}
+            {$signatoriesHtml}
             <div class="lab-report__contact-bar">{$addrLine}</div>
             <div class="lab-report__bottom-line">
                 <span>Page 1 of 1</span>
