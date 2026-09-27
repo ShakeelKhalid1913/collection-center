@@ -194,6 +194,12 @@ function runSetup(): array
             "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
+            "ALTER TABLE test_parameters ADD COLUMN section VARCHAR(128) NULL",
+            "ALTER TABLE test_parameters ADD COLUMN sub_table TEXT NULL",
+            "ALTER TABLE results ADD COLUMN section VARCHAR(128) NULL",
+            "ALTER TABLE results ADD COLUMN reference_range VARCHAR(128) NULL",
+            "ALTER TABLE results ADD COLUMN sub_table TEXT NULL",
+            "ALTER TABLE results ADD COLUMN sort_order INT DEFAULT 0",
         ] as $alter) {
             try {
                 $pdo->exec($alter);
@@ -206,10 +212,12 @@ function runSetup(): array
         $pdo->exec("CREATE TABLE IF NOT EXISTS test_parameters (
             id              VARCHAR(64) PRIMARY KEY,
             test_id         VARCHAR(64) NOT NULL,
+            section         VARCHAR(128) NULL,
             name            VARCHAR(255) NOT NULL,
             unit            VARCHAR(32),
             normal_value    VARCHAR(128),
             reference_range VARCHAR(128),
+            sub_table       TEXT NULL,
             sort_order      INT DEFAULT 0,
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_test_params_test (test_id)
@@ -228,6 +236,69 @@ function runSetup(): array
             INDEX idx_signatories_org (organization_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Seed CBC Parameters (Chughtai Lab structure)
+        $cbcParams = [
+            // ERYTHROCYTES
+            ['PRM-CBC-01', 'TST-01', 'ERYTHROCYTES', 'Hemoglobin (HB)', 'g/dl', '12.0 - 16.5', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 1],
+            ['PRM-CBC-02', 'TST-01', 'ERYTHROCYTES', 'Total RBCs', 'X10^12/L', '4.50 - 6.50', '4.50 - 6.50', null, 2],
+            // ABSOLUTE VALUES
+            ['PRM-CBC-03', 'TST-01', 'ABSOLUTE VALUES', 'HCT (Hematocrit)', '%', '38.0 - 52.0', '38.0 - 52.0', null, 3],
+            ['PRM-CBC-04', 'TST-01', 'ABSOLUTE VALUES', 'MCV', 'Fl', '75.0 - 95.0', '75.0 - 95.0', null, 4],
+            ['PRM-CBC-05', 'TST-01', 'ABSOLUTE VALUES', 'MCH', 'Pg', '27.0 - 32.0', '27.0 - 32.0', null, 5],
+            ['PRM-CBC-06', 'TST-01', 'ABSOLUTE VALUES', 'MCHC', 'g/dl', '30.0 - 35.0', '30.0 - 35.0', null, 6],
+            // THROMBOCYTE
+            ['PRM-CBC-07', 'TST-01', 'THROMBOCYTE', 'Platelet Count', 'x10^3/µL', '150 - 400', '150 - 400', null, 7],
+            // Differential Leukocytes Count
+            ['PRM-CBC-08', 'TST-01', 'Differential Leukocytes Count', 'WBC (TLC)', 'K/uL', '4.0 - 11.0', '4.0 - 11.0', null, 8],
+            ['PRM-CBC-09', 'TST-01', 'Differential Leukocytes Count', 'Neutrophils', '%', '40 - 75', '40 - 75', null, 9],
+            ['PRM-CBC-10', 'TST-01', 'Differential Leukocytes Count', 'Lymphocytes', '%', '20 - 50', '20 - 50', null, 10],
+            ['PRM-CBC-11', 'TST-01', 'Differential Leukocytes Count', 'Monocytes', '%', '02 - 10', '02 - 10', null, 11],
+            ['PRM-CBC-12', 'TST-01', 'Differential Leukocytes Count', 'Eosinophils', '%', '01 - 06', '01 - 06', null, 12],
+            ['PRM-CBC-13', 'TST-01', 'Differential Leukocytes Count', 'ESR', 'mm/1stHr', '0 - 18', '0 - 18', null, 13],
+        ];
+        $stmtCbcParam = $pdo->prepare("INSERT INTO test_parameters (id, test_id, section, name, unit, normal_value, reference_range, sub_table, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE section=VALUES(section), name=VALUES(name), unit=VALUES(unit), normal_value=VALUES(normal_value), reference_range=VALUES(reference_range), sub_table=VALUES(sub_table), sort_order=VALUES(sort_order)");
+        foreach ($cbcParams as $cp) {
+            $stmtCbcParam->execute($cp);
+        }
+
+        // Seed Default Doctor Signatories
+        $signatoriesSeed = [
+            ['SIG-01', 'ORG-001', 1, 'Dr Alina', "M.B.B.S, M Phill Hematology\nAssistant Professor\nConsultant Pathologist", 'Assistant Professor / Consultant Pathologist', 1, 0],
+            ['SIG-02', 'ORG-001', 2, 'Dr M Mujeeb Ur Rehman', "M.B.B.S (Pak) R.M.P (PMC)\nPMC Reg # 712493-01-M", 'Consultant Physician', 1, 1],
+            ['SIG-03', 'ORG-001', 3, 'IMRAN AFZAL (MLT)', "Medical Lab Technology", 'Head Lab Technologist', 1, 2],
+        ];
+        $stmtSig = $pdo->prepare("INSERT INTO report_signatories (id, organization_id, slot_number, name, qualifications, designation, is_active, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name=VALUES(name), qualifications=VALUES(qualifications), designation=VALUES(designation)");
+        foreach ($signatoriesSeed as $sRow) {
+            $stmtSig->execute($sRow);
+        }
+
+        // Seed Full CBC Results for Lab Entry L-2026-0891
+        $cbcResultsSeed = [
+            ['R-CBC-01', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ERYTHROCYTES', 'Hemoglobin (HB)', '14.9', 'g/dl', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 'normal', 1],
+            ['R-CBC-02', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ERYTHROCYTES', 'Total RBCs', '6.03', 'X10^12/L', '4.50 - 6.50', null, 'normal', 2],
+            ['R-CBC-03', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'HCT (Hematocrit)', '45.9', '%', '38.0 - 52.0', null, 'normal', 3],
+            ['R-CBC-04', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCV', '76.2', 'Fl', '75.0 - 95.0', null, 'normal', 4],
+            ['R-CBC-05', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCH', '26.3', 'Pg', '27.0 - 32.0', null, 'L', 5],
+            ['R-CBC-06', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCHC', '34.5', 'g/dl', '30.0 - 35.0', null, 'normal', 6],
+            ['R-CBC-07', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'THROMBOCYTE', 'Platelet Count', '267', 'x10^3/µL', '150 - 400', null, 'normal', 7],
+            ['R-CBC-08', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'WBC (TLC)', '9.70', 'K/uL', '4.0 - 11.0', null, 'normal', 8],
+            ['R-CBC-09', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Neutrophils', '55', '%', '40 - 75', null, 'normal', 9],
+            ['R-CBC-10', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Lymphocytes', '35', '%', '20 - 50', null, 'normal', 10],
+            ['R-CBC-11', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Monocytes', '06', '%', '02 - 10', null, 'normal', 11],
+            ['R-CBC-12', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Eosinophils', '04', '%', '01 - 06', null, 'normal', 12],
+            ['R-CBC-13', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'ESR', '14', 'mm/1stHr', '0 - 18', null, 'normal', 13],
+        ];
+        $stmtCbcRes = $pdo->prepare("INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE section=VALUES(section), parameter=VALUES(parameter), value=VALUES(value), unit=VALUES(unit), reference_range=VALUES(reference_range), sub_table=VALUES(sub_table), flag=VALUES(flag), sort_order=VALUES(sort_order)");
+        foreach ($cbcResultsSeed as $rRow) {
+            $stmtCbcRes->execute($rRow);
+        }
+
         // Re-seed expanded tests (INSERT IGNORE) so existing DBs get Uric Acid etc.
         $stmtTestExtra = $pdo->prepare("INSERT IGNORE INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?)");
         foreach ($tests as $tRow) {
@@ -238,6 +309,8 @@ function runSetup(): array
         $pdo->exec("UPDATE tests SET category = 'Special Chemistry' WHERE category IN ('Hormones','Immunology')");
         $pdo->exec("UPDATE tests SET category = 'Chemistry' WHERE category IN ('Clinical Pathology')");
         $logs[] = "Catalog synced (departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology, Microbiology).";
+        $logs[] = "CBC (Complete Blood Count) pre-configured with 13 parameters and Chughtai Lab sections.";
+        $logs[] = "Default doctor signatories seeded for report footer.";
 
         $logs[] = "All tables & seed data inserted successfully!";
         return ['success' => true, 'logs' => $logs];

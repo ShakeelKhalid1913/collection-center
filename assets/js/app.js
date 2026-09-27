@@ -202,24 +202,28 @@
 
     addBtn.addEventListener('click', () => {
       const row = document.createElement('div');
-      row.className = 'grid gap-2 items-end';
-      row.style.gridTemplateColumns = '1fr 0.6fr 0.8fr 0.8fr auto';
+      row.className = 'grid gap-2 items-end p-2 bg-slate-50 border border-slate-200 rounded';
+      row.style.gridTemplateColumns = '0.9fr 1.1fr 0.5fr 0.7fr 0.7fr auto';
       row.innerHTML = `
         <div>
-          <label class="field-label">Parameter Name</label>
-          <input type="text" name="param_name[]" class="field" placeholder="e.g. Hemoglobin" required>
+          <label class="field-label text-xs">Section / Group</label>
+          <input type="text" name="param_section[]" class="field text-sm" placeholder="e.g. ERYTHROCYTES">
         </div>
         <div>
-          <label class="field-label">Unit</label>
-          <input type="text" name="param_unit[]" class="field" placeholder="g/dL">
+          <label class="field-label text-xs">Parameter Name</label>
+          <input type="text" name="param_name[]" class="field text-sm" placeholder="e.g. Hemoglobin (HB)" required>
         </div>
         <div>
-          <label class="field-label">Normal Value</label>
-          <input type="text" name="param_normal[]" class="field" placeholder="13-17">
+          <label class="field-label text-xs">Unit</label>
+          <input type="text" name="param_unit[]" class="field text-sm" placeholder="g/dl">
         </div>
         <div>
-          <label class="field-label">Reference Range</label>
-          <input type="text" name="param_range[]" class="field" placeholder="11.5-16.0">
+          <label class="field-label text-xs">Normal Value</label>
+          <input type="text" name="param_normal[]" class="field text-sm" placeholder="12.0 - 16.5">
+        </div>
+        <div>
+          <label class="field-label text-xs">Reference Range</label>
+          <input type="text" name="param_range[]" class="field text-sm" placeholder="12.0 - 16.5">
         </div>
         <div class="flex items-end pb-1">
           <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem;color:#dc2626" data-remove-param title="Remove">&times;</button>

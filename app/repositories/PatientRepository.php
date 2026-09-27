@@ -55,8 +55,9 @@ class PatientRepository
 
     public function create(array $data): array
     {
-        $patientNo = $data['patient_no'] ?? ('P-' . rand(10000, 99999));
-        $id = $data['id'] ?? $patientNo;
+        $manualNo = trim((string)($data['patient_no'] ?? ''));
+        $patientNo = $manualNo !== '' ? $manualNo : ('MR-' . rand(10000, 99999));
+        $id = $data['id'] ?? ('P-' . bin2hex(random_bytes(4)));
 
         $sql = "INSERT INTO patients (
                     id, organization_id, patient_no, title, full_name, relation, relation_of,

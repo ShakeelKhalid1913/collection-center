@@ -84,10 +84,12 @@ CREATE TABLE IF NOT EXISTS tests (
 CREATE TABLE IF NOT EXISTS test_parameters (
     id              VARCHAR(64) PRIMARY KEY,
     test_id         VARCHAR(64) NOT NULL,
+    section         VARCHAR(128) NULL,
     name            VARCHAR(255) NOT NULL,
     unit            VARCHAR(32),
     normal_value    VARCHAR(128),
     reference_range VARCHAR(128),
+    sub_table       TEXT NULL,
     sort_order      INT DEFAULT 0,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
@@ -160,18 +162,23 @@ CREATE TABLE IF NOT EXISTS samples (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS results (
-    id           VARCHAR(64) PRIMARY KEY,
-    lab_no       VARCHAR(32) NOT NULL,
-    patient      VARCHAR(255) NOT NULL,
-    test         VARCHAR(255) NOT NULL,
-    due          VARCHAR(64) DEFAULT 'Today',
-    parameter    VARCHAR(128) NULL,
-    value        VARCHAR(64) NULL,
-    unit         VARCHAR(32) NULL,
-    flag         VARCHAR(16) NULL,
-    verified_at  DATETIME NULL,
-    verified_by  VARCHAR(64) NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              VARCHAR(64) PRIMARY KEY,
+    lab_no          VARCHAR(32) NOT NULL,
+    patient         VARCHAR(255) NOT NULL,
+    test            VARCHAR(255) NOT NULL,
+    due             VARCHAR(64) DEFAULT 'Today',
+    section         VARCHAR(128) NULL,
+    parameter       VARCHAR(128) NULL,
+    value           VARCHAR(64) NULL,
+    unit            VARCHAR(32) NULL,
+    reference_range VARCHAR(128) NULL,
+    sub_table       TEXT NULL,
+    flag            VARCHAR(16) NULL,
+    sort_order      INT DEFAULT 0,
+    verified_at     DATETIME NULL,
+    verified_by     VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_results_lab (lab_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS imaging_scans (

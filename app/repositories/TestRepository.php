@@ -145,20 +145,31 @@ class TestRepository
         foreach ($params as $i => $p) {
             $id = 'PRM-' . bin2hex(random_bytes(4));
             $this->db->execute(
-                "INSERT INTO test_parameters (id, test_id, name, unit, normal_value, reference_range, sort_order)
-                 VALUES (:id, :test_id, :name, :unit, :normal_value, :reference_range, :sort_order)",
+                "INSERT INTO test_parameters (id, test_id, section, name, unit, normal_value, reference_range, sub_table, sort_order)
+                 VALUES (:id, :test_id, :section, :name, :unit, :normal_value, :reference_range, :sub_table, :sort_order)",
                 [
                     'id' => $id,
                     'test_id' => $testId,
+                    'section' => !empty($p['section']) ? trim($p['section']) : null,
                     'name' => $p['name'] ?? '',
                     'unit' => $p['unit'] ?? '',
                     'normal_value' => $p['normal_value'] ?? '',
                     'reference_range' => $p['reference_range'] ?? '',
-                    'sort_order' => $i,
+                    'sub_table' => !empty($p['sub_table']) ? trim($p['sub_table']) : null,
+                    'sort_order' => $i + 1,
                 ]
             );
         }
         return true;
+    }
+
+    public function findByCode(string $code, string $orgId = 'ORG-001'): ?array
+    {
+        $row = $this->db->fetchOne(
+            "SELECT * FROM tests WHERE (code = :code OR name = :name) AND organization_id = :org_id LIMIT 1",
+            ['code' => $code, 'name' => $code, 'org_id' => $orgId]
+        );
+        return $row ?: null;
     }
 
     public function deleteTest(string $testId): bool

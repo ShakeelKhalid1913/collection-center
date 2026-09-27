@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = flash_error('Full name is required.');
     } else {
         $res = patient_repo()->create([
+            'patient_no' => trim($_POST['patient_no'] ?? ''),
             'full_name' => $name,
             'phone' => $_POST['phone'] ?? '',
             'age' => (int)($_POST['age'] ?? 0),
@@ -33,6 +34,7 @@ $content = page_header('Register Patient', 'Shared patient database across all p
 $content .= $message;
 $content .= card(
     '<form method="post" class="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">' .
+    form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
     form_field('Full name', 'name') .
     form_field('Mobile', 'phone') .
     form_field('Age', 'age', 'number') .

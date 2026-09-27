@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullName = trim($_POST['full_name'] ?? '');
     if ($fullName !== '') {
         $res = patient_repo()->create([
+            'patient_no' => trim($_POST['patient_no'] ?? ''),
             'title' => $_POST['title'] ?? 'Mr',
             'full_name' => $fullName,
             'phone' => $_POST['phone'] ?? '',
@@ -51,6 +52,7 @@ $form = '<form method="post">' . card(
     panel_head('Patient registration') .
     '<p class="form-section-note">Title, name, mobile, gender required. CNIC / blood group / email optional (shown on report only when filled). Address prints with the lab header.</p>' .
     '<div class="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-6">' .
+    form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
     select_field('Title', 'title', $titles, 'Mr') .
     form_field('Full name', 'full_name', 'text', null, 'Legal / CNIC name') .
     form_field('Mobile (primary)', 'phone', 'tel', null, '03xx-xxxxxxx') .

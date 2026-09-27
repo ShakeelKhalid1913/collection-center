@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = flash_error('Patient full name is required.');
     } else {
         $patientRes = patient_repo()->create([
+            'patient_no' => trim($_POST['patient_no'] ?? ''),
             'title' => $_POST['title'] ?? 'Mr',
             'full_name' => $fullName,
             'phone' => $_POST['phone'] ?? '',
@@ -86,6 +87,7 @@ $patientBlock = card(
     panel_head('1. Patient details') .
     '<p class="form-section-note">Required: Title, Full name, Mobile, Gender. CNIC, blood group and email are optional — they appear on the report only when filled. Address prints on the report header area.</p>' .
     '<div class="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-6">' .
+    form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
     select_field('Title', 'title', $titles, 'Mr') .
     form_field('Full name', 'full_name', 'text', null, 'As on CNIC / slip') .
     form_field('Mobile', 'phone', 'tel', null, '03xx-xxxxxxx') .

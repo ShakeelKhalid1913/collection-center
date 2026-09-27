@@ -211,19 +211,33 @@ function load_document_context(?string $labNo): array
     $lines = [];
     $deptHint = '';
     if ($entry) {
-        $results = result_repo()->getResultsByLabNo((string)$entry['lab_no']);
+        $labNo = (string)$entry['lab_no'];
+        $results = result_repo()->getResultsByLabNo($labNo);
+        if (empty($results)) {
+            $results = result_repo()->ensureResultsInitialized(
+                $labNo,
+                (string)($entry['tests'] ?? ''),
+                (string)($patient['name'] ?? ''),
+                $settings['organization_id'] ?? 'ORG-001'
+            );
+        }
+
         foreach ($results as $r) {
             if (($r['value'] ?? '') === '' && ($r['parameter'] ?? '') === '') {
                 continue;
             }
             $lines[] = [
+                'test_title' => $r['test'] ?? '',
+                'section' => $r['section'] ?? '',
                 'test' => $r['parameter'] ?: ($r['test'] ?? 'Result'),
-                'result' => $r['value'] ?? 'Pending',
+                'result' => ($r['value'] !== null && $r['value'] !== '') ? $r['value'] : 'Pending',
                 'unit' => $r['unit'] ?? '—',
-                'range' => '—',
+                'range' => $r['reference_range'] ?: ($r['normal_value'] ?? '—'),
+                'sub_table' => $r['sub_table'] ?? '',
                 'flag' => $r['flag'] ?? '',
             ];
         }
+
         if ($lines === []) {
             $tests = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
             foreach ($tests as $tName) {
@@ -238,19 +252,35 @@ function load_document_context(?string $labNo): array
                     $deptHint = $meta['category'];
                 }
                 $lines[] = [
+                    'test_title' => $tName,
+                    'section' => '',
                     'test' => $tName,
                     'result' => 'Pending',
                     'unit' => $meta['unit'] ?? '—',
                     'range' => $meta['range'] ?? '—',
+                    'sub_table' => '',
                     'flag' => '',
                 ];
             }
         }
     }
 
+    // Determine department title
+    if ($deptHint === '' && $entry) {
+        $tests = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
+        foreach ($tests as $tName) {
+            foreach (mock('mock_tests') as $t) {
+                if (strcasecmp($t['name'], $tName) === 0 || strcasecmp($t['code'], $tName) === 0) {
+                    $deptHint = $t['category'] ?? '';
+                    break 2;
+                }
+            }
+        }
+    }
+
     $reportTitle = $deptHint !== ''
-        ? strtoupper($deptHint) . ' REPORT'
-        : 'LABORATORY REPORT';
+        ? strtoupper($deptHint) . ' REPORT:'
+        : 'LABORATORY REPORT:';
 
     return [
         'settings' => $settings,
@@ -414,21 +444,79 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $title = e(strtoupper($reportTitle));
 
     $rows = '';
+    $currentTestTitle = null;
+    $currentSection = null;
+
     foreach ($resultLines as $line) {
+        $testTitle = trim((string)($line['test_title'] ?? ''));
+        $section = trim((string)($line['section'] ?? ''));
+
+        // Print main test heading if it's a test with sections or multi-parameters
+        if ($testTitle !== '' && $testTitle !== $currentTestTitle) {
+            $currentTestTitle = $testTitle;
+            $currentSection = null;
+            $rows .= '<tr class="lab-report__test-head"><td colspan="4"><strong>' . e($testTitle) . '</strong></td></tr>';
+        }
+
+        // Print Section Banner (e.g. ERYTHROCYTES, ABSOLUTE VALUES, etc.)
+        if ($section !== '' && $section !== $currentSection) {
+            $currentSection = $section;
+            $rows .= '<tr class="lab-report__section-head"><td colspan="4"><span>' . e($section) . '</span></td></tr>';
+        }
+
         $flagRaw = strtolower((string)($line['flag'] ?? ''));
-        $flag = in_array($flagRaw, ['critical', 'h', 'l'], true)
-            ? '<span class="lab-report__flag">' . e(strtoupper($flagRaw === 'critical' ? 'CRITICAL' : $flagRaw)) . '</span>'
-            : e(($line['flag'] ?? '') !== '' ? (string)$line['flag'] : '—');
+        $resClass = 'lab-report__result';
+        $arrow = '';
+        if ($flagRaw === 'l') {
+            $resClass .= ' lab-report__result--low';
+            $arrow = ' <span class="lab-report__arrow">&darr;</span>';
+        } elseif ($flagRaw === 'h') {
+            $resClass .= ' lab-report__result--high';
+            $arrow = ' <span class="lab-report__arrow">&uarr;</span>';
+        } elseif ($flagRaw === 'critical') {
+            $resClass .= ' lab-report__result--critical';
+            $arrow = ' <span class="lab-report__flag">!</span>';
+        }
+
+        $resVal = e($line['result'] ?? 'Pending');
+        $unitVal = e($line['unit'] ?? '—');
+        $rangeVal = e($line['range'] ?? '—');
+
         $rows .= '<tr>
-            <td>' . e($line['test'] ?? '') . '</td>
-            <td class="lab-report__result">' . e($line['result'] ?? '') . '</td>
-            <td>' . e($line['unit'] ?? '') . '</td>
-            <td>' . e($line['range'] ?? '') . '</td>
-            <td>' . $flag . '</td>
+            <td class="lab-report__param-cell">' . e($line['test'] ?? '') . '</td>
+            <td>' . $unitVal . '</td>
+            <td class="font-mono text-slate-700">' . $rangeVal . '</td>
+            <td class="' . $resClass . '" style="text-align: right;">' . $resVal . $arrow . '</td>
         </tr>';
+
+        // Render sub-table if present (e.g. for Hemoglobin age-wise values)
+        if (!empty($line['sub_table'])) {
+            $subLines = explode("\n", trim((string)$line['sub_table']));
+            $subRowsHtml = '';
+            foreach ($subLines as $sl) {
+                $parts = explode(':', $sl, 2);
+                if (count($parts) === 2) {
+                    $subRowsHtml .= '<tr><td>' . e(trim($parts[0])) . '</td><td>' . e(trim($parts[1])) . '</td></tr>';
+                }
+            }
+            if ($subRowsHtml !== '') {
+                $rows .= '<tr class="lab-report__subtable-row">
+                    <td colspan="4">
+                        <div class="lab-report__subtable-wrap">
+                            <span class="lab-report__subtable-title">Reference Table</span>
+                            <table class="lab-report__subtable">
+                                <thead><tr><th>AGE</th><th>VALUE</th></tr></thead>
+                                <tbody>' . $subRowsHtml . '</tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>';
+            }
+        }
     }
+
     if ($rows === '') {
-        $rows = '<tr><td colspan="5" class="lab-report__empty">No tests on this entry yet.</td></tr>';
+        $rows = '<tr><td colspan="4" class="lab-report__empty">No tests on this entry yet.</td></tr>';
     }
 
     $footerNote = e($settings['footer'] ?? '');
@@ -488,15 +576,15 @@ function render_report_document(array $settings, array $patient, array $resultLi
             <table class="lab-report__table">
                 <thead>
                     <tr>
-                        <th>Test</th>
-                        <th>Result</th>
-                        <th>Unit</th>
-                        <th>Reference</th>
-                        <th>Flag</th>
+                        <th style="width: 38%;">TEST</th>
+                        <th style="width: 16%;">UNIT</th>
+                        <th style="width: 28%;">REFERENCE RANGE</th>
+                        <th style="width: 18%; text-align: right;">RESULT</th>
                     </tr>
                 </thead>
                 <tbody>{$rows}</tbody>
             </table>
+            <div class="lab-report__clinical-note">Note: Lab values should always be correlated with clinical picture. Normal Range(s) and Unit(s) shown are most recent results</div>
         </section>
 
         <aside class="lab-report__side-note" aria-hidden="true">
