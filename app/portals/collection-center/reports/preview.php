@@ -20,6 +20,14 @@ $content .= '<div class="mt-6 no-print flex flex-wrap gap-2">' .
     btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode((string)($ctx['entry']['lab_no'] ?? '')), 'Receipt') .
     btn_secondary('/portals/collection-center/branding.php', 'Edit header / footer') .
     '</div>';
-$content .= '<div class="mt-6">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT', $ctx['signatories'] ?? []) . '</div>';
+$content .= '<div class="mt-6">' . render_report_document(
+    $ctx['settings'],
+    $ctx['patient'],
+    $ctx['lines'],
+    $ctx['entry'],
+    $ctx['report_title'] ?? 'DEPARTMENT OF LABORATORY MEDICINE',
+    $ctx['signatories'] ?? [],
+    $ctx['specimen'] ?? 'Serum'
+) . '</div>';
 
 render_page('Report Preview', 'collection-center', 'reports', $content, true);

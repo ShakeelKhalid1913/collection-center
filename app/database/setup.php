@@ -8,6 +8,7 @@ use PDO;
 use PDOException;
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/import_tests_csv.php';
 
 function runSetup(): array  
 {
@@ -72,51 +73,26 @@ function runSetup(): array
             $stmtPatient->execute($pRow);
         }
 
-        // Seed Tests
-        $stmtTest = $pdo->prepare("INSERT IGNORE INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?)");
-        $tests = [
-            ['TST-01', 'CBC', 'Complete Blood Count', 'Hematology', 1200.00, 'Blood', '—', '—'],
-            ['TST-02', 'HB', 'Hemoglobin', 'Hematology', 350.00, 'Blood', 'g/dL', '13–17'],
-            ['TST-03', 'ESR', 'ESR', 'Hematology', 400.00, 'Blood', 'mm/hr', '0–20'],
-            ['TST-04', 'FBS', 'Fasting Blood Sugar', 'Biochemistry', 450.00, 'Blood', 'mg/dL', '70–100'],
-            ['TST-05', 'RBS', 'Random Blood Sugar', 'Biochemistry', 400.00, 'Blood', 'mg/dL', '70–140'],
-            ['TST-06', 'LFT', 'Liver Function Test', 'Biochemistry', 2800.00, 'Blood', '—', '—'],
-            ['TST-07', 'RFT', 'Renal Function Test', 'Biochemistry', 2500.00, 'Blood', '—', '—'],
-            ['TST-08', 'LIPID', 'Lipid Profile', 'Biochemistry', 2200.00, 'Blood', '—', '—'],
-            ['TST-09', 'TFT', 'Thyroid Profile (T3/T4/TSH)', 'Special Chemistry', 3200.00, 'Blood', '—', '—'],
-            ['TST-10', 'UDR', 'Urine Complete (DR)', 'Chemistry', 500.00, 'Urine', '—', '—'],
-            ['TST-11', 'CXR', 'Chest X-Ray PA', 'Radiology', 1800.00, '—', '—', '—'],
-            ['TST-12', 'UA', 'Uric Acid', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '3.5–7.2'],
-            ['TST-13', 'CREAT', 'Creatinine', 'Biochemistry', 550.00, 'Blood', 'mg/dL', '0.6–1.3'],
-            ['TST-14', 'UREA', 'Blood Urea', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '15–40'],
-            ['TST-15', 'HBA1C', 'HbA1c', 'Special Chemistry', 1800.00, 'Blood', '%', '4.0–5.6'],
-            ['TST-16', 'CRP', 'C-Reactive Protein', 'Special Chemistry', 1200.00, 'Blood', 'mg/L', '<5'],
-            ['TST-17', 'VITD', 'Vitamin D (25-OH)', 'Special Chemistry', 3500.00, 'Blood', 'ng/mL', '30–100'],
-            ['TST-18', 'B12', 'Vitamin B12', 'Special Chemistry', 2800.00, 'Blood', 'pg/mL', '200–900'],
-            ['TST-19', 'SGPT', 'SGPT (ALT)', 'Biochemistry', 450.00, 'Blood', 'U/L', '7–56'],
-            ['TST-20', 'SGOT', 'SGOT (AST)', 'Biochemistry', 450.00, 'Blood', 'U/L', '10–40'],
-            ['TST-21', 'BIL', 'Bilirubin Total', 'Biochemistry', 500.00, 'Blood', 'mg/dL', '0.1–1.2'],
-            ['TST-22', 'CHOL', 'Cholesterol Total', 'Chemistry', 600.00, 'Blood', 'mg/dL', '<200'],
-            ['TST-23', 'TG', 'Triglycerides', 'Chemistry', 600.00, 'Blood', 'mg/dL', '<150'],
-            ['TST-24', 'WBC', 'White Blood Cell Count', 'Hematology', 400.00, 'Blood', '10³/µL', '4–11'],
-            ['TST-25', 'PLT', 'Platelet Count', 'Hematology', 400.00, 'Blood', '10³/µL', '150–450'],
-            ['TST-26', 'PAP', 'Pap Smear', 'Histopathology', 2500.00, 'Slide', '—', '—'],
-            ['TST-27', 'BIOPSY', 'Tissue Biopsy (routine)', 'Histopathology', 4500.00, 'Tissue', '—', '—'],
-            ['TST-28', 'C/S', 'Culture & Sensitivity', 'Microbiology', 2200.00, 'Swab/Fluid', '—', '—'],
-            ['TST-29', 'BLOOD-C', 'Blood Culture', 'Microbiology', 3500.00, 'Blood', '—', '—'],
-            ['TST-30', 'AFB', 'AFB Smear', 'Microbiology', 800.00, 'Sputum', '—', '—'],
-        ];
-        foreach ($tests as $tRow) {
-            $stmtTest->execute($tRow);
+        // Seed Tests from project-root tests.csv (replaces hardcoded catalog)
+        $csvPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'tests.csv';
+        $import = import_tests_from_csv($pdo, $csvPath, 'ORG-001');
+        foreach ($import['logs'] as $msg) {
+            $logs[] = $msg;
+        }
+        $cbcId = seed_cbc_parameters_for_imported_catalog($pdo, 'ORG-001');
+        if ($cbcId) {
+            $logs[] = "CBC multi-parameters attached to imported test {$cbcId}.";
+        } else {
+            $logs[] = 'CBC not found in CSV — skipped CBC parameter seed.';
         }
 
         // Seed Packages
         $stmtPkg = $pdo->prepare("INSERT IGNORE INTO packages (id, organization_id, code, name, tests_included, price, regular_price) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?)");
         $packages = [
-            ['PKG-01', 'PKG-01', 'Basic Health Panel', 'CBC, FBS, Urine DR', 2200.00, 2550.00],
-            ['PKG-02', 'PKG-02', 'Executive Checkup', 'CBC, LFT, Lipid Profile, RFT', 6500.00, 8700.00],
-            ['PKG-03', 'PKG-03', 'Diabetes Screen', 'FBS, HbA1c, Urine DR', 2800.00, 3200.00],
-            ['PKG-04', 'PKG-04', 'Thyroid + CBC', 'TFT, CBC', 3800.00, 4400.00],
+            ['PKG-01', 'PKG-01', 'Basic Health Panel', 'CBC (Complete Blood Count), FBS (Fasting Blood Sugar), UCE (Urine Complete Examination)', 2200.00, 2550.00],
+            ['PKG-02', 'PKG-02', 'Executive Checkup', 'CBC (Complete Blood Count), LFTs (Liver Function Tests), LIPID PROFILE', 6500.00, 8700.00],
+            ['PKG-03', 'PKG-03', 'Diabetes Screen', 'FBS (Fasting Blood Sugar), HBA1C (Glycated Hemoglobin), UCE (Urine Complete Examination)', 2800.00, 3200.00],
+            ['PKG-04', 'PKG-04', 'Thyroid + CBC', 'TFTs (Thyroid Function Tests) HC, CBC (Complete Blood Count)', 3800.00, 4400.00],
         ];
         foreach ($packages as $pkgRow) {
             $stmtPkg->execute($pkgRow);
@@ -125,11 +101,11 @@ function runSetup(): array
         // Seed Lab Entries
         $stmtLab = $pdo->prepare("INSERT IGNORE INTO lab_entries (id, organization_id, branch_id, lab_no, patient_id, patient_name, tests, doctor, route, priority, status, sample_status, amount, paid, discount, branch) VALUES (?, 'ORG-001', 'BR-GULBERG', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $labEntries = [
-            ['LAB-01', 'L-2026-0891', 'P-10482', 'Ayesha Khan', 'CBC, FBS', 'Dr. Fatima Noor', 'Laboratory — Pathology', 'Normal', 'pending', 'pending', 1650.00, 1650.00, 0.00, 'CC-01'],
-            ['LAB-02', 'L-2026-0890', 'P-10481', 'Muhammad Ali', 'LFT', 'Dr. Usman Malik', 'Laboratory — Biochemistry', 'Urgent', 'collected', 'collected', 2800.00, 1500.00, 200.00, 'CC-01'],
+            ['LAB-01', 'L-2026-0891', 'P-10482', 'Ayesha Khan', 'CBC (Complete Blood Count), FBS (Fasting Blood Sugar)', 'Dr. Fatima Noor', 'Laboratory — Pathology', 'Normal', 'pending', 'pending', 1650.00, 1650.00, 0.00, 'CC-01'],
+            ['LAB-02', 'L-2026-0890', 'P-10481', 'Muhammad Ali', 'LFTs (Liver Function Tests)', 'Dr. Usman Malik', 'Laboratory — Biochemistry', 'Urgent', 'collected', 'collected', 2800.00, 1500.00, 200.00, 'CC-01'],
             ['LAB-03', 'L-2026-0889', 'P-10480', 'Sana Ahmed', 'Basic Health Panel', 'Walk-in / Self', 'Laboratory — Pathology', 'Normal', 'completed', 'received', 2200.00, 2200.00, 0.00, 'CC-02'],
-            ['LAB-04', 'L-2026-0888', 'P-10479', 'Hassan Raza', 'FBS, HB', 'Dr. Nadia Hussain', 'Laboratory — Biochemistry', 'STAT', 'critical', 'completed', 800.00, 800.00, 0.00, 'CC-01'],
-            ['LAB-05', 'L-2026-0887', 'P-10478', 'Ahmed Malik', 'CBC', 'Dr. Imran Sheikh', 'Laboratory — Hematology', 'Normal', 'pending', 'pending', 1200.00, 0.00, 0.00, 'CC-01'],
+            ['LAB-04', 'L-2026-0888', 'P-10479', 'Hassan Raza', 'FBS (Fasting Blood Sugar), HB (Hemoglobin)', 'Dr. Nadia Hussain', 'Laboratory — Biochemistry', 'STAT', 'critical', 'completed', 800.00, 800.00, 0.00, 'CC-01'],
+            ['LAB-05', 'L-2026-0887', 'P-10478', 'Ahmed Malik', 'CBC (Complete Blood Count)', 'Dr. Imran Sheikh', 'Laboratory — Hematology', 'Normal', 'pending', 'pending', 1200.00, 0.00, 0.00, 'CC-01'],
         ];
         foreach ($labEntries as $lRow) {
             $stmtLab->execute($lRow);
@@ -237,33 +213,6 @@ function runSetup(): array
             INDEX idx_signatories_org (organization_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // Seed CBC Parameters (Chughtai Lab structure)
-        $cbcParams = [
-            // ERYTHROCYTES
-            ['PRM-CBC-01', 'TST-01', 'ERYTHROCYTES', 'Hemoglobin (HB)', 'g/dl', '12.0 - 16.5', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 1],
-            ['PRM-CBC-02', 'TST-01', 'ERYTHROCYTES', 'Total RBCs', 'X10^12/L', '4.50 - 6.50', '4.50 - 6.50', null, 2],
-            // ABSOLUTE VALUES
-            ['PRM-CBC-03', 'TST-01', 'ABSOLUTE VALUES', 'HCT (Hematocrit)', '%', '38.0 - 52.0', '38.0 - 52.0', null, 3],
-            ['PRM-CBC-04', 'TST-01', 'ABSOLUTE VALUES', 'MCV', 'Fl', '75.0 - 95.0', '75.0 - 95.0', null, 4],
-            ['PRM-CBC-05', 'TST-01', 'ABSOLUTE VALUES', 'MCH', 'Pg', '27.0 - 32.0', '27.0 - 32.0', null, 5],
-            ['PRM-CBC-06', 'TST-01', 'ABSOLUTE VALUES', 'MCHC', 'g/dl', '30.0 - 35.0', '30.0 - 35.0', null, 6],
-            // THROMBOCYTE
-            ['PRM-CBC-07', 'TST-01', 'THROMBOCYTE', 'Platelet Count', 'x10^3/µL', '150 - 400', '150 - 400', null, 7],
-            // Differential Leukocytes Count
-            ['PRM-CBC-08', 'TST-01', 'Differential Leukocytes Count', 'WBC (TLC)', 'K/uL', '4.0 - 11.0', '4.0 - 11.0', null, 8],
-            ['PRM-CBC-09', 'TST-01', 'Differential Leukocytes Count', 'Neutrophils', '%', '40 - 75', '40 - 75', null, 9],
-            ['PRM-CBC-10', 'TST-01', 'Differential Leukocytes Count', 'Lymphocytes', '%', '20 - 50', '20 - 50', null, 10],
-            ['PRM-CBC-11', 'TST-01', 'Differential Leukocytes Count', 'Monocytes', '%', '02 - 10', '02 - 10', null, 11],
-            ['PRM-CBC-12', 'TST-01', 'Differential Leukocytes Count', 'Eosinophils', '%', '01 - 06', '01 - 06', null, 12],
-            ['PRM-CBC-13', 'TST-01', 'Differential Leukocytes Count', 'ESR', 'mm/1stHr', '0 - 18', '0 - 18', null, 13],
-        ];
-        $stmtCbcParam = $pdo->prepare("INSERT INTO test_parameters (id, test_id, section, name, unit, normal_value, reference_range, sub_table, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE section=VALUES(section), name=VALUES(name), unit=VALUES(unit), normal_value=VALUES(normal_value), reference_range=VALUES(reference_range), sub_table=VALUES(sub_table), sort_order=VALUES(sort_order)");
-        foreach ($cbcParams as $cp) {
-            $stmtCbcParam->execute($cp);
-        }
-
         // Seed Default Doctor Signatories
         $signatoriesSeed = [
             ['SIG-01', 'ORG-001', 1, 'Dr Alina', "M.B.B.S, M Phill Hematology\nAssistant Professor\nConsultant Pathologist", 'Assistant Professor / Consultant Pathologist', 1, 0],
@@ -279,19 +228,19 @@ function runSetup(): array
 
         // Seed Full CBC Results for Lab Entry L-2026-0891
         $cbcResultsSeed = [
-            ['R-CBC-01', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ERYTHROCYTES', 'Hemoglobin (HB)', '14.9', 'g/dl', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 'normal', 1],
-            ['R-CBC-02', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ERYTHROCYTES', 'Total RBCs', '6.03', 'X10^12/L', '4.50 - 6.50', null, 'normal', 2],
-            ['R-CBC-03', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'HCT (Hematocrit)', '45.9', '%', '38.0 - 52.0', null, 'normal', 3],
-            ['R-CBC-04', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCV', '76.2', 'Fl', '75.0 - 95.0', null, 'normal', 4],
-            ['R-CBC-05', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCH', '26.3', 'Pg', '27.0 - 32.0', null, 'L', 5],
-            ['R-CBC-06', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'ABSOLUTE VALUES', 'MCHC', '34.5', 'g/dl', '30.0 - 35.0', null, 'normal', 6],
-            ['R-CBC-07', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'THROMBOCYTE', 'Platelet Count', '267', 'x10^3/µL', '150 - 400', null, 'normal', 7],
-            ['R-CBC-08', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'WBC (TLC)', '9.70', 'K/uL', '4.0 - 11.0', null, 'normal', 8],
-            ['R-CBC-09', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Neutrophils', '55', '%', '40 - 75', null, 'normal', 9],
-            ['R-CBC-10', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Lymphocytes', '35', '%', '20 - 50', null, 'normal', 10],
-            ['R-CBC-11', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Monocytes', '06', '%', '02 - 10', null, 'normal', 11],
-            ['R-CBC-12', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'Eosinophils', '04', '%', '01 - 06', null, 'normal', 12],
-            ['R-CBC-13', 'L-2026-0891', 'Ayesha Khan', 'CBC', 'Differential Leukocytes Count', 'ESR', '14', 'mm/1stHr', '0 - 18', null, 'normal', 13],
+            ['R-CBC-01', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ERYTHROCYTES', 'Hemoglobin (HB)', '14.9', 'g/dl', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 'normal', 1],
+            ['R-CBC-02', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ERYTHROCYTES', 'Total RBCs', '6.03', 'X10^12/L', '4.50 - 6.50', null, 'normal', 2],
+            ['R-CBC-03', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ABSOLUTE VALUES', 'HCT (Hematocrit)', '45.9', '%', '38.0 - 52.0', null, 'normal', 3],
+            ['R-CBC-04', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ABSOLUTE VALUES', 'MCV', '76.2', 'Fl', '75.0 - 95.0', null, 'normal', 4],
+            ['R-CBC-05', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ABSOLUTE VALUES', 'MCH', '26.3', 'Pg', '27.0 - 32.0', null, 'L', 5],
+            ['R-CBC-06', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'ABSOLUTE VALUES', 'MCHC', '34.5', 'g/dl', '30.0 - 35.0', null, 'normal', 6],
+            ['R-CBC-07', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'THROMBOCYTE', 'Platelet Count', '267', 'x10^3/µL', '150 - 400', null, 'normal', 7],
+            ['R-CBC-08', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'WBC (TLC)', '9.70', 'K/uL', '4.0 - 11.0', null, 'normal', 8],
+            ['R-CBC-09', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'Neutrophils', '55', '%', '40 - 75', null, 'normal', 9],
+            ['R-CBC-10', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'Lymphocytes', '35', '%', '20 - 50', null, 'normal', 10],
+            ['R-CBC-11', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'Monocytes', '06', '%', '02 - 10', null, 'normal', 11],
+            ['R-CBC-12', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'Eosinophils', '04', '%', '01 - 06', null, 'normal', 12],
+            ['R-CBC-13', 'L-2026-0891', 'Ayesha Khan', 'CBC (Complete Blood Count)', 'Differential Leukocytes Count', 'ESR', '14', 'mm/1stHr', '0 - 18', null, 'normal', 13],
         ];
         $stmtCbcRes = $pdo->prepare("INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -300,17 +249,8 @@ function runSetup(): array
             $stmtCbcRes->execute($rRow);
         }
 
-        // Re-seed expanded tests (INSERT IGNORE) so existing DBs get Uric Acid etc.
-        $stmtTestExtra = $pdo->prepare("INSERT IGNORE INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?)");
-        foreach ($tests as $tRow) {
-            $stmtTestExtra->execute($tRow);
-        }
-
-        // Align old category names to client departments
-        $pdo->exec("UPDATE tests SET category = 'Special Chemistry' WHERE category IN ('Hormones','Immunology')");
-        $pdo->exec("UPDATE tests SET category = 'Chemistry' WHERE category IN ('Clinical Pathology')");
-        $logs[] = "Catalog synced (departments: Hematology, Chemistry, Biochemistry, Special Chemistry, Histopathology, Microbiology).";
-        $logs[] = "CBC (Complete Blood Count) pre-configured with 13 parameters and Chughtai Lab sections.";
+        $logs[] = "Test catalog loaded from tests.csv (source of truth).";
+        $logs[] = "mock_tests in bootstrap.php loads from DB via test_repo.";
         $logs[] = "Default doctor signatories seeded for report footer.";
 
         $logs[] = "All tables & seed data inserted successfully!";

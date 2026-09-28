@@ -17,6 +17,14 @@ if ($labNo !== '') {
     $content .= '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($labNo) . '" class="btn btn-primary"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Test Results for this Patient</a>';
 }
 $content .= '</div>';
-$content .= '<div class="mt-4">' . render_report_document($ctx['settings'], $ctx['patient'], $ctx['lines'], $ctx['entry'], $ctx['report_title'] ?? 'LABORATORY REPORT', $ctx['signatories'] ?? []) . '</div>';
+$content .= '<div class="mt-4">' . render_report_document(
+    $ctx['settings'],
+    $ctx['patient'],
+    $ctx['lines'],
+    $ctx['entry'],
+    $ctx['report_title'] ?? 'DEPARTMENT OF LABORATORY MEDICINE',
+    $ctx['signatories'] ?? [],
+    $ctx['specimen'] ?? 'Serum'
+) . '</div>';
 
 render_page('Report Preview', 'main-lab', 'reports-generate', $content, true);

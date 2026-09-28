@@ -165,9 +165,33 @@ class TestRepository
 
     public function findByCode(string $code, string $orgId = 'ORG-001'): ?array
     {
+        $code = trim($code);
+        if ($code === '') {
+            return null;
+        }
+
+        // Exact code or exact name
         $row = $this->db->fetchOne(
-            "SELECT * FROM tests WHERE (code = :code OR name = :name) AND organization_id = :org_id LIMIT 1",
+            "SELECT * FROM tests WHERE organization_id = :org_id AND (code = :code OR name = :name) LIMIT 1",
             ['code' => $code, 'name' => $code, 'org_id' => $orgId]
+        );
+        if ($row) {
+            return $row;
+        }
+
+        // Prefix match: "CBC" → "CBC (Complete Blood Count)", "FBS" → "FBS (Fasting Blood Sugar)"
+        $row = $this->db->fetchOne(
+            "SELECT * FROM tests
+             WHERE organization_id = :org_id
+               AND (name LIKE :prefix_paren OR name LIKE :prefix_space OR UPPER(code) = UPPER(:code2))
+             ORDER BY LENGTH(name) ASC
+             LIMIT 1",
+            [
+                'org_id' => $orgId,
+                'prefix_paren' => $code . ' (%',
+                'prefix_space' => $code . ' %',
+                'code2' => $code,
+            ]
         );
         return $row ?: null;
     }

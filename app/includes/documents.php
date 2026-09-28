@@ -19,7 +19,13 @@ function report_meta_cell(string $label, string $value, bool $strong = false, bo
         return '';
     }
     $display = $trimmed !== '' ? e($trimmed) : '—';
-    $valClass = 'lab-report__val' . ($strong ? ' lab-report__val--strong' : '');
+    $valClass = 'lab-report__val';
+    if ($strong) {
+        $valClass .= ' lab-report__val--strong';
+    }
+    if (strcasecmp($label, 'Patient Name') === 0) {
+        $valClass .= ' lab-report__val--patient';
+    }
     return '<div class="lab-report__cell">'
         . '<span class="lab-report__lbl">' . e($label) . '</span>'
         . '<span class="' . $valClass . '">' . $display . '</span>'
@@ -286,22 +292,33 @@ function load_document_context(?string $labNo): array
         }
     }
 
-    // Determine department title
+    // Determine department title + specimen
+    $specimen = '';
     if ($deptHint === '' && $entry) {
         $tests = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
         foreach ($tests as $tName) {
             foreach (mock('mock_tests') as $t) {
                 if (strcasecmp($t['name'], $tName) === 0 || strcasecmp($t['code'], $tName) === 0) {
                     $deptHint = $t['category'] ?? '';
+                    $specimen = (string)($t['sample'] ?? '');
+                    break 2;
+                }
+            }
+        }
+    }
+    if ($specimen === '' && $entry) {
+        $tests = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
+        foreach ($tests as $tName) {
+            foreach (mock('mock_tests') as $t) {
+                if (strcasecmp($t['name'], $tName) === 0 || strcasecmp($t['code'], $tName) === 0) {
+                    $specimen = (string)($t['sample'] ?? '');
                     break 2;
                 }
             }
         }
     }
 
-    $reportTitle = $deptHint !== ''
-        ? strtoupper($deptHint) . ' REPORT:'
-        : 'LABORATORY REPORT:';
+    $reportTitle = department_report_heading($deptHint);
 
     return [
         'settings' => $settings,
@@ -309,8 +326,40 @@ function load_document_context(?string $labNo): array
         'entry' => $entry,
         'lines' => $lines,
         'report_title' => $reportTitle,
+        'specimen' => $specimen !== '' && $specimen !== '—' ? $specimen : 'Serum',
         'signatories' => setting_repo()->getSignatories($settings['organization_id'] ?? 'ORG-001'),
     ];
+}
+
+/**
+ * Sample-style department heading for the report title bar.
+ */
+function department_report_heading(string $category): string
+{
+    $map = [
+        'Biochemistry' => 'DEPARTMENT OF CHEMICAL PATHOLOGY',
+        'Chemistry' => 'DEPARTMENT OF CHEMICAL PATHOLOGY',
+        'Chemical Pathology' => 'DEPARTMENT OF CHEMICAL PATHOLOGY',
+        'Special Chemistry' => 'DEPARTMENT OF SPECIAL CHEMISTRY',
+        'Hematology' => 'DEPARTMENT OF HAEMATOLOGY',
+        'Microbiology' => 'DEPARTMENT OF MICROBIOLOGY',
+        'Histopathology' => 'DEPARTMENT OF HISTOPATHOLOGY',
+        'Pathology' => 'DEPARTMENT OF PATHOLOGY',
+        'Serology' => 'DEPARTMENT OF SEROLOGY',
+        'Immunology' => 'DEPARTMENT OF IMMUNOLOGY',
+        'Molecular' => 'DEPARTMENT OF MOLECULAR PATHOLOGY',
+        'Endocrinology' => 'DEPARTMENT OF ENDOCRINOLOGY',
+        'Clinical Pathology' => 'DEPARTMENT OF CLINICAL PATHOLOGY',
+        'Report Profile' => 'DEPARTMENT OF LABORATORY MEDICINE',
+        'Radiology' => 'DEPARTMENT OF RADIOLOGY',
+    ];
+    if ($category !== '' && isset($map[$category])) {
+        return $map[$category];
+    }
+    if ($category !== '') {
+        return 'DEPARTMENT OF ' . strtoupper($category);
+    }
+    return 'DEPARTMENT OF LABORATORY MEDICINE';
 }
 
 function format_datetime_report(?string $iso): string
@@ -415,10 +464,17 @@ function render_report_signatories(array $signatories): string
 }
 
 /**
- * Infinity-style clinical lab report.
+ * Compact clinical lab report (Infinity-style header / clean B&W table).
  */
-function render_report_document(array $settings, array $patient, array $resultLines, ?array $entry = null, string $reportTitle = 'LABORATORY REPORT', array $signatories = []): string
-{
+function render_report_document(
+    array $settings,
+    array $patient,
+    array $resultLines,
+    ?array $entry = null,
+    string $reportTitle = 'DEPARTMENT OF LABORATORY MEDICINE',
+    array $signatories = [],
+    string $specimen = 'Serum'
+): string {
     $letterhead = render_letterhead_image($settings);
     $logoImg = brand_logo('brand-logo brand-logo--report');
     $labName = e($settings['name'] ?? '');
@@ -427,7 +483,18 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $labPhone = e($settings['phone'] ?? '');
     $labEmail = e($settings['email'] ?? '');
 
-    $brandBlock = $letterhead !== ''
+    $labNoRaw = (string)($entry['lab_no'] ?? '');
+    $qrPayload = $labNoRaw !== ''
+        ? (isset($_SERVER['HTTP_HOST'])
+            ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+                . '://' . $_SERVER['HTTP_HOST']
+                . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
+            : $labNoRaw)
+        : ($settings['name'] ?? 'Lab Report');
+    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=0&data=' . rawurlencode($qrPayload);
+    $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="72" height="72"></div>';
+
+    $brandInner = $letterhead !== ''
         ? $letterhead
         : <<<HTML
             <div class="lab-report__brand">
@@ -438,6 +505,8 @@ function render_report_document(array $settings, array $patient, array $resultLi
                 </div>
             </div>
             HTML;
+
+    $brandBlock = '<div class="lab-report__top">' . $brandInner . $qrHtml . '</div>';
 
     $mrNo = (string)($patient['id'] ?? '—');
     $pname = (string)($patient['name'] ?? '—');
@@ -454,6 +523,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $receivedOn = format_datetime_report($entry['created_at'] ?? null);
     $reportedOn = format_datetime_report(null);
     $resultDate = e(format_date_report(null));
+    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
 
     $doctorRaw = trim((string)($entry['doctor'] ?? ''));
     if ($doctorRaw === '') {
@@ -463,7 +533,6 @@ function render_report_document(array $settings, array $patient, array $resultLi
         $doctorRaw = 'Walk-in / Self';
     }
 
-    // Mandatory cells — always printed
     $metaCells = report_meta_cell('Patient Name', $pname, true)
         . report_meta_cell('MR No', $mrNo, true)
         . report_meta_cell('Phone', $phoneP)
@@ -471,7 +540,6 @@ function render_report_document(array $settings, array $patient, array $resultLi
         . report_meta_cell('Age / Gender', $ageGender)
         . report_meta_cell('Address', $patientAddress);
 
-    // Optional cells — only when filled (saves vertical space)
     $metaCells .= report_meta_cell('Case No', $labNoDisplay, false, true)
         . report_meta_cell('F/H Name', $fhNameRaw, false, true)
         . report_meta_cell('Registered at', $registeredAt, false, true)
@@ -503,18 +571,33 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $currentTestTitle = null;
     $currentSection = null;
 
+    // Count rows per test so single-parameter tests (FBS, HB) don't print the name twice
+    $testRowCounts = [];
+    foreach ($resultLines as $line) {
+        $tt = trim((string)($line['test_title'] ?? ''));
+        if ($tt === '') {
+            continue;
+        }
+        $testRowCounts[$tt] = ($testRowCounts[$tt] ?? 0) + 1;
+    }
+
     foreach ($resultLines as $line) {
         $testTitle = trim((string)($line['test_title'] ?? ''));
         $section = trim((string)($line['section'] ?? ''));
+        $paramRaw = trim((string)($line['test'] ?? ''));
 
-        // Print main test heading if it's a test with sections or multi-parameters
         if ($testTitle !== '' && $testTitle !== $currentTestTitle) {
             $currentTestTitle = $testTitle;
             $currentSection = null;
-            $rows .= '<tr class="lab-report__test-head"><td colspan="4"><strong>' . e($testTitle) . '</strong></td></tr>';
+            // Only show a panel heading for multi-parameter tests (e.g. CBC), or when
+            // the parameter label differs from the test name.
+            $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
+                || strcasecmp($testTitle, $paramRaw) !== 0;
+            if ($needsHeading) {
+                $rows .= '<tr class="lab-report__test-head"><td colspan="4"><strong>' . e($testTitle) . '</strong></td></tr>';
+            }
         }
 
-        // Print Section Banner (e.g. ERYTHROCYTES, ABSOLUTE VALUES, etc.)
         if ($section !== '' && $section !== $currentSection) {
             $currentSection = $section;
             $rows .= '<tr class="lab-report__section-head"><td colspan="4"><span>' . e($section) . '</span></td></tr>';
@@ -537,15 +620,15 @@ function render_report_document(array $settings, array $patient, array $resultLi
         $resVal = e($line['result'] ?? 'Pending');
         $unitVal = e($line['unit'] ?? '—');
         $rangeVal = e($line['range'] ?? '—');
+        $paramName = e($paramRaw);
 
         $rows .= '<tr>
-            <td class="lab-report__param-cell">' . e($line['test'] ?? '') . '</td>
-            <td class="font-mono text-slate-700">' . $rangeVal . '</td>
-            <td>' . $unitVal . '</td>
-            <td class="' . $resClass . '" style="text-align: right;">' . $resVal . $arrow . '</td>
+            <td class="lab-report__param-cell">' . $paramName . '</td>
+            <td class="lab-report__range-cell">' . $rangeVal . '</td>
+            <td class="lab-report__unit-cell">' . $unitVal . '</td>
+            <td class="' . $resClass . '">' . $resVal . $arrow . '</td>
         </tr>';
 
-        // Render sub-table if present (e.g. for Hemoglobin age-wise values)
         if (!empty($line['sub_table'])) {
             $subLines = explode("\n", trim((string)$line['sub_table']));
             $subRowsHtml = '';
@@ -578,7 +661,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $footerNote = e($settings['footer'] ?? '');
     $footerBlock = $footerNote !== '' ? '<p class="lab-report__lab-note">' . $footerNote . '</p>' : '';
     $credit = software_credit_footer(true);
-    $printStamp = e(date('h:i:s A'));
+    $printStamp = e(date('d-M-Y h:i:s A'));
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
 
     $signatoriesHtml = render_report_signatories($signatories);
@@ -594,6 +677,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
 
             <div class="lab-report__title-wrap">
                 <h2 class="lab-report__title">{$title}</h2>
+                <span class="lab-report__specimen"><strong>Specimen:</strong> {$specimenE}</span>
             </div>
         </header>
 
@@ -601,10 +685,10 @@ function render_report_document(array $settings, array $patient, array $resultLi
             <table class="lab-report__table">
                 <thead>
                     <tr>
-                        <th style="width: 38%;">TEST</th>
-                        <th style="width: 26%;">REFERENCE RANGE</th>
-                        <th style="width: 14%;">UNIT</th>
-                        <th style="width: 22%; text-align: right;">RESULT [{$resultDate}]</th>
+                        <th class="lab-report__th-test">TEST</th>
+                        <th class="lab-report__th-range">REFERENCE RANGE</th>
+                        <th class="lab-report__th-unit">UNIT</th>
+                        <th class="lab-report__th-result">RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
                     </tr>
                 </thead>
                 <tbody>{$rows}</tbody>
@@ -613,7 +697,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
         </section>
 
         <aside class="lab-report__side-note" aria-hidden="true">
-            All Results Should Be Interpreted And Correlated By Physician. Electronically Verified Report. No Signature(s) required.
+            All Results Should Be Interpreted And Correlated By Physician. Electronically Verified Report. No Signature(s) required. Not Valid for Legal Proceeding.
         </aside>
 
         <footer class="lab-report__footer">
@@ -630,6 +714,7 @@ function render_report_document(array $settings, array $patient, array $resultLi
     </div>
     HTML;
 }
+
 
 function render_receipt_document(array $settings, array $entry, array $patient): string
 {

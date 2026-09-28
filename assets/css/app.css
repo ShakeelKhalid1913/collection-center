@@ -1113,7 +1113,38 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.lab-report__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.45rem;
+}
+
+.lab-report__top .lab-letterhead-image {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.lab-report__qr {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #0f172a;
+  padding: 2px;
+  background: #fff;
+}
+
+.lab-report__qr img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .lab-report__logo {
@@ -1184,16 +1215,34 @@ textarea::placeholder {
 }
 
 .lab-report__val--strong {
-  font-weight: 800;
+  color: #000 !important;
+  font-weight: 900;
+  font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.lab-report__val--patient {
+  color: #000 !important;
+  font-weight: 900;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .lab-report__title-wrap {
-  margin-top: 0.35rem;
-  margin-bottom: 0.2rem;
-  border-bottom: 1px solid #0f172a;
-  padding: 0.2rem 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid #0f172a;
+  padding: 0.32rem 0;
   text-align: left;
 }
 
@@ -1209,6 +1258,12 @@ textarea::placeholder {
   padding: 0;
 }
 
+.lab-report__specimen {
+  font-size: 0.78rem;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .lab-report__meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1216,74 +1271,134 @@ textarea::placeholder {
 }
 
 .lab-report__body {
-  padding: 0.45rem 0 0.5rem;
+  padding: 0;
   flex: 1;
 }
 
 .lab-report__table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.82rem;
+  border-bottom: 1px solid #0f172a;
 }
 
+/* Header row: top/bottom + vertical dividers between columns only (no outer L/R) */
 .lab-report__table thead th {
-  background: #0f172a !important;
-  color: #ffffff !important;
+  background: #fff !important;
+  color: #0f172a !important;
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.35rem 0.6rem;
-  border: none;
+  letter-spacing: 0.03em;
+  padding: 0.18rem 0.35rem;
+  border-top: 1px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+  border-right: 1px solid #0f172a;
+  border-left: none;
+  vertical-align: bottom;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
+.lab-report__table thead th:first-child {
+  border-left: none;
+}
+
+.lab-report__table thead th:last-child {
+  border-right: none;
+}
+
+.lab-report__th-test {
+  width: 36%;
+}
+
+.lab-report__th-range {
+  width: 26%;
+  text-align: center !important;
+}
+
+.lab-report__th-unit {
+  width: 18%;
+  text-align: center !important;
+}
+
+.lab-report__th-result {
+  width: 20%;
+  text-align: center !important;
+  line-height: 1.15;
+}
+
+.lab-report__result-date {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 0.05rem;
+}
+
+/* Body matches Infinity sample: NO borders at all — alignment only */
 .lab-report__table tbody td {
-  padding: 0.32rem 0.6rem;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 0.35rem 0.5rem;
+  border: none !important;
   vertical-align: middle;
+  color: #0f172a;
+}
+
+.lab-report__param-cell {
+  font-weight: 700;
+}
+
+.lab-report__range-cell,
+.lab-report__unit-cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .lab-report__test-head td {
-  background: #ffffff;
-  padding: 0.6rem 0.6rem 0.2rem !important;
-  font-size: 0.95rem;
+  background: #ffffff !important;
+  padding: 0.55rem 0.5rem 0.15rem !important;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #0f172a;
-  border-bottom: none !important;
+  border: none !important;
 }
 
 .lab-report__section-head td {
-  background: #f3e8ff !important;
-  color: #6b21a8 !important;
+  background: #fff !important;
+  color: #0f172a !important;
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.22rem 0.6rem !important;
-  border-bottom: 1px solid #e9d5ff !important;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.5rem 0.1rem !important;
+  border: none !important;
+}
+
+.lab-report__subtable-row td {
+  border: none !important;
 }
 
 .lab-report__result {
   font-weight: 800;
   font-size: 0.88rem;
+  text-align: center;
 }
 
 .lab-report__result--low {
-  color: #2563eb !important;
+  color: #0f172a !important;
 }
 
 .lab-report__result--high {
-  color: #dc2626 !important;
+  color: #0f172a !important;
 }
 
 .lab-report__result--critical {
-  color: #b91c1c !important;
+  color: #0f172a !important;
   font-weight: 900;
+  text-decoration: underline;
 }
 
 .lab-report__arrow {
@@ -1309,31 +1424,31 @@ textarea::placeholder {
   border-collapse: collapse;
   font-size: 0.7rem;
   width: 210px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: #fff;
+  border: 1px solid #0f172a;
 }
 
 .lab-report__subtable th,
 .lab-report__subtable td {
   padding: 0.12rem 0.5rem !important;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #94a3b8;
 }
 
 .lab-report__subtable th {
-  background: #e2e8f0;
-  color: #334155;
+  background: #fff;
+  color: #0f172a;
   font-weight: 700;
   text-align: left;
 }
 
 .lab-report__clinical-note {
-  margin-top: 0.75rem;
+  margin-top: 0.55rem;
   font-size: 0.72rem;
   color: #475569;
   font-style: italic;
   line-height: 1.4;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 0.4rem;
+  border-top: 1px solid #94a3b8;
+  padding-top: 0.35rem;
 }
 
 .lab-report__empty {
@@ -1348,37 +1463,39 @@ textarea::placeholder {
 
 .lab-report__footer {
   margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--lr-line);
+  padding-top: 0.55rem;
+  border-top: none;
 }
 
 .lab-report__disclaimer {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
   font-size: 0.68rem;
   color: var(--lr-muted);
   line-height: 1.4;
 }
 
 .lab-report__lab-note {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
   font-size: 0.75rem;
   color: #334155;
 }
 
 .lab-report__contact-bar {
-  margin-top: 0.65rem;
-  padding: 0.45rem 0.6rem;
-  background: #334155;
-  color: #f8fafc !important;
+  margin-top: 0;
+  padding: 0.4rem 0.55rem;
+  background: #e2e8f0;
+  color: #0f172a !important;
   font-size: 0.7rem;
   text-align: center;
   letter-spacing: 0.01em;
+  border-top: 1px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
 }
 
 .lab-report__bottom-line {
   display: flex;
   justify-content: space-between;
-  margin-top: 0.45rem;
+  margin-top: 0.35rem;
   font-size: 0.65rem;
   color: var(--lr-muted);
 }
@@ -1472,26 +1589,39 @@ textarea::placeholder {
 .lab-report__signatories {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid #94a3b8;
+  gap: 0;
+  margin-top: 0.15rem;
+  padding: 0.18rem 0 0.2rem;
+  border-top: 1px solid #0f172a;
 }
 
 .lab-report__signatory {
   flex: 1;
   text-align: left;
+  padding: 0 0.25rem;
+  border-right: 1px solid #0f172a;
+}
+
+.lab-report__signatory:first-child {
+  padding-left: 0;
+}
+
+.lab-report__signatory:last-child {
+  border-right: none;
+  padding-right: 0;
 }
 
 .lab-report__signatory-name {
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.6rem;
   color: #0f172a;
+  line-height: 1.15;
 }
 
 .lab-report__signatory-quals {
-  font-size: 0.68rem;
-  color: #475569;
-  line-height: 1.3;
+  font-size: 0.52rem;
+  color: #334155;
+  line-height: 1.15;
   white-space: pre-line;
 }
 
@@ -1548,8 +1678,8 @@ textarea::placeholder {
   }
 
   .lab-report__contact-bar {
-    background: #334155 !important;
-    color: #fff !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -1558,5 +1688,43 @@ textarea::placeholder {
     background: transparent !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .lab-report__side-note {
+    display: block;
+    position: absolute;
+    right: 0.15in;
+    top: 45%;
+    width: 0.9rem;
+    font-size: 0.55rem;
+    line-height: 1.15;
+    color: #64748b;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+
+  .lab-report__table thead th {
+    border-color: #000 !important;
+  }
+
+  .lab-report__table tbody td,
+  .lab-report__test-head td,
+  .lab-report__section-head td,
+  .lab-report__subtable-row td {
+    border: none !important;
+  }
+
+  .lab-report__val--patient,
+  .lab-report__val--strong {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report__signatories,
+  .lab-report__signatory {
+    border-color: #000 !important;
   }
 }

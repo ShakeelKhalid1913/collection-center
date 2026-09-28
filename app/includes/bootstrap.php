@@ -34,11 +34,20 @@ const APP_NAME = 'Health LMS Pro';
  */
 const TEST_DEPARTMENTS = [
     'Hematology' => 'Hematology',
-    'Chemistry' => 'Chemistry',
     'Biochemistry' => 'Biochemistry',
+    'Chemical Pathology' => 'Chemical Pathology',
     'Special Chemistry' => 'Special Chemistry',
-    'Histopathology' => 'Histopathology',
+    'Serology' => 'Serology',
     'Microbiology' => 'Microbiology',
+    'Histopathology' => 'Histopathology',
+    'Pathology' => 'Pathology',
+    'Radiology' => 'Radiology',
+    'Molecular' => 'Molecular',
+    'Report Profile' => 'Report Profile',
+    'Clinical Pathology' => 'Clinical Pathology',
+    'Immunology' => 'Immunology',
+    'Endocrinology' => 'Endocrinology',
+    'Chemistry' => 'Chemistry',
 ];
 
 function test_departments(): array
@@ -251,6 +260,7 @@ function mock(string $key): array
             ], lab_repo()->getAll());
 
         case 'mock_tests':
+            // Catalog source of truth: tests table (TestRepository), not a static list.
             $orgId = current_user()['organization_id'] ?? 'ORG-001';
             return array_map(fn($t) => [
                 'code' => $t['code'],
