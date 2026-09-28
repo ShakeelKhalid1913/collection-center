@@ -18,7 +18,7 @@ foreach ($patients as $p) {
 
     $actions = '<div class="flex flex-wrap gap-2">' .
         '<a href="/portals/main-lab/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
-        '<a href="/portals/collection-center/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Book / Assign Tests</a>' .
+        '<a href="/portals/main-lab/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Book / Assign Tests</a>' .
         '</div>';
 
     $rows[] = [

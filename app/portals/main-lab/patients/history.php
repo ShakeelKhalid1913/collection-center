@@ -48,7 +48,7 @@ if ($selectedPatient) {
         $actions = '<div class="flex flex-wrap gap-2">' .
             '<a href="/portals/main-lab/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>' .
             '<a href="/portals/main-lab/results/entry.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Edit Results</a>' .
-            '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
+            '<a href="/portals/main-lab/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
             '</div>';
 
         $rows[] = [
@@ -75,7 +75,7 @@ $content .= <<<HTML
         </select>
     </div>
     <div class="flex items-center gap-2">
-        <a href="/portals/collection-center/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
+        <a href="/portals/main-lab/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
             <i class="fa-solid fa-plus mr-1"></i> Book New Test for this Patient
         </a>
     </div>
