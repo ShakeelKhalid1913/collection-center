@@ -52,56 +52,130 @@ class ResultRepository
 
     public function ensureResultsInitialized(string $labNo, string $testsString, string $patientName, string $orgId = 'ORG-001'): array
     {
+        $testRepo = new TestRepository();
         $existing = $this->getResultsByLabNo($labNo);
-        // If we already have multiple detailed results or at least one with a parameter filled, return them
-        $hasDetailed = false;
-        foreach ($existing as $r) {
-            if (!empty($r['parameter'])) {
-                $hasDetailed = true;
-                break;
+
+        // Expand packages → individual test names, then resolve each to catalog
+        $rawNames = array_filter(array_map('trim', explode(',', $testsString)));
+        $resolvedTests = []; // list of ['label' => display name, 'obj' => test row|null]
+
+        foreach ($rawNames as $tName) {
+            // Package? expand its tests list
+            $pkg = $this->db->fetchOne(
+                "SELECT * FROM packages WHERE organization_id = :org AND (name = :n OR code = :c) LIMIT 1",
+                ['org' => $orgId, 'n' => $tName, 'c' => $tName]
+            );
+            if ($pkg && !empty($pkg['tests_included'])) {
+                // Drop any old stub row named after the package itself
+                $this->db->execute(
+                    "DELETE FROM results WHERE lab_no = :lab_no AND LOWER(test) = LOWER(:pkg)",
+                    ['lab_no' => $labNo, 'pkg' => $tName]
+                );
+                foreach (array_filter(array_map('trim', explode(',', (string)$pkg['tests_included']))) as $piece) {
+                    $obj = $testRepo->findByCode($piece, $orgId);
+                    $resolvedTests[] = [
+                        'label' => $obj['name'] ?? $piece,
+                        'obj' => $obj,
+                        'booked_as' => $piece,
+                    ];
+                }
+                continue;
             }
+
+            $obj = $testRepo->findByCode($tName, $orgId);
+            $resolvedTests[] = [
+                'label' => $obj['name'] ?? $tName,
+                'obj' => $obj,
+                'booked_as' => $tName,
+            ];
         }
-        if ($hasDetailed) {
+
+        if ($resolvedTests === []) {
             return $existing;
         }
 
-        // Initialize from test catalog
-        $testNames = array_filter(array_map('trim', explode(',', $testsString)));
-        if (empty($testNames)) {
-            return $existing;
+        // Index existing rows by normalized test title
+        $byTest = [];
+        foreach ($existing as $r) {
+            $key = strtolower(trim((string)($r['test'] ?? '')));
+            $byTest[$key][] = $r;
         }
 
         $sortOrder = 1;
-        $inserted = [];
-        $testRepo = new TestRepository();
+        foreach ($existing as $r) {
+            $sortOrder = max($sortOrder, ((int)($r['sort_order'] ?? 0)) + 1);
+        }
 
-        foreach ($testNames as $tName) {
-            $testObj = $testRepo->findByCode($tName, $orgId);
-            if (!$testObj) {
-                // Try finding by name in all tests
-                $allTests = $testRepo->getTests($orgId);
-                foreach ($allTests as $at) {
-                    if (strcasecmp($at['name'], $tName) === 0 || strcasecmp($at['code'], $tName) === 0) {
-                        $testObj = $at;
-                        break;
-                    }
+        foreach ($resolvedTests as $rt) {
+            $label = $rt['label'];
+            $obj = $rt['obj'];
+            $bookedAs = (string)($rt['booked_as'] ?? $label);
+            $key = strtolower($label);
+            $alsoKeys = [
+                strtolower($bookedAs),
+                strtolower((string)($obj['code'] ?? '')),
+            ];
+            if ($obj) {
+                $alsoKeys[] = strtolower((string)$obj['name']);
+                if (preg_match('/^([A-Za-z0-9]+)\s*\(/', (string)$obj['name'], $m)) {
+                    $alsoKeys[] = strtolower($m[1]);
+                    $alsoKeys[] = rtrim(strtolower($m[1]), 's');
+                }
+            }
+            $alsoKeys[] = rtrim(strtolower($bookedAs), 's');
+
+            $existingForTest = $byTest[$key] ?? [];
+            foreach (array_unique(array_filter($alsoKeys)) as $ak) {
+                if (!empty($byTest[$ak])) {
+                    $existingForTest = array_merge($existingForTest, $byTest[$ak]);
                 }
             }
 
-            if ($testObj) {
-                $params = $testRepo->getParameters($testObj['id']);
-                if (!empty($params)) {
-                    // Test has multi-parameters (e.g. CBC)
+            $seenIds = [];
+            $deduped = [];
+            foreach ($existingForTest as $row) {
+                $id = $row['id'] ?? '';
+                if ($id === '' || isset($seenIds[$id])) {
+                    continue;
+                }
+                $seenIds[$id] = true;
+                $deduped[] = $row;
+            }
+            $existingForTest = $deduped;
+
+            $params = $obj ? $testRepo->getParameters((string)$obj['id']) : [];
+
+            $stubs = [];
+            $detailed = [];
+            foreach ($existingForTest as $row) {
+                $p = trim((string)($row['parameter'] ?? ''));
+                $t = trim((string)($row['test'] ?? ''));
+                if ($p === '' || strcasecmp($p, $t) === 0 || strcasecmp($p, $label) === 0 || strcasecmp($p, $bookedAs) === 0) {
+                    $stubs[] = $row;
+                } else {
+                    $detailed[] = $row;
+                }
+            }
+
+            if (!empty($params)) {
+                foreach ($stubs as $old) {
+                    $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
+                }
+
+                if ($detailed === [] || count($detailed) < count($params)) {
+                    foreach ($detailed as $old) {
+                        $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
+                    }
                     foreach ($params as $p) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
-                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order)
-                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, '', :sort)",
+                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible)
+                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, '', :sort, 1)",
                             [
                                 'id' => $resId,
                                 'lab_no' => $labNo,
                                 'patient' => $patientName,
-                                'test' => $testObj['name'],
+                                'test' => $label,
                                 'section' => $p['section'] ?? null,
                                 'param' => $p['name'],
                                 'unit' => $p['unit'] ?? '',
@@ -111,29 +185,37 @@ class ResultRepository
                             ]
                         );
                     }
-                    continue;
                 }
+                continue;
             }
 
-            // Single parameter or custom test
-            $resId = 'RES-' . bin2hex(random_bytes(5));
-            $this->db->execute(
-                "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order)
-                 VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort)",
-                [
-                    'id' => $resId,
-                    'lab_no' => $labNo,
-                    'patient' => $patientName,
-                    'test' => $tName,
-                    'param' => $tName,
-                    'unit' => $testObj['unit'] ?? '—',
-                    'range' => $testObj['normal_range'] ?? $testObj['reference_value'] ?? '—',
-                    'sort' => $sortOrder++,
-                ]
-            );
+            if ($detailed !== []) {
+                foreach ($stubs as $old) {
+                    $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
+                }
+                continue;
+            }
+
+            if ($existingForTest === []) {
+                $resId = 'RES-' . bin2hex(random_bytes(5));
+                $this->db->execute(
+                    "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible)
+                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1)",
+                    [
+                        'id' => $resId,
+                        'lab_no' => $labNo,
+                        'patient' => $patientName,
+                        'test' => $label,
+                        'param' => $label,
+                        'unit' => $obj['unit'] ?? '—',
+                        'range' => $obj['normal_range'] ?? $obj['reference_value'] ?? $obj['normal_value'] ?? '—',
+                        'sort' => $sortOrder++,
+                    ]
+                );
+            }
         }
 
-        // Clean up empty stub if it exists
+        // Clean empty stubs
         $this->db->execute(
             "DELETE FROM results WHERE lab_no = :lab_no AND (parameter IS NULL OR parameter = '') AND (value IS NULL OR value = '')",
             ['lab_no' => $labNo]
@@ -198,6 +280,38 @@ class ResultRepository
                 'unit' => $data['unit'] ?? null,
                 'flag' => $data['flag'] ?? null,
             ]
+        );
+    }
+
+    public function findResult(string $id): ?array
+    {
+        return $this->db->fetchOne(
+            "SELECT * FROM results WHERE id = :id OR lab_no = :lab LIMIT 1",
+            ['id' => $id, 'lab' => $id]
+        );
+    }
+
+    public function getUnverifiedResults(): array
+    {
+        // One row per lab visit that has entered values still waiting for sign-off
+        return $this->db->fetchAll(
+            "SELECT
+                r.lab_no,
+                MAX(r.patient) AS patient,
+                GROUP_CONCAT(DISTINCT r.test ORDER BY r.test SEPARATOR ', ') AS test,
+                COUNT(*) AS param_count,
+                SUM(CASE WHEN r.value IS NOT NULL AND r.value != '' THEN 1 ELSE 0 END) AS filled_count,
+                MIN(r.id) AS id
+             FROM results r
+             WHERE r.verified_at IS NULL
+               AND EXISTS (
+                    SELECT 1 FROM results r2
+                    WHERE r2.lab_no = r.lab_no
+                      AND r2.verified_at IS NULL
+                      AND r2.value IS NOT NULL AND r2.value != ''
+               )
+             GROUP BY r.lab_no
+             ORDER BY r.lab_no DESC"
         );
     }
 

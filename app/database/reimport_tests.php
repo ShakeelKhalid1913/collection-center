@@ -38,9 +38,13 @@ function runReimportTests(): array
         $import = import_tests_from_csv($pdo, $csvPath, 'ORG-001');
         $logs = array_merge($logs, $import['logs']);
 
-        $cbcId = seed_cbc_parameters_for_imported_catalog($pdo, 'ORG-001');
-        if ($cbcId) {
-            $logs[] = "CBC multi-parameters attached to {$cbcId}.";
+        $attached = seed_panel_parameters_for_imported_catalog($pdo, 'ORG-001');
+        if ($attached !== []) {
+            foreach ($attached as $panel => $info) {
+                $logs[] = "{$panel} multi-parameters attached to {$info}.";
+            }
+        } else {
+            $logs[] = 'No panel tests found for parameter seeding.';
         }
 
         $logs[] = 'Done.';

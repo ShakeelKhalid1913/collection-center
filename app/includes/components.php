@@ -105,80 +105,126 @@ function filter_bar(array $fields, string $applyLabel = 'Apply filters'): string
     return $html;
 }
 
-function catalog_picker(string $mode = 'pathology'): string
+function catalog_picker(string $mode = 'pathology', array $selectedNames = []): string
 {
-    $deptFilterOpts = '<option value="">All departments (optional filter)</option>';
-    foreach (TEST_DEPARTMENTS as $dept) {
-        $deptFilterOpts .= '<option value="' . e(strtolower($dept)) . '">' . e($dept) . '</option>';
+    $selectedLookup = [];
+    foreach ($selectedNames as $n) {
+        $n = trim((string)$n);
+        if ($n !== '') {
+            $selectedLookup[strtolower($n)] = true;
+        }
     }
+    $items = [];
 
-    $search = '<div class="mb-3 grid gap-3 sm:grid-cols-2">'
-        . '<input type="search" id="catalog-search" class="field" placeholder="Search test / package by name or code…" data-catalog-search>'
-        . '<select class="field" data-catalog-dept aria-label="Filter by department">'
-        . $deptFilterOpts
-        . '</select>'
-        . '</div>'
-        . '<p class="mb-3 text-xs text-slate-500">Department filter is optional — pick one to see only that department’s tests, or leave “All”.</p>';
-
-    $packages = '';
     foreach (mock('mock_packages') as $pkg) {
-        $packages .= '<label class="catalog-item" data-catalog-item data-dept="" data-name="' . e(strtolower($pkg['name'] . ' ' . $pkg['code'])) . '">'
-            . '<input type="checkbox" name="tests[]" value="' . e($pkg['name']) . '" class="catalog-check" data-price="' . (int) $pkg['price'] . '" data-code="' . e($pkg['code']) . '">'
-            . '<span class="catalog-item__body">'
-            . '<span class="catalog-item__title">' . e($pkg['name']) . ' <span class="catalog-code">' . e($pkg['code']) . '</span></span>'
-            . '<span class="catalog-item__meta">Package · ' . e($pkg['tests']) . '</span>'
-            . '</span>'
-            . '<span class="catalog-item__price">' . e(format_money((float) $pkg['price'])) . '</span>'
-            . '</label>';
+        $items[] = [
+            'dept' => 'packages',
+            'dept_label' => 'Packages',
+            'name' => $pkg['name'],
+            'code' => $pkg['code'],
+            'meta' => 'Package · ' . $pkg['tests'],
+            'price' => (int)$pkg['price'],
+            'search' => strtolower($pkg['name'] . ' ' . $pkg['code'] . ' package'),
+        ];
     }
-
-    $byDept = [];
-    foreach (array_keys(TEST_DEPARTMENTS) as $dept) {
-        $byDept[$dept] = '';
-    }
-    $other = '';
 
     foreach (mock('mock_tests') as $t) {
-        if ($mode === 'pathology' && $t['category'] === 'Radiology') {
+        if ($mode === 'pathology' && ($t['category'] ?? '') === 'Radiology') {
             continue;
         }
-        $deptKey = strtolower((string)($t['category'] ?? ''));
-        $item = '<label class="catalog-item" data-catalog-item data-dept="' . e($deptKey) . '" data-name="' . e(strtolower($t['name'] . ' ' . $t['code'] . ' ' . $t['category'])) . '">'
-            . '<input type="checkbox" name="tests[]" value="' . e($t['name']) . '" class="catalog-check" data-price="' . (int) $t['price'] . '" data-code="' . e($t['code']) . '">'
+        $cat = (string)($t['category'] ?? 'Other');
+        $items[] = [
+            'dept' => strtolower($cat),
+            'dept_label' => $cat,
+            'name' => $t['name'],
+            'code' => $t['code'],
+            'meta' => $cat . ' · Sample: ' . ($t['sample'] ?? '—'),
+            'price' => (int)$t['price'],
+            'search' => strtolower($t['name'] . ' ' . $t['code'] . ' ' . $cat),
+        ];
+    }
+
+    $deptCounts = [];
+    foreach ($items as $it) {
+        $deptCounts[$it['dept']] = ($deptCounts[$it['dept']] ?? 0) + 1;
+    }
+
+    $orderedDepts = ['packages' => 'Packages'];
+    foreach (TEST_DEPARTMENTS as $key => $label) {
+        $dk = strtolower($key);
+        if ($mode === 'pathology' && $dk === 'radiology') {
+            continue;
+        }
+        if (!empty($deptCounts[$dk])) {
+            $orderedDepts[$dk] = $label;
+        }
+    }
+    foreach ($deptCounts as $dk => $count) {
+        if (!isset($orderedDepts[$dk])) {
+            $orderedDepts[$dk] = ucwords(str_replace('_', ' ', $dk));
+        }
+    }
+
+    $typeNav = '';
+    $firstDept = array_key_first($orderedDepts) ?: 'packages';
+    foreach ($orderedDepts as $dk => $label) {
+        $count = (int)($deptCounts[$dk] ?? 0);
+        if ($count === 0) {
+            continue;
+        }
+        $active = $dk === $firstDept ? ' is-active' : '';
+        $typeNav .= '<button type="button" class="catalog-type-btn' . $active . '" data-catalog-type="' . e($dk) . '">'
+            . '<span>' . e($label) . '</span>'
+            . '<span class="catalog-type-btn__count">' . $count . '</span>'
+            . '</button>';
+    }
+
+    $options = '<option value="">— Choose a test —</option>';
+    $hiddenChecks = '';
+    foreach ($items as $it) {
+        $options .= '<option value="' . e($it['name']) . '" data-dept="' . e($it['dept']) . '" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '" data-name="' . e($it['search']) . '" data-meta="' . e($it['meta']) . '">'
+            . e($it['name'] . ' (' . $it['code'] . ') — ' . format_money((float)$it['price']))
+            . '</option>';
+
+        $isSelected = isset($selectedLookup[strtolower($it['name'])]);
+        $checked = $isSelected ? ' checked' : '';
+        $rowHidden = $isSelected ? '' : ' hidden';
+
+        // Hidden until selected — still post as tests[] for the server / billing JS
+        $hiddenChecks .= '<label class="catalog-item catalog-item--selected' . $rowHidden . '" data-catalog-item data-dept="' . e($it['dept']) . '" data-name="' . e($it['search']) . '" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '" data-meta="' . e($it['meta']) . '">'
+            . '<input type="checkbox" name="tests[]" value="' . e($it['name']) . '" class="catalog-check" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '"' . $checked . '>'
             . '<span class="catalog-item__body">'
-            . '<span class="catalog-item__title">' . e($t['name']) . ' <span class="catalog-code">' . e($t['code']) . '</span></span>'
-            . '<span class="catalog-item__meta">' . e($t['category']) . ' · Sample: ' . e($t['sample']) . '</span>'
+            . '<span class="catalog-item__title">' . e($it['name']) . ' <span class="catalog-code">' . e($it['code']) . '</span></span>'
+            . '<span class="catalog-item__meta">' . e($it['meta']) . '</span>'
             . '</span>'
-            . '<span class="catalog-item__price">' . e(format_money((float) $t['price'])) . '</span>'
+            . '<span class="catalog-item__price">' . e(format_money((float)$it['price'])) . '</span>'
+            . '<button type="button" class="catalog-remove" data-catalog-remove title="Remove">&times;</button>'
             . '</label>';
-
-        $cat = $t['category'] ?? '';
-        if (isset($byDept[$cat])) {
-            $byDept[$cat] .= $item;
-        } else {
-            $other .= $item;
-        }
     }
 
-    $deptSections = '';
-    foreach ($byDept as $dept => $html) {
-        if ($html === '') {
-            continue;
-        }
-        $deptSections .= '<div class="catalog-section mt-4" data-catalog-section data-dept="' . e(strtolower($dept)) . '">'
-            . '<p class="catalog-section__title">' . e($dept) . '</p>'
-            . '<div class="catalog-list">' . $html . '</div></div>';
-    }
-    if ($other !== '') {
-        $deptSections .= '<div class="catalog-section mt-4" data-catalog-section data-dept="other">'
-            . '<p class="catalog-section__title">Other</p>'
-            . '<div class="catalog-list">' . $other . '</div></div>';
-    }
-
-    return $search
-        . '<div class="catalog-section" data-catalog-section data-dept=""><p class="catalog-section__title">Packages</p><div class="catalog-list">' . $packages . '</div></div>'
-        . $deptSections;
+    return <<<HTML
+<div class="catalog-workspace" data-catalog-workspace>
+    <aside class="catalog-types" aria-label="Test type">
+        <p class="catalog-pane-label">1. Test type</p>
+        <div class="catalog-type-list">{$typeNav}</div>
+    </aside>
+    <div class="catalog-pick">
+        <p class="catalog-pane-label">2. Add test</p>
+        <div class="catalog-add-row">
+            <select class="field" data-catalog-select aria-label="Select a test">{$options}</select>
+            <button type="button" class="btn btn-primary whitespace-nowrap" data-catalog-add>Add</button>
+        </div>
+        <p class="catalog-pane-label mt-4">Selected for this patient</p>
+        <div class="catalog-list catalog-list--selected" data-catalog-selected>
+            <p class="catalog-empty" data-catalog-empty>No tests added yet. Pick a type, choose a test, click Add.</p>
+            {$hiddenChecks}
+        </div>
+    </div>
+</div>
+HTML;
 }
+
+
 
 function billing_panel(): string
 {

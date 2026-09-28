@@ -117,7 +117,7 @@ $content .= card(
     '<div class="border-t border-slate-200 pt-4">' .
     '<h3 class="font-bold text-slate-800 text-base mb-1">Select / Update Tests for this Patient</h3>' .
     '<p class="text-xs text-slate-500 mb-3">Check or uncheck tests below. Searching and filtering is supported. You can select single tests (e.g. CBC, FBS) or packages.</p>' .
-    catalog_picker('pathology') .
+    catalog_picker('pathology', array_filter(array_map('trim', explode(',', (string)$currentTests)))) .
     '</div>' .
 
     // Billing details

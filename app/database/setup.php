@@ -79,11 +79,13 @@ function runSetup(): array
         foreach ($import['logs'] as $msg) {
             $logs[] = $msg;
         }
-        $cbcId = seed_cbc_parameters_for_imported_catalog($pdo, 'ORG-001');
-        if ($cbcId) {
-            $logs[] = "CBC multi-parameters attached to imported test {$cbcId}.";
+        $attached = seed_panel_parameters_for_imported_catalog($pdo, 'ORG-001');
+        if ($attached !== []) {
+            foreach ($attached as $panel => $info) {
+                $logs[] = "{$panel} multi-parameters attached to {$info}.";
+            }
         } else {
-            $logs[] = 'CBC not found in CSV — skipped CBC parameter seed.';
+            $logs[] = 'No panel tests found for parameter seeding.';
         }
 
         // Seed Packages

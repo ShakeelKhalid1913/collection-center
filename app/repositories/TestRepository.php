@@ -170,27 +170,55 @@ class TestRepository
             return null;
         }
 
-        // Exact code or exact name
+        // 1) Exact code (case-insensitive)
         $row = $this->db->fetchOne(
-            "SELECT * FROM tests WHERE organization_id = :org_id AND (code = :code OR name = :name) LIMIT 1",
-            ['code' => $code, 'name' => $code, 'org_id' => $orgId]
+            "SELECT * FROM tests WHERE organization_id = :org_id AND UPPER(code) = UPPER(:code) LIMIT 1",
+            ['code' => $code, 'org_id' => $orgId]
         );
         if ($row) {
             return $row;
         }
 
-        // Prefix match: "CBC" → "CBC (Complete Blood Count)", "FBS" → "FBS (Fasting Blood Sugar)"
+        // 2) Exact name
         $row = $this->db->fetchOne(
-            "SELECT * FROM tests
-             WHERE organization_id = :org_id
-               AND (name LIKE :prefix_paren OR name LIKE :prefix_space OR UPPER(code) = UPPER(:code2))
-             ORDER BY LENGTH(name) ASC
+            "SELECT * FROM tests WHERE organization_id = :org_id AND name = :name LIMIT 1",
+            ['name' => $code, 'org_id' => $orgId]
+        );
+        if ($row) {
+            return $row;
+        }
+
+        // 3) Smart prefix: "CBC" → "CBC (Complete Blood Count)", never "CBC For (Dengue)"
+        // Prefer: name starts with "CODE (", then tests that have parameters, then shorter names.
+        $row = $this->db->fetchOne(
+            "SELECT t.*,
+                    (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+             FROM tests t
+             WHERE t.organization_id = :org_id
+               AND (
+                    t.name LIKE :paren
+                    OR t.name LIKE :space
+                    OR t.name LIKE :paren_s
+                    OR t.name LIKE :space_s
+               )
+             ORDER BY
+                CASE
+                    WHEN t.name LIKE :paren2 THEN 0
+                    WHEN t.name LIKE :paren_s2 THEN 1
+                    ELSE 2
+                END,
+                CASE WHEN LOWER(t.name) LIKE '%complete blood count%' THEN 0 ELSE 1 END,
+                param_count DESC,
+                LENGTH(t.name) ASC
              LIMIT 1",
             [
                 'org_id' => $orgId,
-                'prefix_paren' => $code . ' (%',
-                'prefix_space' => $code . ' %',
-                'code2' => $code,
+                'paren' => $code . ' (%',
+                'paren2' => $code . ' (%',
+                'space' => $code . ' %',
+                'paren_s' => $code . 's (%',
+                'paren_s2' => $code . 's (%',
+                'space_s' => $code . 's %',
             ]
         );
         return $row ?: null;

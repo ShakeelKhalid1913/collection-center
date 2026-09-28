@@ -196,59 +196,142 @@ function parse_pkr_price(string $yourPrice, string $basePrice = ''): float
 }
 
 /**
- * Attach CBC multi-parameters to whichever CSV test matches CBC.
+ * Attach multi-parameter panels (CBC, LFT, Lipid, RFT, TFT) to matching catalog tests.
+ *
+ * @return array<string,string> map of panel key => test id
  */
-function seed_cbc_parameters_for_imported_catalog(PDO $pdo, string $orgId = 'ORG-001'): ?string
+function seed_panel_parameters_for_imported_catalog(PDO $pdo, string $orgId = 'ORG-001'): array
 {
-    $row = $pdo->prepare(
-        "SELECT id FROM tests
-         WHERE organization_id = :org
-           AND (UPPER(code) IN ('CBC','100') OR name LIKE '%Complete Blood Count%' OR name LIKE 'CBC (%')
-         ORDER BY CASE WHEN UPPER(code)='CBC' THEN 0 WHEN UPPER(code)='100' THEN 1 ELSE 2 END
-         LIMIT 1"
-    );
-    $row->execute(['org' => $orgId]);
-    $test = $row->fetch(PDO::FETCH_ASSOC);
-    if (!$test) {
-        return null;
-    }
-    $testId = (string)$test['id'];
-
-    $pdo->prepare('DELETE FROM test_parameters WHERE test_id = :id')->execute(['id' => $testId]);
-
-    $cbcParams = [
-        ['ERYTHROCYTES', 'Hemoglobin (HB)', 'g/dl', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3", 1],
-        ['ERYTHROCYTES', 'Total RBCs', 'X10^12/L', '4.50 - 6.50', null, 2],
-        ['ABSOLUTE VALUES', 'HCT (Hematocrit)', '%', '38.0 - 52.0', null, 3],
-        ['ABSOLUTE VALUES', 'MCV', 'Fl', '75.0 - 95.0', null, 4],
-        ['ABSOLUTE VALUES', 'MCH', 'Pg', '27.0 - 32.0', null, 5],
-        ['ABSOLUTE VALUES', 'MCHC', 'g/dl', '30.0 - 35.0', null, 6],
-        ['THROMBOCYTE', 'Platelet Count', 'x10^3/µL', '150 - 400', null, 7],
-        ['Differential Leukocytes Count', 'WBC (TLC)', 'K/uL', '4.0 - 11.0', null, 8],
-        ['Differential Leukocytes Count', 'Neutrophils', '%', '40 - 75', null, 9],
-        ['Differential Leukocytes Count', 'Lymphocytes', '%', '20 - 50', null, 10],
-        ['Differential Leukocytes Count', 'Monocytes', '%', '02 - 10', null, 11],
-        ['Differential Leukocytes Count', 'Eosinophils', '%', '01 - 06', null, 12],
-        ['Differential Leukocytes Count', 'ESR', 'mm/1stHr', '0 - 18', null, 13],
+    $panels = [
+        'CBC' => [
+            'match' => "UPPER(code) IN ('CBC','100') OR name LIKE '%Complete Blood Count%' OR name LIKE 'CBC (%'",
+            'order' => "CASE WHEN UPPER(code)='CBC' THEN 0 WHEN UPPER(code)='100' THEN 1 WHEN name LIKE '%Complete Blood Count%' THEN 2 ELSE 3 END",
+            'exclude' => "name NOT LIKE 'CBC For%'",
+            'params' => [
+                ['ERYTHROCYTES', 'Hemoglobin (HB)', 'g/dl', '12.0 - 16.5', "New born (HB): 15.2 - 23.5\nBaby (HB): 10.1 - 12.8\nInfant (HB): 10.8 - 12.9\nChildren (HB): 11.1 - 14.3"],
+                ['ERYTHROCYTES', 'Total RBCs', 'X10^12/L', '4.50 - 6.50', null],
+                ['ABSOLUTE VALUES', 'HCT (Hematocrit)', '%', '38.0 - 52.0', null],
+                ['ABSOLUTE VALUES', 'MCV', 'Fl', '75.0 - 95.0', null],
+                ['ABSOLUTE VALUES', 'MCH', 'Pg', '27.0 - 32.0', null],
+                ['ABSOLUTE VALUES', 'MCHC', 'g/dl', '30.0 - 35.0', null],
+                ['THROMBOCYTE', 'Platelet Count', 'x10^3/µL', '150 - 400', null],
+                ['Differential Leukocytes Count', 'WBC (TLC)', 'K/uL', '4.0 - 11.0', null],
+                ['Differential Leukocytes Count', 'Neutrophils', '%', '40 - 75', null],
+                ['Differential Leukocytes Count', 'Lymphocytes', '%', '20 - 50', null],
+                ['Differential Leukocytes Count', 'Monocytes', '%', '02 - 10', null],
+                ['Differential Leukocytes Count', 'Eosinophils', '%', '01 - 06', null],
+                ['Differential Leukocytes Count', 'ESR', 'mm/1stHr', '0 - 18', null],
+            ],
+        ],
+        'LFT' => [
+            'match' => "UPPER(code) IN ('LFT','LFTS') OR name LIKE 'LFTs (%' OR name LIKE '%Liver Function%'",
+            'order' => "CASE WHEN name LIKE '%Liver Function%' THEN 0 WHEN name LIKE 'LFTs (%' THEN 1 ELSE 2 END",
+            'exclude' => '1=1',
+            'params' => [
+                ['LIVER FUNCTION', 'Bilirubin Total', 'mg/dl', '0.1 - 1.2', null],
+                ['LIVER FUNCTION', 'Bilirubin Direct', 'mg/dl', '0.0 - 0.3', null],
+                ['LIVER FUNCTION', 'Bilirubin Indirect', 'mg/dl', '0.1 - 1.0', null],
+                ['LIVER FUNCTION', 'SGPT (ALT)', 'U/L', '10 - 40', null],
+                ['LIVER FUNCTION', 'SGOT (AST)', 'U/L', '10 - 40', null],
+                ['LIVER FUNCTION', 'Alkaline Phosphatase (ALP)', 'U/L', '40 - 129', null],
+                ['LIVER FUNCTION', 'Gamma GT (GGT)', 'U/L', '5 - 40', null],
+                ['LIVER FUNCTION', 'Total Protein', 'g/dl', '6.0 - 8.3', null],
+                ['LIVER FUNCTION', 'Albumin', 'g/dl', '3.5 - 5.2', null],
+                ['LIVER FUNCTION', 'Globulin', 'g/dl', '2.0 - 3.5', null],
+                ['LIVER FUNCTION', 'A/G Ratio', '', '1.0 - 2.5', null],
+            ],
+        ],
+        'LIPID' => [
+            'match' => "UPPER(code) IN ('LIPID','LP') OR name LIKE '%LIPID PROFILE%' OR name LIKE '%Lipid Profile%'",
+            'order' => "CASE WHEN name LIKE '%LIPID PROFILE%' OR name LIKE '%Lipid Profile%' THEN 0 ELSE 1 END",
+            'exclude' => '1=1',
+            'params' => [
+                ['LIPID PROFILE', 'Cholesterol Total', 'mg/dl', '< 200', null],
+                ['LIPID PROFILE', 'Triglycerides', 'mg/dl', '< 150', null],
+                ['LIPID PROFILE', 'HDL Cholesterol', 'mg/dl', '> 40', null],
+                ['LIPID PROFILE', 'LDL Cholesterol', 'mg/dl', '< 100', null],
+                ['LIPID PROFILE', 'VLDL Cholesterol', 'mg/dl', '5 - 40', null],
+                ['LIPID PROFILE', 'Cholesterol / HDL Ratio', '', '< 5.0', null],
+            ],
+        ],
+        'RFT' => [
+            'match' => "UPPER(code) IN ('RFT','RFTS','200') OR name LIKE 'RFTs (%' OR name LIKE '%Renal Function%'",
+            'order' => "CASE WHEN name LIKE '%Renal Function%' THEN 0 WHEN UPPER(code)='200' THEN 1 ELSE 2 END",
+            'exclude' => '1=1',
+            'params' => [
+                ['RENAL FUNCTION', 'Urea', 'mg/dl', '15 - 40', null],
+                ['RENAL FUNCTION', 'Creatinine', 'mg/dl', '0.6 - 1.3', null],
+                ['RENAL FUNCTION', 'Uric Acid', 'mg/dl', '3.5 - 7.2', null],
+                ['RENAL FUNCTION', 'Sodium (Na)', 'mmol/L', '136 - 145', null],
+                ['RENAL FUNCTION', 'Potassium (K)', 'mmol/L', '3.5 - 5.1', null],
+                ['RENAL FUNCTION', 'Chloride (Cl)', 'mmol/L', '98 - 107', null],
+                ['RENAL FUNCTION', 'BUN', 'mg/dl', '7 - 20', null],
+            ],
+        ],
+        'TFT' => [
+            'match' => "UPPER(code) IN ('TFT','TFTS') OR name LIKE 'TFTs (%' OR name LIKE '%Thyroid Function%'",
+            'order' => "CASE WHEN name LIKE '%Thyroid Function%HC%' OR name LIKE 'TFTs (%HC%' THEN 0 WHEN name LIKE '%Thyroid Function%' THEN 1 ELSE 2 END",
+            'exclude' => '1=1',
+            'params' => [
+                ['THYROID', 'T3 (Triiodothyronine)', 'ng/ml', '0.8 - 2.0', null],
+                ['THYROID', 'T4 (Thyroxine)', 'µg/dl', '5.1 - 14.1', null],
+                ['THYROID', 'TSH', 'µIU/ml', '0.4 - 4.0', null],
+            ],
+        ],
     ];
 
+    $attached = [];
     $stmt = $pdo->prepare(
         'INSERT INTO test_parameters (id, test_id, section, name, unit, normal_value, reference_range, sub_table, sort_order)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    foreach ($cbcParams as $i => $p) {
-        $stmt->execute([
-            'PRM-CBC-' . str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT),
-            $testId,
-            $p[0],
-            $p[1],
-            $p[2],
-            $p[3],
-            $p[3],
-            $p[4],
-            $p[5],
-        ]);
+
+    foreach ($panels as $key => $panel) {
+        $sql = "SELECT id, name FROM tests
+                WHERE organization_id = :org
+                  AND ({$panel['match']})
+                  AND ({$panel['exclude']})
+                ORDER BY {$panel['order']}
+                LIMIT 1";
+        $q = $pdo->prepare($sql);
+        $q->execute(['org' => $orgId]);
+        $test = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$test) {
+            continue;
+        }
+        $testId = (string)$test['id'];
+        $pdo->prepare('DELETE FROM test_parameters WHERE test_id = :id')->execute(['id' => $testId]);
+
+        foreach ($panel['params'] as $i => $p) {
+            $stmt->execute([
+                'PRM-' . $key . '-' . str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT),
+                $testId,
+                $p[0],
+                $p[1],
+                $p[2],
+                $p[3],
+                $p[3],
+                $p[4],
+                $i + 1,
+            ]);
+        }
+        $attached[$key] = $testId . ' (' . $test['name'] . ')';
     }
 
-    return $testId;
+    return $attached;
+}
+
+/** @deprecated use seed_panel_parameters_for_imported_catalog */
+function seed_cbc_parameters_for_imported_catalog(PDO $pdo, string $orgId = 'ORG-001'): ?string
+{
+    $attached = seed_panel_parameters_for_imported_catalog($pdo, $orgId);
+    if (empty($attached['CBC'])) {
+        return null;
+    }
+    // Return bare id for older callers
+    if (preg_match('/^(TST-\S+)/', $attached['CBC'], $m)) {
+        return $m[1];
+    }
+    $parts = explode(' ', $attached['CBC'], 2);
+    return $parts[0] ?: null;
 }

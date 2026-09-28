@@ -42,18 +42,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
                 $existingEntry['organization_id'] ?? 'ORG-001'
             );
 
-            $message = flash_success("Lab entry {$postLabNo} updated successfully! Tests assigned: {$newTests}");
+            $message = flash_success("Updated. Tests on this visit: {$newTests}");
             $entry = lab_repo()->findByLabNo($postLabNo);
         } else {
-            $message = flash_error('Failed to update lab entry.');
+            $message = flash_error('Could not update tests.');
         }
     }
 }
 
 if (!$entry) {
-    $content = page_header('Edit Lab Entry', 'No entry specified.');
-    $content .= card('<p class="p-6 text-slate-600">Open an entry from <a href="/portals/main-lab/patients/history.php" class="text-teal-700 underline font-semibold">Patient History</a> to edit assigned tests.</p>');
-    render_page('Edit Lab Entry', 'main-lab', 'history', $content);
+    $content = page_header('Change Tests', 'No visit selected.');
+    $content .= card('<p class="p-6 text-slate-600">Open a visit from <a href="/portals/main-lab/patients/history.php" class="text-teal-700 underline font-semibold">Patient History</a>.</p>');
+    render_page('Change Tests', 'main-lab', 'history', $content);
     exit;
 }
 
@@ -62,14 +62,9 @@ $mrNo = $patient['patient_no'] ?? ($entry['patient_id'] ?? '—');
 $patientName = $entry['patient_name'] ?? '—';
 $currentTests = $entry['tests'] ?? '';
 
-$doctorOpts = ['' => '— Select referring doctor —'];
+$doctorOpts = ['' => '— Referring doctor —'];
 foreach (mock('mock_doctors') as $d) {
     $doctorOpts[$d['id']] = $d['name'] . ' (' . $d['specialty'] . ')';
-}
-
-$routeOpts = [];
-foreach (mock('mock_routes') as $r) {
-    $routeOpts[$r['id']] = $r['label'];
 }
 
 $currentDoctorId = '';
@@ -80,64 +75,53 @@ foreach (mock('mock_doctors') as $d) {
     }
 }
 
-$currentRouteId = '';
-foreach (mock('mock_routes') as $r) {
-    if ($r['label'] === ($entry['route'] ?? '')) {
-        $currentRouteId = $r['id'];
-        break;
-    }
-}
-
 $historyUrl = '/portals/main-lab/patients/history.php?id=' . urlencode((string)$mrNo);
+$labNoSafe = e((string)$entry['lab_no']);
+$patientSafe = e((string)$patientName);
+$mrSafe = e((string)$mrNo);
+$testsSafe = e((string)$currentTests);
 
 $content = page_header(
-    'Edit Assigned Tests &amp; Entry',
-    "Lab No: {$entry['lab_no']} · Patient: {$patientName} (MR No: {$mrNo})"
+    'Change Tests',
+    "Lab No {$entry['lab_no']} · {$patientName} · MR {$mrNo}"
 );
 $content .= $message;
 
+$content .= '<form method="post" data-billing class="space-y-4">' .
+    '<input type="hidden" name="lab_no" value="' . $labNoSafe . '">' .
+    '<input type="hidden" name="route_id" value="RT-MAIN">';
+
 $content .= card(
-    '<form method="post" data-billing class="p-4 sm:p-6 space-y-6">' .
-    '<input type="hidden" name="lab_no" value="' . e($entry['lab_no']) . '">' .
+    '<div class="grid gap-3 p-4 sm:grid-cols-3 sm:p-5 text-sm">' .
+    '<div><span class="block text-[10px] uppercase font-bold text-slate-400">Patient</span><strong>' . $patientSafe . '</strong></div>' .
+    '<div><span class="block text-[10px] uppercase font-bold text-slate-400">MR No</span><strong class="font-mono">' . $mrSafe . '</strong></div>' .
+    '<div><span class="block text-[10px] uppercase font-bold text-slate-400">Currently booked</span><span class="font-semibold text-teal-800">' . $testsSafe . '</span></div>' .
+    '<div class="sm:col-span-2">' . select_field('Referring doctor', 'doctor_id', $doctorOpts, $currentDoctorId, true) . '</div>' .
+    '<div>' . select_field('Priority', 'priority', ['Normal' => 'Normal', 'Urgent' => 'Urgent', 'STAT' => 'STAT'], $entry['priority'] ?? 'Normal') . '</div>' .
+    '</div>'
+);
 
-    '<div class="grid gap-3 sm:grid-cols-3 p-4 bg-teal-50 border border-teal-200 rounded-lg text-sm">' .
-    '<div><span class="text-teal-700 font-bold block text-xs uppercase">Patient Name</span><strong class="text-slate-900 text-base">' . e($patientName) . '</strong></div>' .
-    '<div><span class="text-teal-700 font-bold block text-xs uppercase">MR Number</span><strong class="text-slate-900 font-mono text-base">' . e($mrNo) . '</strong></div>' .
-    '<div><span class="text-teal-700 font-bold block text-xs uppercase">Currently Assigned Tests</span><span class="inline-block px-2 py-0.5 rounded bg-teal-200 text-teal-900 font-bold text-xs">' . e($currentTests) . '</span></div>' .
-    '</div>' .
-
-    '<div class="grid gap-4 sm:grid-cols-3 pt-2">' .
-    select_field('Referring doctor', 'doctor_id', $doctorOpts, $currentDoctorId, true) .
-    select_field('Route / Bench', 'route_id', $routeOpts, $currentRouteId, true) .
-    select_field('Priority', 'priority', ['Normal' => 'Normal', 'Urgent' => 'Urgent', 'STAT' => 'STAT'], $entry['priority'] ?? 'Normal') .
-    '</div>' .
-
-    '<div class="border-t border-slate-200 pt-4">' .
-    '<h3 class="font-bold text-slate-800 text-base mb-1">Select / Update Tests for this Patient</h3>' .
-    '<p class="text-xs text-slate-500 mb-3">Check or uncheck tests below. Searching and filtering is supported. You can select single tests (e.g. CBC, FBS) or packages.</p>' .
-    catalog_picker('pathology') .
-    '</div>' .
-
-    '<div class="border-t border-slate-200 pt-4 grid gap-6 sm:grid-cols-2">' .
-    '<div>' .
-    textarea_field('Clinical notes (optional)', 'clinical', $entry['clinical_notes'] ?? '', 'Notes...', 3, true) .
-    '</div>' .
-    billing_panel() .
-    '</div>' .
-
-    '<div class="border-t border-slate-200 pt-4 flex flex-wrap gap-3 items-center justify-between">' .
-    '<div class="flex gap-2">' .
-    '<button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Updated Tests</button>' .
-    '<a href="' . e($historyUrl) . '" class="btn btn-secondary">Cancel</a>' .
-    '</div>' .
-    '<div class="flex gap-2">' .
-    '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Results</a>' .
-    '<a href="/portals/main-lab/reports/preview.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
-    '</div>' .
-    '</div>' .
-
-    '</form>',
+$content .= '<div class="book-layout">';
+$content .= card(
+    panel_head('Tests') .
+    '<div class="p-3 sm:p-4">' . catalog_picker('pathology', array_filter(array_map('trim', explode(',', (string)$currentTests)))) . '</div>',
     'overflow-hidden'
 );
 
-render_page('Edit Lab Entry', 'main-lab', 'history', $content);
+$content .= '<div class="book-layout__side space-y-3">' .
+    card(
+        panel_head('Discount & payment') .
+        '<div class="p-4">' . billing_panel() . '</div>' .
+        '<div class="px-4 pb-4">' .
+        textarea_field('Notes (optional)', 'clinical', $entry['clinical_notes'] ?? '', 'Notes…', 3, true) .
+        '</div>' .
+        '<div class="sticky-actions border-t border-slate-100 flex flex-wrap gap-2">' .
+        '<button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Save tests</button>' .
+        '<a href="' . e($historyUrl) . '" class="btn btn-secondary">Cancel</a>' .
+        '</div>'
+    ) .
+    '</div>';
+
+$content .= '</div></form>';
+
+render_page('Change Tests', 'main-lab', 'history', $content);

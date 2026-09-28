@@ -90,45 +90,89 @@
   }
 
   function initCatalogSearch() {
-    const input = document.querySelector('[data-catalog-search]');
-    const deptSelect = document.querySelector('[data-catalog-dept]');
-    if (!input && !deptSelect) return;
+    const workspace = document.querySelector('[data-catalog-workspace]');
+    if (!workspace) return;
 
-    function applyFilters() {
-      const q = (input?.value || '').trim().toLowerCase();
-      const dept = (deptSelect?.value || '').trim().toLowerCase();
+    const select = workspace.querySelector('[data-catalog-select]');
+    const addBtn = workspace.querySelector('[data-catalog-add]');
+    const emptyEl = workspace.querySelector('[data-catalog-empty]');
+    const typeButtons = workspace.querySelectorAll('[data-catalog-type]');
+    let activeType = typeButtons[0]?.getAttribute('data-catalog-type') || '';
 
-      document.querySelectorAll('[data-catalog-item]').forEach((item) => {
-        const name = item.getAttribute('data-name') || '';
-        const itemDept = (item.getAttribute('data-dept') || '').toLowerCase();
-        const matchQ = !q || name.includes(q);
-        // Packages (empty data-dept) always show unless searching excludes them
-        const matchDept = !dept || itemDept === '' || itemDept === dept;
-        item.style.display = matchQ && matchDept ? '' : 'none';
+    function refreshSelected() {
+      const items = workspace.querySelectorAll('[data-catalog-item]');
+      let any = false;
+      items.forEach((item) => {
+        const check = item.querySelector('.catalog-check');
+        const on = !!(check && check.checked);
+        item.classList.toggle('hidden', !on);
+        item.style.display = on ? '' : 'none';
+        if (on) any = true;
       });
-
-      document.querySelectorAll('[data-catalog-section]').forEach((section) => {
-        const sectionDept = (section.getAttribute('data-dept') || '').toLowerCase();
-        // Hide whole department section if filter is set and doesn't match
-        if (dept && sectionDept && sectionDept !== dept && sectionDept !== 'other') {
-          section.style.display = 'none';
-          return;
-        }
-        if (dept && sectionDept === 'other') {
-          section.style.display = 'none';
-          return;
-        }
-        // Packages section (data-dept="") — keep visible
-        const visibleItem = Array.from(section.querySelectorAll('[data-catalog-item]')).some(
-          (el) => el.style.display !== 'none'
-        );
-        section.style.display = visibleItem || sectionDept === '' ? '' : 'none';
-      });
+      if (emptyEl) emptyEl.style.display = any ? 'none' : '';
     }
 
-    input?.addEventListener('input', applyFilters);
-    deptSelect?.addEventListener('change', applyFilters);
+    function filterDropdown() {
+      if (!select) return;
+      Array.from(select.options).forEach((opt, idx) => {
+        if (idx === 0) {
+          opt.hidden = false;
+          return;
+        }
+        const optDept = (opt.getAttribute('data-dept') || '').toLowerCase();
+        opt.hidden = !!(activeType && optDept !== activeType);
+      });
+      const current = select.selectedOptions[0];
+      if (current && current.hidden) select.value = '';
+    }
+
+    typeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeType = btn.getAttribute('data-catalog-type') || '';
+        typeButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+        filterDropdown();
+      });
+    });
+
+    addBtn?.addEventListener('click', () => {
+      if (!select || !select.value) return;
+      const name = select.value;
+      const checkbox = Array.from(workspace.querySelectorAll('.catalog-check')).find(
+        (el) => el.value === name
+      );
+      if (checkbox) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      select.value = '';
+      refreshSelected();
+    });
+
+    select?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addBtn?.click();
+      }
+    });
+
+    workspace.querySelectorAll('[data-catalog-remove]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const item = btn.closest('[data-catalog-item]');
+        const check = item?.querySelector('.catalog-check');
+        if (check) {
+          check.checked = false;
+          check.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        refreshSelected();
+      });
+    });
+
+    filterDropdown();
+    refreshSelected();
   }
+
 
   function loadHtml2Pdf() {
     return new Promise((resolve, reject) => {
