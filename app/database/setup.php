@@ -176,6 +176,7 @@ function runSetup(): array
             "ALTER TABLE results ADD COLUMN reference_range VARCHAR(128) NULL",
             "ALTER TABLE results ADD COLUMN sub_table TEXT NULL",
             "ALTER TABLE results ADD COLUMN sort_order INT DEFAULT 0",
+            "ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1",
             "ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL",
         ] as $alter) {
             try {

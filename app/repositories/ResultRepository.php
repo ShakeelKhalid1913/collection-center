@@ -13,6 +13,21 @@ class ResultRepository
     public function __construct()
     {
         $this->db = Database::getInstance();
+        $this->ensureSchema();
+    }
+
+    private function ensureSchema(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $this->db->execute('ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1');
+        } catch (\Throwable $ignored) {
+            // Column already exists
+        }
     }
 
     public function getSamples(): array
@@ -132,12 +147,16 @@ class ResultRepository
         foreach ($items as $item) {
             $id = $item['id'] ?? '';
             if ($id === '') continue;
+            $visible = array_key_exists('is_visible', $item)
+                ? ((int)$item['is_visible'] ? 1 : 0)
+                : null;
             $this->db->execute(
                 "UPDATE results SET 
                     value = :value, 
                     unit = COALESCE(:unit, unit), 
                     reference_range = COALESCE(:range, reference_range), 
-                    flag = :flag 
+                    flag = :flag,
+                    is_visible = COALESCE(:is_visible, is_visible)
                  WHERE id = :id AND lab_no = :lab_no",
                 [
                     'id' => $id,
@@ -146,6 +165,7 @@ class ResultRepository
                     'unit' => $item['unit'] ?? null,
                     'range' => $item['reference_range'] ?? null,
                     'flag' => $item['flag'] ?? '',
+                    'is_visible' => $visible,
                 ]
             );
         }

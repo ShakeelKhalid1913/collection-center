@@ -253,6 +253,10 @@ function load_document_context(?string $labNo): array
             if (($r['value'] ?? '') === '' && ($r['parameter'] ?? '') === '') {
                 continue;
             }
+            // Skip parameters the lab unchecked (Show = off)
+            if (isset($r['is_visible']) && (int)$r['is_visible'] === 0) {
+                continue;
+            }
             $lines[] = [
                 'test_title' => $r['test'] ?? '',
                 'section' => $r['section'] ?? '',

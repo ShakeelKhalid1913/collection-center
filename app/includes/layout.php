@@ -46,7 +46,7 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Results', [
                 nav_item("{$base}/results/pending.php", 'Pending Results', $activeKey, 'results-pending', null, 'fa-solid fa-hourglass-half'),
-                nav_item("{$base}/results/entry.php", 'Results Entry', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
+                nav_item("{$base}/results/entry.php", 'Enter Results', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
                 nav_item("{$base}/results/verification.php", 'Verification', $activeKey, 'verification', $badges['results_verify'] ?: null, 'fa-solid fa-user-check'),
                 nav_item("{$base}/results/critical.php", 'Critical Results', $activeKey, 'critical', $badges['critical'] ?: null, 'fa-solid fa-triangle-exclamation'),
             ]),
