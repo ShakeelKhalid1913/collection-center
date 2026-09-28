@@ -744,38 +744,153 @@ function render_report_document(
 }
 
 
+function receipt_line_items(array $entry, string $orgId = 'ORG-001'): array
+{
+    $raw = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
+    $items = [];
+    $subtotal = 0.0;
+
+    foreach ($raw as $name) {
+        $label = normalize_test_label($name, $orgId);
+        $price = 0.0;
+
+        $test = test_repo()->findByCode($label, $orgId) ?: test_repo()->findByCode($name, $orgId);
+        if ($test) {
+            $price = (float)($test['price'] ?? 0);
+            $label = (string)($test['name'] ?? $label);
+        } else {
+            foreach (test_repo()->getPackages($orgId) as $pkg) {
+                if (strcasecmp((string)($pkg['name'] ?? ''), $name) === 0
+                    || strcasecmp((string)($pkg['name'] ?? ''), $label) === 0
+                    || strcasecmp((string)($pkg['code'] ?? ''), $name) === 0) {
+                    $price = (float)($pkg['price'] ?? 0);
+                    $label = (string)($pkg['name'] ?? $label);
+                    break;
+                }
+            }
+        }
+
+        $subtotal += $price;
+        $items[] = [
+            'name' => $label,
+            'price' => $price,
+            'vial' => '—',
+            'expected' => '—',
+        ];
+    }
+
+    return ['items' => $items, 'subtotal' => $subtotal];
+}
+
 function render_receipt_document(array $settings, array $entry, array $patient): string
 {
     $headerHtml = render_branded_header($settings, true);
     $footerHtml = render_branded_footer($settings, true);
-    $labNo = e($entry['lab_no'] ?? '—');
-    $pname = e($patient['name'] ?? ($entry['patient_name'] ?? '—'));
-    $tests = e($entry['tests'] ?? '—');
-    $date = e(isset($entry['created_at']) ? format_date($entry['created_at']) : date('d M Y'));
-    $amount = e(format_money((float)($entry['amount'] ?? 0)));
-    $paid = e(format_money((float)($entry['paid'] ?? 0)));
-    $discount = e(format_money((float)($entry['discount'] ?? 0)));
-    $due = e(format_money(max(0, (float)($entry['amount'] ?? 0) - (float)($entry['paid'] ?? 0))));
-    $receiptNo = 'R-' . preg_replace('/\D/', '', (string)($entry['lab_no'] ?? '0'));
+    $orgId = (string)($settings['organization_id'] ?? current_user()['organization_id'] ?? 'ORG-001');
+
+    $lines = receipt_line_items($entry, $orgId);
+    $catalogSub = (float)$lines['subtotal'];
+    $discount = (float)($entry['discount'] ?? 0);
+    $storedAmount = (float)($entry['amount'] ?? 0);
+    // Prefer catalog line sum; fall back to stored amount if catalog prices missing
+    $subtotal = $catalogSub > 0 ? $catalogSub : ($storedAmount + $discount);
+    $afterDiscount = max(0, $subtotal - $discount);
+    // If stored net differs and catalog was empty, trust entry
+    if ($catalogSub <= 0 && $storedAmount > 0) {
+        $afterDiscount = $storedAmount;
+        $subtotal = $storedAmount + $discount;
+    }
+    $paid = (float)($entry['paid'] ?? 0);
+    $due = max(0, $afterDiscount - $paid);
+    $isPaid = $due <= 0.009 && $paid > 0;
+
+    $labNo = e((string)($entry['lab_no'] ?? '—'));
+    $mrNo = e((string)($patient['id'] ?? ($entry['patient_id'] ?? '—')));
+    $pname = e(strtoupper(trim((string)($patient['name'] ?? ($entry['patient_name'] ?? '—')))));
+    $age = trim((string)($patient['age'] ?? ''));
+    $gender = trim((string)($patient['gender'] ?? ''));
+    $ageSex = e(trim(($age !== '' ? $age . ' Years' : '—') . ($gender !== '' ? ' / ' . $gender : ''), ' /'));
+    $father = e((string)($patient['relation_of'] ?? '—'));
+    $phone = e((string)($patient['phone'] ?? '—'));
+    $cnic = e((string)($patient['cnic'] ?? '—'));
+    $doctor = e((string)($entry['doctor'] ?? $patient['referring_doctor'] ?? 'Walk-in / Self'));
+    $regAt = e((string)($entry['branch'] ?? 'Laboratory'));
+    $created = (string)($entry['created_at'] ?? '');
+    $regOn = e($created !== '' ? date('m/d/Y H:i', strtotime($created)) : date('m/d/Y H:i'));
+    $recvOn = e($created !== '' ? date('m/d/Y H:i', strtotime($created . ' +3 minutes')) : date('m/d/Y H:i'));
+    $registeredBy = e((string)(current_user()['name'] ?? 'Lab Staff'));
+
+    $rowsHtml = '';
+    foreach ($lines['items'] as $i => $item) {
+        $rowsHtml .= '<tr>'
+            . '<td class="lab-bill__c-vial">' . e((string)$item['vial']) . '</td>'
+            . '<td class="lab-bill__c-test">' . e((string)$item['name']) . '</td>'
+            . '<td class="lab-bill__c-exp">' . e((string)$item['expected']) . '</td>'
+            . '<td class="lab-bill__c-price">' . number_format((float)$item['price'], 0) . '</td>'
+            . '</tr>';
+    }
+    if ($rowsHtml === '') {
+        $rowsHtml = '<tr><td colspan="4" class="lab-bill__empty">No tests on this visit.</td></tr>';
+    }
+
+    $subFmt = 'Rs ' . number_format($subtotal, 0);
+    $discFmt = 'Rs ' . number_format($discount, 0);
+    $afterFmt = 'Rs ' . number_format($afterDiscount, 0);
+    $paidFmt = 'Rs ' . number_format($paid, 0);
+    $dueFmt = 'Rs ' . number_format($due, 0);
+    $stamp = $isPaid ? '<div class="lab-bill__stamp" aria-hidden="true">PAID</div>' : '';
 
     return <<<HTML
-    <div class="print-area lab-receipt">
+    <div class="print-area lab-bill">
         {$headerHtml}
-        <p class="lab-receipt__heading">Cash Receipt</p>
-        <div class="lab-receipt__body">
-            <p><span>Receipt #</span><strong>{$receiptNo}</strong></p>
-            <p><span>Lab No</span><strong>{$labNo}</strong></p>
-            <p><span>Patient</span><strong>{$pname}</strong></p>
-            <p><span>Tests</span><strong>{$tests}</strong></p>
-            <p><span>Date</span><strong>{$date}</strong></p>
+        <div class="lab-bill__meta">
+            <div class="lab-bill__meta-col">
+                <div><span>Patient Name</span><strong>{$pname}</strong></div>
+                <div><span>Age/Gender</span><strong>{$ageSex}</strong></div>
+                <div><span>F/H Name</span><strong>{$father}</strong></div>
+                <div><span>Contact</span><strong>{$phone}</strong></div>
+                <div><span>CNIC</span><strong>{$cnic}</strong></div>
+            </div>
+            <div class="lab-bill__meta-col">
+                <div><span>Lab No</span><strong>{$labNo}</strong></div>
+                <div><span>MR No</span><strong>{$mrNo}</strong></div>
+                <div><span>Referred By</span><strong>{$doctor}</strong></div>
+                <div><span>Specimen Taken</span><strong>Taken In Lab</strong></div>
+                <div><span>Registered At</span><strong>{$regAt}</strong></div>
+            </div>
+            <div class="lab-bill__meta-col">
+                <div><span>Registered On</span><strong>{$regOn}</strong></div>
+                <div><span>Received On</span><strong>{$recvOn}</strong></div>
+                <div><span>Registered by</span><strong>{$registeredBy}</strong></div>
+            </div>
         </div>
-        <div class="lab-receipt__totals">
-            <p><span>Total</span><strong>{$amount}</strong></p>
-            <p><span>Discount</span><strong>{$discount}</strong></p>
-            <p><span>Paid</span><strong>{$paid}</strong></p>
-            <p><span>Due</span><strong>{$due}</strong></p>
+
+        <table class="lab-bill__table">
+            <thead>
+                <tr>
+                    <th class="lab-bill__c-vial">Vial No.</th>
+                    <th class="lab-bill__c-test">Test Name</th>
+                    <th class="lab-bill__c-exp">Expected Report</th>
+                    <th class="lab-bill__c-price">Price (Rs)</th>
+                </tr>
+            </thead>
+            <tbody>{$rowsHtml}</tbody>
+        </table>
+
+        <div class="lab-bill__footer-row">
+            <div class="lab-bill__totals-wrap">
+                {$stamp}
+                <table class="lab-bill__totals">
+                    <tr><td>Subtotal</td><td>{$subFmt}</td></tr>
+                    <tr><td>Total Discount</td><td>{$discFmt}</td></tr>
+                    <tr><td>After Discount</td><td>{$afterFmt}</td></tr>
+                    <tr><td>Paid</td><td>{$paidFmt}</td></tr>
+                    <tr class="lab-bill__due"><td>Due</td><td>{$dueFmt}</td></tr>
+                </table>
+            </div>
         </div>
-        <div class="lab-receipt__footer">{$footerHtml}</div>
+
+        <div class="lab-bill__brand-footer">{$footerHtml}</div>
     </div>
     HTML;
 }

@@ -1769,7 +1769,144 @@ textarea::placeholder {
   padding-top: 0;
 }
 
-/* Receipt polish */
+/* Patient bill / pricing receipt (visit invoice) */
+.lab-bill {
+  max-width: 52rem;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  padding: 1rem 1.25rem 1.25rem;
+  font-family: "Source Sans 3", "Segoe UI", Calibri, Arial, sans-serif;
+  color: #0f172a;
+  font-size: 0.8125rem;
+}
+
+.lab-bill__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0.75rem 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #94a3b8;
+}
+
+.lab-bill__meta-col > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.25rem 0.5rem;
+  margin: 0.2rem 0;
+  align-items: baseline;
+}
+
+.lab-bill__meta-col span {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.lab-bill__meta-col strong {
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.lab-bill__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.lab-bill__table th {
+  text-align: left;
+  background: #1e3a5f;
+  color: #fff;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.lab-bill__table td {
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.lab-bill__c-vial { width: 5.5rem; }
+.lab-bill__c-exp { width: 8rem; }
+.lab-bill__c-price { width: 6rem; text-align: right !important; font-variant-numeric: tabular-nums; }
+.lab-bill__empty { text-align: center; color: #64748b; padding: 1rem !important; }
+
+.lab-bill__footer-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lab-bill__totals-wrap {
+  position: relative;
+  min-width: 14rem;
+}
+
+.lab-bill__totals {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.lab-bill__totals td {
+  padding: 0.25rem 0.15rem;
+}
+
+.lab-bill__totals td:last-child {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-bill__due td {
+  border-top: 1px solid #94a3b8;
+  padding-top: 0.4rem;
+  font-weight: 700;
+}
+
+.lab-bill__stamp {
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(-18deg);
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 3px solid #2563eb;
+  border-radius: 999px;
+  color: #2563eb;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  pointer-events: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.lab-bill__brand-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .lab-bill__meta { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .lab-bill { border: 0; max-width: none; }
+}
+
+/* Legacy compact receipt (kept for older styles) */
 .lab-receipt {
   max-width: 24rem;
   margin: 0 auto;

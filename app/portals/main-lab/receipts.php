@@ -1,0 +1,206 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../includes/bootstrap.php';
+require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../../includes/components.php';
+
+$orgId = current_user()['organization_id'] ?? 'ORG-001';
+$labNo = trim((string)($_GET['lab_no'] ?? ''));
+$q = trim((string)($_GET['q'] ?? ''));
+$patientId = trim((string)($_GET['patient_id'] ?? ''));
+
+$ctx = load_document_context($labNo !== '' ? $labNo : null);
+$settings = $ctx['settings'];
+$patient = $ctx['patient'];
+$entry = $ctx['entry'];
+$currentLab = (string)($entry['lab_no'] ?? '');
+
+$allEntries = lab_repo()->getAll($orgId, 120);
+$dropdownOpts = '';
+foreach ($allEntries as $ae) {
+    $sel = (($ae['lab_no'] ?? '') === $currentLab) ? ' selected' : '';
+    $dropdownOpts .= '<option value="' . e((string)$ae['lab_no']) . '"' . $sel . '>'
+        . e((string)$ae['lab_no']) . ' — ' . e((string)($ae['patient_name'] ?? ''))
+        . ' (' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . ')</option>';
+}
+
+$searchHits = [];
+$matchedVisits = [];
+$patientVisits = [];
+
+if ($q !== '') {
+    try {
+        $searchHits = patient_repo()->search($q, $orgId);
+    } catch (Throwable $e) {
+        $searchHits = [];
+    }
+    $ql = strtolower($q);
+    foreach ($allEntries as $ae) {
+        $blob = strtolower(
+            ($ae['lab_no'] ?? '') . ' ' .
+            ($ae['patient_name'] ?? '') . ' ' .
+            ($ae['patient_id'] ?? '') . ' ' .
+            ($ae['tests'] ?? '')
+        );
+        if (str_contains($blob, $ql)) {
+            $matchedVisits[] = $ae;
+        }
+    }
+}
+
+if ($patientId !== '') {
+    $selectedPatient = patient_repo()->findById($patientId);
+    if ($selectedPatient) {
+        $patientVisits = lab_repo()->getByPatientId((string)($selectedPatient['id'] ?? ''));
+        if ($patientVisits === [] && !empty($selectedPatient['patient_no'])) {
+            $patientVisits = lab_repo()->getByPatientId((string)$selectedPatient['patient_no']);
+        }
+        if ($patientVisits === []) {
+            $name = strtolower(trim((string)($selectedPatient['full_name'] ?? $selectedPatient['name'] ?? '')));
+            foreach ($allEntries as $ae) {
+                if ($name !== '' && str_contains(strtolower((string)($ae['patient_name'] ?? '')), $name)) {
+                    $patientVisits[] = $ae;
+                }
+            }
+        }
+        if ($labNo === '' && count($patientVisits) === 1) {
+            header('Location: /portals/main-lab/receipts.php?lab_no=' . urlencode((string)$patientVisits[0]['lab_no']) . '&q=' . urlencode($q));
+            exit;
+        }
+    }
+}
+
+$reportUrl = '/portals/main-lab/reports/preview.php?lab_no=' . urlencode($currentLab);
+$entryUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode($currentLab);
+$qVal = e($q);
+
+$content = page_header(
+    'Patient Bill / Receipt',
+    'Search a patient or pick a visit from the list, then print the bill.',
+    $currentLab !== '' ? '<a class="btn btn-secondary" href="' . e($reportUrl) . '">Lab Report</a>' : ''
+);
+
+$content .= <<<HTML
+<div class="mb-4 no-print space-y-3 p-4 bg-white border border-slate-200 rounded-lg">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+        <div class="flex-1 min-w-[16rem]">
+            <label class="field-label" for="bill-q">Search patient</label>
+            <input type="search" id="bill-q" name="q" class="field" value="{$qVal}" placeholder="Name, phone, MR No, or Lab No…" autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass mr-1"></i> Search</button>
+        <a href="/portals/main-lab/receipts.php" class="btn btn-secondary">Clear</a>
+    </form>
+    <div class="flex flex-wrap gap-3 items-end border-t border-slate-100 pt-3">
+        <div class="flex-1 min-w-[16rem]">
+            <label class="field-label" for="bill-visit">Or open visit from list</label>
+            <select id="bill-visit" class="field text-sm" onchange="if(this.value) location.href='/portals/main-lab/receipts.php?lab_no='+encodeURIComponent(this.value)">
+                <option value="">— Select lab number / patient —</option>
+                {$dropdownOpts}
+            </select>
+        </div>
+    </div>
+</div>
+HTML;
+
+if ($q !== '' && $labNo === '' && $patientId === '') {
+    $hitRows = '';
+    $seenPatients = [];
+    foreach ($searchHits as $p) {
+        $pid = (string)($p['patient_no'] ?? $p['id'] ?? '');
+        if ($pid === '' || isset($seenPatients[$pid])) {
+            continue;
+        }
+        $seenPatients[$pid] = true;
+        $name = trim(($p['title'] ?? '') . ' ' . ($p['full_name'] ?? $p['name'] ?? ''));
+        $hitRows .= '<tr class="border-b border-slate-100">'
+            . '<td class="px-3 py-2 font-mono text-teal-800 font-semibold">' . e($pid) . '</td>'
+            . '<td class="px-3 py-2 font-semibold">' . e($name) . '</td>'
+            . '<td class="px-3 py-2">' . e((string)($p['phone'] ?? '—')) . '</td>'
+            . '<td class="px-3 py-2"><a class="btn btn-primary text-xs" href="/portals/main-lab/receipts.php?patient_id=' . urlencode($pid) . '&q=' . urlencode($q) . '">Show visits</a></td>'
+            . '</tr>';
+    }
+
+    $visitRows = '';
+    $seenLabs = [];
+    foreach ($matchedVisits as $ae) {
+        $ln = (string)($ae['lab_no'] ?? '');
+        if ($ln === '' || isset($seenLabs[$ln])) {
+            continue;
+        }
+        $seenLabs[$ln] = true;
+        $visitRows .= '<tr class="border-b border-slate-100">'
+            . '<td class="px-3 py-2 font-mono text-teal-800 font-semibold">' . e($ln) . '</td>'
+            . '<td class="px-3 py-2 font-semibold">' . e((string)($ae['patient_name'] ?? '')) . '</td>'
+            . '<td class="px-3 py-2 text-sm">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
+            . '<td class="px-3 py-2 text-sm">' . e(format_money((float)($ae['amount'] ?? 0))) . '</td>'
+            . '<td class="px-3 py-2"><a class="btn btn-primary text-xs" href="/portals/main-lab/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            . '</tr>';
+    }
+
+    if ($hitRows === '' && $visitRows === '') {
+        $content .= card('<p class="p-6 text-slate-600">No patient or visit found for <strong>' . e($q) . '</strong>.</p>');
+    } else {
+        if ($hitRows !== '') {
+            $content .= card(
+                panel_head('Patients matching "' . $q . '"') .
+                '<div class="overflow-x-auto"><table class="min-w-full text-sm">'
+                . '<thead class="bg-slate-800 text-white text-xs uppercase"><tr>'
+                . '<th class="px-3 py-2 text-left">MR No</th><th class="px-3 py-2 text-left">Name</th><th class="px-3 py-2 text-left">Phone</th><th class="px-3 py-2 text-left">Action</th>'
+                . '</tr></thead><tbody>' . $hitRows . '</tbody></table></div>',
+                'overflow-hidden mb-4'
+            );
+        }
+        if ($visitRows !== '') {
+            $content .= card(
+                panel_head('Visits matching "' . $q . '"') .
+                '<div class="overflow-x-auto"><table class="min-w-full text-sm">'
+                . '<thead class="bg-slate-800 text-white text-xs uppercase"><tr>'
+                . '<th class="px-3 py-2 text-left">Lab No</th><th class="px-3 py-2 text-left">Patient</th><th class="px-3 py-2 text-left">Tests</th><th class="px-3 py-2 text-left">Amount</th><th class="px-3 py-2 text-left">Action</th>'
+                . '</tr></thead><tbody>' . $visitRows . '</tbody></table></div>',
+                'overflow-hidden'
+            );
+        }
+    }
+}
+
+if ($patientId !== '' && $labNo === '') {
+    $selectedPatient = patient_repo()->findById($patientId);
+    $pname = e(trim(($selectedPatient['title'] ?? '') . ' ' . ($selectedPatient['full_name'] ?? $selectedPatient['name'] ?? $patientId)));
+    $visitRows = '';
+    foreach ($patientVisits as $ae) {
+        $ln = (string)($ae['lab_no'] ?? '');
+        $visitRows .= '<tr class="border-b border-slate-100">'
+            . '<td class="px-3 py-2 font-mono text-teal-800 font-semibold">' . e($ln) . '</td>'
+            . '<td class="px-3 py-2 text-sm">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
+            . '<td class="px-3 py-2 text-sm">' . e(format_money((float)($ae['amount'] ?? 0))) . '</td>'
+            . '<td class="px-3 py-2 text-sm">' . e(format_date($ae['created_at'] ?? null)) . '</td>'
+            . '<td class="px-3 py-2"><a class="btn btn-primary text-xs" href="/portals/main-lab/receipts.php?lab_no=' . urlencode($ln) . '&patient_id=' . urlencode($patientId) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            . '</tr>';
+    }
+    if ($visitRows === '') {
+        $content .= card('<p class="p-6 text-slate-600">No lab visits found for <strong>' . $pname . '</strong>.</p>');
+    } else {
+        $content .= card(
+            panel_head('Visits for ' . ($selectedPatient['full_name'] ?? $patientId)) .
+            '<div class="overflow-x-auto"><table class="min-w-full text-sm">'
+            . '<thead class="bg-slate-800 text-white text-xs uppercase"><tr>'
+            . '<th class="px-3 py-2 text-left">Lab No</th><th class="px-3 py-2 text-left">Tests</th><th class="px-3 py-2 text-left">Amount</th><th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">Action</th>'
+            . '</tr></thead><tbody>' . $visitRows . '</tbody></table></div>',
+            'overflow-hidden'
+        );
+    }
+}
+
+if ($currentLab !== '' && $entry) {
+    $content .= '<div class="no-print mb-3 flex flex-wrap gap-2 items-center">'
+        . report_actions($patient['phone'] ?? '', $reportUrl, 'bill-' . $currentLab)
+        . '<a class="btn btn-secondary text-sm" href="' . e($entryUrl) . '">Enter Results</a>'
+        . '</div>';
+    $content .= '<div class="mt-2">' . render_receipt_document($settings, $entry, $patient) . '</div>';
+} elseif ($q === '' && $patientId === '') {
+    $content .= card('<p class="p-6 text-slate-600">Use <strong>Search</strong> or the <strong>visit dropdown</strong> above to open a patient bill.</p>');
+}
+
+render_page('Patient Bill', 'main-lab', 'receipts', $content, true);

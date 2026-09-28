@@ -47,6 +47,7 @@ if ($selectedPatient) {
         $labQ = urlencode($e['lab_no']);
         $actions = '<div class="flex flex-wrap gap-2">' .
             '<a href="/portals/main-lab/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>' .
+            '<a href="/portals/main-lab/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Bill</a>' .
             '<a href="/portals/main-lab/results/entry.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Edit Results</a>' .
             '<a href="/portals/main-lab/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
             '</div>';

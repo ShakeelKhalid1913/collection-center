@@ -33,14 +33,25 @@ class PatientRepository
 
     public function search(string $query, string $orgId = 'ORG-001'): array
     {
+        $like = '%' . $query . '%';
         $sql = "SELECT * FROM patients 
                 WHERE organization_id = :org_id 
-                AND (full_name LIKE :q OR phone LIKE :q OR cnic LIKE :q OR patient_no LIKE :q)
+                AND (
+                    full_name LIKE :q_name
+                    OR phone LIKE :q_phone
+                    OR cnic LIKE :q_cnic
+                    OR patient_no LIKE :q_mr
+                    OR id LIKE :q_id
+                )
                 ORDER BY created_at DESC LIMIT 30";
 
         return $this->db->fetchAll($sql, [
             'org_id' => $orgId,
-            'q' => '%' . $query . '%',
+            'q_name' => $like,
+            'q_phone' => $like,
+            'q_cnic' => $like,
+            'q_mr' => $like,
+            'q_id' => $like,
         ]);
     }
 

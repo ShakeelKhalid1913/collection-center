@@ -53,6 +53,7 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Reports', [
                 nav_item("{$base}/reports/history.php", 'Reports History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
                 nav_item("{$base}/reports/generate.php", 'Generate Report', $activeKey, 'reports-generate', null, 'fa-solid fa-file-pdf'),
+                nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
             ]),
             nav_group('Catalog', [
                 nav_item("{$base}/tests/index.php", 'Tests', $activeKey, 'tests', null, 'fa-solid fa-flask'),
