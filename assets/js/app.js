@@ -93,11 +93,13 @@
     const workspace = document.querySelector('[data-catalog-workspace]');
     if (!workspace) return;
 
-    const select = workspace.querySelector('[data-catalog-select]');
-    const addBtn = workspace.querySelector('[data-catalog-add]');
+    const searchInput = workspace.querySelector('[data-catalog-search]');
+    const hitsBox = workspace.querySelector('[data-catalog-hits]');
+    const hitsHint = workspace.querySelector('[data-catalog-hits-hint]');
     const emptyEl = workspace.querySelector('[data-catalog-empty]');
     const typeButtons = workspace.querySelectorAll('[data-catalog-type]');
-    let activeType = typeButtons[0]?.getAttribute('data-catalog-type') || '';
+    const hits = Array.from(workspace.querySelectorAll('[data-catalog-hit]'));
+    let activeType = '';
 
     function refreshSelected() {
       const items = workspace.querySelectorAll('[data-catalog-item]');
@@ -112,31 +114,8 @@
       if (emptyEl) emptyEl.style.display = any ? 'none' : '';
     }
 
-    function filterDropdown() {
-      if (!select) return;
-      Array.from(select.options).forEach((opt, idx) => {
-        if (idx === 0) {
-          opt.hidden = false;
-          return;
-        }
-        const optDept = (opt.getAttribute('data-dept') || '').toLowerCase();
-        opt.hidden = !!(activeType && optDept !== activeType);
-      });
-      const current = select.selectedOptions[0];
-      if (current && current.hidden) select.value = '';
-    }
-
-    typeButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        activeType = btn.getAttribute('data-catalog-type') || '';
-        typeButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-        filterDropdown();
-      });
-    });
-
-    addBtn?.addEventListener('click', () => {
-      if (!select || !select.value) return;
-      const name = select.value;
+    function addTestByName(name) {
+      if (!name) return;
       const checkbox = Array.from(workspace.querySelectorAll('.catalog-check')).find(
         (el) => el.value === name
       );
@@ -144,15 +123,70 @@
         checkbox.checked = true;
         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      select.value = '';
       refreshSelected();
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+      }
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q = (searchInput?.value || '').trim().toLowerCase();
+      let shown = 0;
+      const maxShow = q ? 40 : 25;
+
+      hits.forEach((hit) => {
+        const dept = (hit.getAttribute('data-dept') || '').toLowerCase();
+        const hay = (hit.getAttribute('data-search') || '').toLowerCase();
+        const matchType = !activeType || dept === activeType;
+        const matchQ = !q || hay.includes(q);
+        const ok = matchType && matchQ && shown < maxShow;
+        if (matchType && matchQ && shown < maxShow) {
+          shown += 1;
+        }
+        hit.hidden = !ok;
+        hit.classList.toggle('hidden', !ok);
+      });
+
+      if (hitsBox) {
+        hitsBox.classList.toggle('is-empty', shown === 0);
+      }
+      if (hitsHint) {
+        if (shown === 0) {
+          hitsHint.textContent = q
+            ? 'No tests match “' + searchInput.value.trim() + '”. Try another name or code.'
+            : 'No tests in this type.';
+        } else if (q) {
+          hitsHint.textContent = shown + ' match' + (shown === 1 ? '' : 'es') + ' — click to add.';
+        } else {
+          hitsHint.textContent = activeType
+            ? 'Showing tests in this type. Search above to find any test by name or code.'
+            : 'Type to search all tests, or pick a type on the left. Click a result to add it.';
+        }
+      }
+    }
+
+    typeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeType = btn.getAttribute('data-catalog-type') || '';
+        typeButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+        applyFilters();
+      });
     });
 
-    select?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addBtn?.click();
-      }
+    searchInput?.addEventListener('input', applyFilters);
+    searchInput?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const first = hits.find((h) => !h.hidden);
+      if (first) addTestByName(first.getAttribute('data-name') || '');
+    });
+
+    hits.forEach((hit) => {
+      hit.addEventListener('click', () => {
+        addTestByName(hit.getAttribute('data-name') || '');
+      });
     });
 
     workspace.querySelectorAll('[data-catalog-remove]').forEach((btn) => {
@@ -169,7 +203,7 @@
       });
     });
 
-    filterDropdown();
+    applyFilters();
     refreshSelected();
   }
 

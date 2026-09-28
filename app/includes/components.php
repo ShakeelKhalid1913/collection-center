@@ -165,32 +165,40 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
         }
     }
 
-    $typeNav = '';
-    $firstDept = array_key_first($orderedDepts) ?: 'packages';
+    $typeNav = '<button type="button" class="catalog-type-btn is-active" data-catalog-type="">'
+        . '<span>All types</span>'
+        . '<span class="catalog-type-btn__count">' . count($items) . '</span>'
+        . '</button>';
     foreach ($orderedDepts as $dk => $label) {
         $count = (int)($deptCounts[$dk] ?? 0);
         if ($count === 0) {
             continue;
         }
-        $active = $dk === $firstDept ? ' is-active' : '';
-        $typeNav .= '<button type="button" class="catalog-type-btn' . $active . '" data-catalog-type="' . e($dk) . '">'
+        $typeNav .= '<button type="button" class="catalog-type-btn" data-catalog-type="' . e($dk) . '">'
             . '<span>' . e($label) . '</span>'
             . '<span class="catalog-type-btn__count">' . $count . '</span>'
             . '</button>';
     }
 
-    $options = '<option value="">— Choose a test —</option>';
+    $searchHits = '';
     $hiddenChecks = '';
     foreach ($items as $it) {
-        $options .= '<option value="' . e($it['name']) . '" data-dept="' . e($it['dept']) . '" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '" data-name="' . e($it['search']) . '" data-meta="' . e($it['meta']) . '">'
-            . e($it['name'] . ' (' . $it['code'] . ') — ' . format_money((float)$it['price']))
-            . '</option>';
+        $searchHits .= '<button type="button" class="catalog-hit" data-catalog-hit'
+            . ' data-name="' . e($it['name']) . '"'
+            . ' data-dept="' . e($it['dept']) . '"'
+            . ' data-search="' . e($it['search']) . '"'
+            . ' data-price="' . $it['price'] . '">'
+            . '<span class="catalog-hit__body">'
+            . '<span class="catalog-hit__title">' . e($it['name']) . ' <span class="catalog-code">' . e($it['code']) . '</span></span>'
+            . '<span class="catalog-hit__meta">' . e($it['meta']) . '</span>'
+            . '</span>'
+            . '<span class="catalog-hit__price">' . e(format_money((float)$it['price'])) . '</span>'
+            . '</button>';
 
         $isSelected = isset($selectedLookup[strtolower($it['name'])]);
         $checked = $isSelected ? ' checked' : '';
         $rowHidden = $isSelected ? '' : ' hidden';
 
-        // Hidden until selected — still post as tests[] for the server / billing JS
         $hiddenChecks .= '<label class="catalog-item catalog-item--selected' . $rowHidden . '" data-catalog-item data-dept="' . e($it['dept']) . '" data-name="' . e($it['search']) . '" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '" data-meta="' . e($it['meta']) . '">'
             . '<input type="checkbox" name="tests[]" value="' . e($it['name']) . '" class="catalog-check" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '"' . $checked . '>'
             . '<span class="catalog-item__body">'
@@ -205,18 +213,21 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
     return <<<HTML
 <div class="catalog-workspace" data-catalog-workspace>
     <aside class="catalog-types" aria-label="Test type">
-        <p class="catalog-pane-label">1. Test type</p>
+        <p class="catalog-pane-label">Filter by type</p>
         <div class="catalog-type-list">{$typeNav}</div>
     </aside>
     <div class="catalog-pick">
-        <p class="catalog-pane-label">2. Add test</p>
-        <div class="catalog-add-row">
-            <select class="field" data-catalog-select aria-label="Select a test">{$options}</select>
-            <button type="button" class="btn btn-primary whitespace-nowrap" data-catalog-add>Add</button>
+        <p class="catalog-pane-label">Search &amp; add test</p>
+        <div class="catalog-search-wrap">
+            <input type="search" class="field catalog-search-input" placeholder="Search any test by name or code (e.g. CBC, sugar, lipid)…" data-catalog-search autocomplete="off">
         </div>
+        <div class="catalog-hits" data-catalog-hits>
+            {$searchHits}
+        </div>
+        <p class="catalog-hits-hint" data-catalog-hits-hint>Type to search all tests, or pick a type on the left. Click a result to add it.</p>
         <p class="catalog-pane-label mt-4">Selected for this patient</p>
         <div class="catalog-list catalog-list--selected" data-catalog-selected>
-            <p class="catalog-empty" data-catalog-empty>No tests added yet. Pick a type, choose a test, click Add.</p>
+            <p class="catalog-empty" data-catalog-empty>No tests added yet. Search above and click a test to add.</p>
             {$hiddenChecks}
         </div>
     </div>
