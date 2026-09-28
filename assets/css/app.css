@@ -1769,44 +1769,22 @@ textarea::placeholder {
   padding-top: 0;
 }
 
-/* Patient bill / pricing receipt (visit invoice) */
+/* Patient bill — same base type scale as .lab-report so shared meta header matches */
 .lab-bill {
+  --lr-ink: #0f172a;
+  --lr-muted: #475569;
+  --lr-line: #94a3b8;
+  --lr-accent: #1e3a5f;
   max-width: 52rem;
   margin: 0 auto;
   background: #fff;
-  border: 1px solid #cbd5e1;
-  padding: 1rem 1.25rem 1.25rem;
+  color: var(--lr-ink);
   font-family: "Source Sans 3", "Segoe UI", Calibri, Arial, sans-serif;
-  color: #0f172a;
-  font-size: 0.8125rem;
-}
-
-.lab-bill__meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem 1.25rem;
-  margin: 0.75rem 0 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #94a3b8;
-}
-
-.lab-bill__meta-col > div {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 0.25rem 0.5rem;
-  margin: 0.2rem 0;
-  align-items: baseline;
-}
-
-.lab-bill__meta-col span {
-  color: #64748b;
-  font-size: 0.72rem;
-}
-
-.lab-bill__meta-col strong {
-  font-weight: 700;
-  color: #0f172a;
-  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border: 1px solid #cbd5e1;
+  padding: 1rem 1.35rem 0.85rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .lab-bill__table {
@@ -1898,12 +1876,8 @@ textarea::placeholder {
   border-top: 1px solid #e2e8f0;
 }
 
-@media (max-width: 720px) {
-  .lab-bill__meta { grid-template-columns: 1fr; }
-}
-
 @media print {
-  .lab-bill { border: 0; max-width: none; }
+  .lab-bill { border: 0; max-width: none; box-shadow: none; }
 }
 
 /* Legacy compact receipt (kept for older styles) */

@@ -7,9 +7,39 @@ require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
 $orgId = current_user()['organization_id'] ?? 'ORG-001';
-$labNo = trim((string)($_GET['lab_no'] ?? ''));
-$q = trim((string)($_GET['q'] ?? ''));
-$patientId = trim((string)($_GET['patient_id'] ?? ''));
+$labNo = trim((string)($_GET['lab_no'] ?? $_POST['lab_no'] ?? ''));
+$q = trim((string)($_GET['q'] ?? $_POST['q'] ?? ''));
+$patientId = trim((string)($_GET['patient_id'] ?? $_POST['patient_id'] ?? ''));
+$payMessage = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($labNo !== '') && isset($_POST['save_payment'])) {
+    $existing = lab_repo()->findByLabNo($labNo);
+    if ($existing) {
+        $amount = (float)($_POST['amount'] ?? $existing['amount'] ?? 0);
+        $discount = max(0, (float)($_POST['discount'] ?? 0));
+        $paid = max(0, (float)($_POST['paid'] ?? 0));
+        if ($amount <= 0) {
+            $lines = receipt_line_items($existing, $orgId);
+            $amount = max(0, (float)$lines['subtotal'] - $discount);
+        }
+        lab_repo()->updateEntry($labNo, [
+            'amount' => $amount,
+            'discount' => $discount,
+            'paid' => $paid,
+        ]);
+        $redirect = '/portals/main-lab/receipts.php?lab_no=' . urlencode($labNo);
+        if ($q !== '') {
+            $redirect .= '&q=' . urlencode($q);
+        }
+        if ($patientId !== '') {
+            $redirect .= '&patient_id=' . urlencode($patientId);
+        }
+        $redirect .= '&paid_saved=1';
+        header('Location: ' . $redirect);
+        exit;
+    }
+    $payMessage = flash_error('Could not save payment — visit not found.');
+}
 
 $ctx = load_document_context($labNo !== '' ? $labNo : null);
 $settings = $ctx['settings'];
@@ -194,6 +224,47 @@ if ($patientId !== '' && $labNo === '') {
 }
 
 if ($currentLab !== '' && $entry) {
+    if (isset($_GET['paid_saved'])) {
+        $payMessage = flash_success('Payment saved. Bill updated.');
+    }
+    $content .= $payMessage;
+
+    $billLines = receipt_line_items($entry, $orgId);
+    $catalogSub = (float)$billLines['subtotal'];
+    $curDiscount = (float)($entry['discount'] ?? 0);
+    $curPaid = (float)($entry['paid'] ?? 0);
+    $curAmount = (float)($entry['amount'] ?? 0);
+    $netSuggest = $catalogSub > 0 ? max(0, $catalogSub - $curDiscount) : $curAmount;
+    if ($curAmount <= 0 && $netSuggest > 0) {
+        $curAmount = $netSuggest;
+    }
+    $dueNow = max(0, $curAmount - $curPaid);
+
+    $content .= '<div class="no-print mb-4">'
+        . card(
+            panel_head('Record payment') .
+            '<form method="post" class="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">'
+            . '<input type="hidden" name="lab_no" value="' . e($currentLab) . '">'
+            . '<input type="hidden" name="q" value="' . e($q) . '">'
+            . '<input type="hidden" name="patient_id" value="' . e($patientId) . '">'
+            . '<div><label class="field-label" for="bill-amount">Bill total (Rs.)</label>'
+            . '<input type="number" id="bill-amount" name="amount" class="field" min="0" step="1" value="' . e((string)(int)round($curAmount)) . '"></div>'
+            . '<div><label class="field-label" for="bill-discount">Discount (Rs.)</label>'
+            . '<input type="number" id="bill-discount" name="discount" class="field" min="0" step="1" value="' . e((string)(int)round($curDiscount)) . '"></div>'
+            . '<div><label class="field-label" for="bill-paid">Amount paid (Rs.)</label>'
+            . '<input type="number" id="bill-paid" name="paid" class="field" min="0" step="1" value="' . e((string)(int)round($curPaid)) . '"></div>'
+            . '<div class="flex flex-wrap gap-2">'
+            . '<button type="submit" name="save_payment" value="1" class="btn btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Save payment</button>'
+            . '<button type="submit" name="save_payment" value="1" class="btn btn-secondary" onclick="document.getElementById(\'bill-paid\').value=document.getElementById(\'bill-amount\').value;">Mark fully paid</button>'
+            . '</div>'
+            . '<p class="sm:col-span-2 lg:col-span-4 text-xs text-slate-500 m-0">Catalog subtotal: <strong>' . e(format_money($catalogSub)) . '</strong>'
+            . ' · Due now: <strong class="' . ($dueNow > 0 ? 'text-amber-700' : 'text-emerald-700') . '">' . e(format_money($dueNow)) . '</strong>'
+            . ' · Tip: click <em>Mark fully paid</em> then Save if they paid the full bill.</p>'
+            . '</form>',
+            'overflow-hidden'
+        )
+        . '</div>';
+
     $content .= '<div class="no-print mb-3 flex flex-wrap gap-2 items-center">'
         . report_actions($patient['phone'] ?? '', $reportUrl, 'bill-' . $currentLab)
         . '<a class="btn btn-secondary text-sm" href="' . e($entryUrl) . '">Enter Results</a>'

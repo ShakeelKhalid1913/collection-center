@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'patient_no' => trim($_POST['patient_no'] ?? ''),
             'title' => $_POST['title'] ?? 'Mr',
             'full_name' => $fullName,
+            'relation_of' => trim($_POST['relation_of'] ?? ''),
             'phone' => $_POST['phone'] ?? '',
             'age' => (int)($_POST['age'] ?? 0),
             'gender' => $_POST['gender'] ?? 'Male',
@@ -91,6 +92,7 @@ $patientBlock = card(
     form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
     select_field('Title', 'title', $titles, 'Mr') .
     form_field('Full name', 'full_name', 'text', null, 'As on CNIC / slip') .
+    form_field('Father / Husband Name', 'relation_of', 'text', null, 'F/H name', true) .
     form_field('Mobile', 'phone', 'tel', null, '03xx-xxxxxxx') .
     form_field('Age', 'age', 'number', null, 'Years', true) .
     select_field('Gender', 'gender', ['Male' => 'Male', 'Female' => 'Female', 'Other' => 'Other']) .

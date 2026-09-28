@@ -32,6 +32,82 @@ function report_meta_cell(string $label, string $value, bool $strong = false, bo
         . '</div>';
 }
 
+/**
+ * Shared patient header grid — same markup/CSS for lab report and patient bill.
+ *
+ * @param 'report'|'bill' $context Reserved; header fields stay identical on both documents.
+ */
+function build_patient_document_meta(array $patient, ?array $entry, string $context = 'report'): string
+{
+    unset($context);
+    $mrNo = (string)($patient['id'] ?? ($entry['patient_id'] ?? '—'));
+    $pname = (string)($patient['name'] ?? ($entry['patient_name'] ?? '—'));
+    $fhName = trim((string)($patient['relation_of'] ?? ''));
+    $age = (string)($patient['age'] ?? '—');
+    $gender = (string)($patient['gender'] ?? '—');
+    $ageGender = trim(
+        ($age !== '—' && $age !== '' ? $age . ' years' : '—')
+        . ($gender !== '—' && $gender !== '' ? ' / ' . $gender : ''),
+        ' /'
+    );
+    $phoneP = ($patient['phone'] ?? '') !== '' ? (string)$patient['phone'] : '—';
+    $patientAddress = ($patient['address'] ?? '') !== '' ? (string)$patient['address'] : '—';
+    $cnic = trim((string)($patient['cnic'] ?? ''));
+
+    $labNo = (string)($entry['lab_no'] ?? '');
+    $labNoDisplay = $labNo !== '' ? $labNo : '—';
+    $registeredAt = trim((string)($entry['branch'] ?? ''));
+    $receivedOn = format_datetime_report($entry['created_at'] ?? null);
+    $registeredOn = format_datetime_report($entry['created_at'] ?? null);
+    $reportedOn = format_datetime_report(
+        $entry['reported_at'] ?? $entry['updated_at'] ?? $entry['created_at'] ?? null
+    );
+
+    $doctorRaw = trim((string)($entry['doctor'] ?? ''));
+    if ($doctorRaw === '') {
+        $doctorRaw = trim((string)($patient['referring_doctor'] ?? ''));
+    }
+    if ($doctorRaw === '') {
+        $doctorRaw = 'Walk-in / Self';
+    }
+
+    // Identical field set on test report + billing report (matches sample patient header)
+    $metaCells = report_meta_cell('Patient Name', $pname, true)
+        . report_meta_cell('MR No', $mrNo, true)
+        . report_meta_cell('Father / Husband Name', $fhName !== '' ? $fhName : '—')
+        . report_meta_cell('Phone', $phoneP)
+        . report_meta_cell('Doctor Name', $doctorRaw, true)
+        . report_meta_cell('Age / Gender', $ageGender)
+        . report_meta_cell('Address', $patientAddress)
+        . report_meta_cell('Case No', $labNoDisplay)
+        . report_meta_cell('Registered at', $registeredAt !== '' ? $registeredAt : '—')
+        . report_meta_cell('Received on', $receivedOn)
+        . report_meta_cell('Registered On', $registeredOn)
+        . report_meta_cell('Reported On', $reportedOn)
+        . report_meta_cell('Specimen Taken', 'Taken In Lab');
+
+    if ($cnic !== '') {
+        $metaCells .= report_meta_cell('CNIC', $cnic, false, true);
+    }
+    if (!empty($patient['blood_group'])) {
+        $metaCells .= report_meta_cell('Blood group', (string)$patient['blood_group'], false, true);
+    }
+    if (!empty($patient['email'])) {
+        $metaCells .= report_meta_cell('Email', (string)$patient['email'], false, true);
+    }
+
+    $route = trim((string)($entry['route'] ?? ''));
+    $priority = trim((string)($entry['priority'] ?? ''));
+    if ($route !== '' && strcasecmp($route, '—') !== 0) {
+        $metaCells .= report_meta_cell('Route', $route, false, true);
+    }
+    if ($priority !== '' && strcasecmp($priority, 'Normal') !== 0) {
+        $metaCells .= report_meta_cell('Priority', $priority, false, true);
+    }
+
+    return '<div class="lab-report__meta">' . $metaCells . '</div>';
+}
+
 function branding_settings(?string $orgId = null): array
 {
     $orgId = $orgId ?? (current_user()['organization_id'] ?? 'ORG-001');
@@ -230,6 +306,7 @@ function load_document_context(?string $labNo): array
                 'email' => $p['email'] ?? '',
                 'address' => $p['address'] ?? '',
                 'relation_of' => $p['relation_of'] ?? '',
+                'emergency_name' => $p['emergency_name'] ?? '',
                 'referring_doctor' => $p['referring_doctor'] ?? $p['emergency_name'] ?? '',
             ];
         }
@@ -536,64 +613,11 @@ function render_report_document(
 
     $brandBlock = '<div class="lab-report__top">' . $brandInner . $qrHtml . '</div>';
 
-    $mrNo = (string)($patient['id'] ?? '—');
-    $pname = (string)($patient['name'] ?? '—');
-    $fhNameRaw = trim((string)($patient['relation_of'] ?? ''));
-    $age = (string)($patient['age'] ?? '—');
-    $gender = (string)($patient['gender'] ?? '—');
-    $ageGender = trim($age . ($age !== '—' && $gender !== '—' ? ' years / ' : ' / ') . $gender, ' /');
-    $phoneP = ($patient['phone'] ?? '') !== '' ? (string)$patient['phone'] : '—';
-    $patientAddress = ($patient['address'] ?? '') !== '' ? (string)$patient['address'] : '—';
-
-    $labNo = (string)($entry['lab_no'] ?? '');
-    $labNoDisplay = $labNo !== '' ? $labNo : '—';
-    $registeredAt = trim((string)($entry['branch'] ?? ''));
-    $receivedOn = format_datetime_report($entry['created_at'] ?? null);
-    $reportedOn = format_datetime_report(null);
-    $resultDate = e(format_date_report(null));
-    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
-
-    $doctorRaw = trim((string)($entry['doctor'] ?? ''));
-    if ($doctorRaw === '') {
-        $doctorRaw = trim((string)($patient['referring_doctor'] ?? ''));
-    }
-    if ($doctorRaw === '') {
-        $doctorRaw = 'Walk-in / Self';
-    }
-
-    $metaCells = report_meta_cell('Patient Name', $pname, true)
-        . report_meta_cell('MR No', $mrNo, true)
-        . report_meta_cell('Phone', $phoneP)
-        . report_meta_cell('Doctor Name', $doctorRaw, true)
-        . report_meta_cell('Age / Gender', $ageGender)
-        . report_meta_cell('Address', $patientAddress);
-
-    $metaCells .= report_meta_cell('Case No', $labNoDisplay, false, true)
-        . report_meta_cell('F/H Name', $fhNameRaw, false, true)
-        . report_meta_cell('Registered at', $registeredAt, false, true)
-        . report_meta_cell('Received on', $receivedOn, false, true)
-        . report_meta_cell('Reported On', $reportedOn, false, true);
-
-    if (!empty($patient['cnic'])) {
-        $metaCells .= report_meta_cell('CNIC', (string)$patient['cnic'], false, true);
-    }
-    if (!empty($patient['blood_group'])) {
-        $metaCells .= report_meta_cell('Blood group', (string)$patient['blood_group'], false, true);
-    }
-    if (!empty($patient['email'])) {
-        $metaCells .= report_meta_cell('Email', (string)$patient['email'], false, true);
-    }
-
-    $route = trim((string)($entry['route'] ?? ''));
-    $priority = trim((string)($entry['priority'] ?? ''));
-    if ($route !== '' && strcasecmp($route, '—') !== 0) {
-        $metaCells .= report_meta_cell('Route', $route, false, true);
-    }
-    if ($priority !== '' && strcasecmp($priority, 'Normal') !== 0) {
-        $metaCells .= report_meta_cell('Priority', $priority, false, true);
-    }
+    $metaBlock = build_patient_document_meta($patient, $entry, 'report');
 
     $title = e(strtoupper($reportTitle));
+    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
+    $resultDate = e(format_date_report(null));
 
     $rows = '';
     $currentTestTitle = null;
@@ -699,9 +723,7 @@ function render_report_document(
         <header class="lab-report__header">
             {$brandBlock}
 
-            <div class="lab-report__meta">
-                {$metaCells}
-            </div>
+            {$metaBlock}
 
             <div class="lab-report__title-wrap">
                 <h2 class="lab-report__title">{$title}</h2>
@@ -804,21 +826,7 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $due = max(0, $afterDiscount - $paid);
     $isPaid = $due <= 0.009 && $paid > 0;
 
-    $labNo = e((string)($entry['lab_no'] ?? '—'));
-    $mrNo = e((string)($patient['id'] ?? ($entry['patient_id'] ?? '—')));
-    $pname = e(strtoupper(trim((string)($patient['name'] ?? ($entry['patient_name'] ?? '—')))));
-    $age = trim((string)($patient['age'] ?? ''));
-    $gender = trim((string)($patient['gender'] ?? ''));
-    $ageSex = e(trim(($age !== '' ? $age . ' Years' : '—') . ($gender !== '' ? ' / ' . $gender : ''), ' /'));
-    $father = e((string)($patient['relation_of'] ?? '—'));
-    $phone = e((string)($patient['phone'] ?? '—'));
-    $cnic = e((string)($patient['cnic'] ?? '—'));
-    $doctor = e((string)($entry['doctor'] ?? $patient['referring_doctor'] ?? 'Walk-in / Self'));
-    $regAt = e((string)($entry['branch'] ?? 'Laboratory'));
-    $created = (string)($entry['created_at'] ?? '');
-    $regOn = e($created !== '' ? date('m/d/Y H:i', strtotime($created)) : date('m/d/Y H:i'));
-    $recvOn = e($created !== '' ? date('m/d/Y H:i', strtotime($created . ' +3 minutes')) : date('m/d/Y H:i'));
-    $registeredBy = e((string)(current_user()['name'] ?? 'Lab Staff'));
+    $metaBlock = build_patient_document_meta($patient, $entry, 'bill');
 
     $rowsHtml = '';
     foreach ($lines['items'] as $i => $item) {
@@ -843,27 +851,7 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     return <<<HTML
     <div class="print-area lab-bill">
         {$headerHtml}
-        <div class="lab-bill__meta">
-            <div class="lab-bill__meta-col">
-                <div><span>Patient Name</span><strong>{$pname}</strong></div>
-                <div><span>Age/Gender</span><strong>{$ageSex}</strong></div>
-                <div><span>F/H Name</span><strong>{$father}</strong></div>
-                <div><span>Contact</span><strong>{$phone}</strong></div>
-                <div><span>CNIC</span><strong>{$cnic}</strong></div>
-            </div>
-            <div class="lab-bill__meta-col">
-                <div><span>Lab No</span><strong>{$labNo}</strong></div>
-                <div><span>MR No</span><strong>{$mrNo}</strong></div>
-                <div><span>Referred By</span><strong>{$doctor}</strong></div>
-                <div><span>Specimen Taken</span><strong>Taken In Lab</strong></div>
-                <div><span>Registered At</span><strong>{$regAt}</strong></div>
-            </div>
-            <div class="lab-bill__meta-col">
-                <div><span>Registered On</span><strong>{$regOn}</strong></div>
-                <div><span>Received On</span><strong>{$recvOn}</strong></div>
-                <div><span>Registered by</span><strong>{$registeredBy}</strong></div>
-            </div>
-        </div>
+        {$metaBlock}
 
         <table class="lab-bill__table">
             <thead>

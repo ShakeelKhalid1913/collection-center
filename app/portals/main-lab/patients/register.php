@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'phone' => $_POST['phone'] ?? '',
             'age' => (int)($_POST['age'] ?? 0),
             'gender' => $_POST['gender'] ?? 'Female',
+            'relation_of' => trim($_POST['relation_of'] ?? ''),
             'doctor' => trim($_POST['doctor'] ?? ''),
             'referring_doctor' => trim($_POST['doctor'] ?? ''),
             'address' => trim($_POST['address'] ?? ''),
@@ -39,6 +40,7 @@ $content .= card(
     '<form method="post" class="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">' .
     form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
     form_field('Full name', 'name') .
+    form_field('Father / Husband Name', 'relation_of', 'text', null, 'F/H name', true) .
     form_field('Mobile', 'phone') .
     form_field('Age', 'age', 'number') .
     select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male']) .
