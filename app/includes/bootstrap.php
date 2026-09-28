@@ -357,8 +357,69 @@ function resolve_route_label(?string $idOrLabel): string
 }
 
 /**
+ * Canonical catalog display name for a booked test / package (e.g. CBC → CBC (Complete Blood Count)).
+ */
+function normalize_test_label(string $name, string $orgId = 'ORG-001'): string
+{
+    $name = trim($name);
+    if ($name === '') {
+        return '';
+    }
+
+    $pkg = null;
+    try {
+        $pkg = test_repo()->getPackages($orgId);
+    } catch (Throwable) {
+        $pkg = mock('mock_packages');
+    }
+    foreach ($pkg as $p) {
+        $pName = (string)($p['name'] ?? '');
+        $pCode = (string)($p['code'] ?? '');
+        if (strcasecmp($pName, $name) === 0 || strcasecmp($pCode, $name) === 0) {
+            return $pName !== '' ? $pName : $name;
+        }
+    }
+
+    $test = test_repo()->findByCode($name, $orgId);
+    if ($test && !empty($test['name'])) {
+        return (string)$test['name'];
+    }
+
+    return $name;
+}
+
+/**
+ * Normalize a comma-separated (or array) tests list to catalog names.
+ */
+function normalize_tests_list(string|array $tests, string $orgId = 'ORG-001'): string
+{
+    if (is_string($tests)) {
+        $parts = array_filter(array_map('trim', explode(',', $tests)));
+    } else {
+        $parts = array_values(array_filter(array_map(static fn ($t) => trim((string)$t), $tests)));
+    }
+
+    $normalized = [];
+    $seen = [];
+    foreach ($parts as $part) {
+        $label = normalize_test_label($part, $orgId);
+        if ($label === '') {
+            continue;
+        }
+        $key = strtolower($label);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $normalized[] = $label;
+    }
+
+    return implode(', ', $normalized);
+}
+
+/**
  * Resolve selected catalog checkbox values (names) + amount from POST.
- * @return array{tests: string, amount: float}
+ * @return array{tests: string, amount: float, gross: float, discount: float, paid: float}
  */
 function resolve_catalog_from_post(array $post): array
 {
@@ -367,6 +428,14 @@ function resolve_catalog_from_post(array $post): array
         $selected = $selected !== '' ? [$selected] : [];
     }
     $selected = array_values(array_filter(array_map('trim', $selected)));
+    $orgId = current_user()['organization_id'] ?? 'ORG-001';
+
+    // Always store official catalog names (never bare "CBC" / "LFT")
+    $selected = array_values(array_filter(array_map(
+        static fn (string $n): string => normalize_test_label($n, $orgId),
+        $selected
+    )));
+    $selected = array_values(array_unique($selected));
 
     $amount = (float)($post['amount'] ?? 0);
     if ($amount <= 0 && $selected !== []) {
@@ -388,9 +457,9 @@ function resolve_catalog_from_post(array $post): array
     $net = max(0, $amount - $discount);
 
     if ($selected === []) {
-        // Sensible default when nothing checked (CBC + FBS seed prices)
+        $fallback = normalize_tests_list('CBC, FBS', $orgId);
         return [
-            'tests' => 'CBC, FBS',
+            'tests' => $fallback,
             'amount' => $net > 0 ? $net : 1650.0,
             'gross' => $amount > 0 ? $amount : 1650.0,
             'discount' => $discount,

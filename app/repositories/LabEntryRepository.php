@@ -45,7 +45,10 @@ class LabEntryRepository
             'lab_no' => $labNo,
             'patient_id' => $data['patient_id'] ?? '',
             'patient_name' => $data['patient_name'] ?? $data['patient'] ?? '',
-            'tests' => is_array($data['tests']) ? implode(', ', $data['tests']) : ($data['tests'] ?? ''),
+            'tests' => \normalize_tests_list(
+                is_array($data['tests']) ? $data['tests'] : (string)($data['tests'] ?? ''),
+                (string)($data['organization_id'] ?? 'ORG-001')
+            ),
             'doctor' => $data['doctor'] ?? 'Walk-in / Self',
             'route' => $data['route'] ?? 'Laboratory — Pathology',
             'priority' => $data['priority'] ?? 'Normal',
@@ -59,17 +62,19 @@ class LabEntryRepository
         ]);
 
         if ($ok) {
-            // Create a pending result stub so lab can enter values
-            $tests = is_array($data['tests']) ? implode(', ', $data['tests']) : ($data['tests'] ?? 'General');
-            $this->db->execute(
-                "INSERT INTO results (id, lab_no, patient, test, due) VALUES (:id, :lab_no, :patient, :test, 'Today')",
-                [
-                    'id' => 'RES-' . bin2hex(random_bytes(5)),
-                    'lab_no' => $labNo,
-                    'patient' => $data['patient_name'] ?? $data['patient'] ?? '',
-                    'test' => $tests,
-                ]
+            $tests = \normalize_tests_list(
+                is_array($data['tests']) ? $data['tests'] : (string)($data['tests'] ?? ''),
+                (string)($data['organization_id'] ?? 'ORG-001')
             );
+            // Build proper parameter sheets (CBC → 13 lines, etc.) — no single junk stub
+            if ($tests !== '') {
+                (new ResultRepository())->ensureResultsInitialized(
+                    $labNo,
+                    $tests,
+                    (string)($data['patient_name'] ?? $data['patient'] ?? ''),
+                    (string)($data['organization_id'] ?? 'ORG-001')
+                );
+            }
 
             if (($data['sample_status'] ?? '') === 'collected') {
                 $this->db->execute(
@@ -103,7 +108,9 @@ class LabEntryRepository
         foreach ($allowed as $f) {
             if (array_key_exists($f, $data)) {
                 $fields[] = "{$f} = :{$f}";
-                $params[$f] = $data[$f];
+                $params[$f] = $f === 'tests'
+                    ? \normalize_tests_list((string)$data[$f])
+                    : $data[$f];
             }
         }
         if (empty($fields)) return true;

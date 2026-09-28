@@ -221,6 +221,25 @@ class TestRepository
                 'space_s' => $code . 's %',
             ]
         );
+        if ($row) {
+            return $row;
+        }
+
+        // 4) Contains match: "Complete Blood Count" → "CBC (Complete Blood Count)"
+        //    "Liver Function Test" → "LFTs (Liver Function Tests)"
+        $row = $this->db->fetchOne(
+            "SELECT t.*,
+                    (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+             FROM tests t
+             WHERE t.organization_id = :org_id
+               AND LOWER(t.name) LIKE :contains
+             ORDER BY param_count DESC, LENGTH(t.name) ASC
+             LIMIT 1",
+            [
+                'org_id' => $orgId,
+                'contains' => '%' . strtolower($code) . '%',
+            ]
+        );
         return $row ?: null;
     }
 

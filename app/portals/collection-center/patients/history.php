@@ -53,7 +53,7 @@ if ($selectedPatient) {
 
         $rows[] = [
             '<strong class="text-teal-800 font-mono">' . e($e['lab_no']) . '</strong>',
-            '<span class="font-semibold">' . e($e['tests']) . '</span>',
+            '<span class="font-semibold">' . e(normalize_tests_list((string)($e['tests'] ?? ''))) . '</span>',
             e($e['doctor'] ?? 'Walk-in / Self'),
             status_badge($e['status']),
             e(format_money((float)$e['amount'])),

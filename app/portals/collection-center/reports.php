@@ -12,7 +12,7 @@ foreach (mock('mock_lab_entries') as $e) {
     $rows[] = [
         e($e['lab_no']),
         e($e['patient']),
-        e($e['tests']),
+        e(normalize_tests_list((string)($e['tests'] ?? ''))),
         e($e['doctor'] ?? '—'),
         status_badge($e['status']),
         e($e['branch'] ?? '—'),

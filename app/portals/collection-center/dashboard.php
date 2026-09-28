@@ -13,7 +13,7 @@ foreach (array_slice($entries, 0, 12) as $e) {
     $rows[] = [
         e($e['lab_no']),
         e($e['patient']),
-        e($e['tests']),
+        e(normalize_tests_list((string)($e['tests'] ?? ''))),
         status_badge($e['status']),
         e(format_money((float) $e['amount'])),
         '<div class="flex flex-wrap gap-2">' .

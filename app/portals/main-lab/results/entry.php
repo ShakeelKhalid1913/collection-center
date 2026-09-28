@@ -105,7 +105,7 @@ if (!$entry) {
 $patient = patient_repo()->findById((string)($entry['patient_id'] ?? '')) ?: [];
 $mrNo = e((string)($patient['patient_no'] ?? ($entry['patient_id'] ?? '—')));
 $patientName = e((string)($entry['patient_name'] ?? ($patient['full_name'] ?? '—')));
-$testsOrdered = e((string)($entry['tests'] ?? ''));
+$testsOrdered = e(normalize_tests_list((string)($entry['tests'] ?? '')));
 $doctor = e((string)($entry['doctor'] ?? 'Walk-in / Self'));
 $status = e((string)($entry['status'] ?? 'pending'));
 $age = e((string)($patient['age'] ?? '—'));
@@ -151,8 +151,9 @@ $allEntries = lab_repo()->getAll();
 $switcherOpts = '';
 foreach ($allEntries as $ae) {
     $sel = $ae['lab_no'] === $labNo ? ' selected' : '';
+    $testsLabel = normalize_tests_list((string)($ae['tests'] ?? ''));
     $switcherOpts .= '<option value="' . e($ae['lab_no']) . '"' . $sel . '>'
-        . e($ae['lab_no']) . ' — ' . e($ae['patient_name']) . ' (' . e($ae['tests']) . ')</option>';
+        . e($ae['lab_no']) . ' — ' . e($ae['patient_name']) . ' (' . e($testsLabel) . ')</option>';
 }
 
 $testSelectOpts = '';
