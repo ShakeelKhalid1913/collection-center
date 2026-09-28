@@ -1195,7 +1195,7 @@ textarea::placeholder {
 .lab-report__lbl {
   display: block;
   font-weight: 400;
-  color: #334155;
+  color: #000;
   font-size: 0.68rem;
   line-height: 1.2;
   margin-bottom: 0.05rem;
@@ -1207,7 +1207,7 @@ textarea::placeholder {
 
 .lab-report__val {
   display: block;
-  color: #0f172a;
+  color: #000;
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.25;
@@ -1260,7 +1260,7 @@ textarea::placeholder {
 
 .lab-report__specimen {
   font-size: 0.78rem;
-  color: #0f172a;
+  color: #000;
   white-space: nowrap;
 }
 
@@ -1444,10 +1444,10 @@ textarea::placeholder {
 .lab-report__clinical-note {
   margin-top: 0.55rem;
   font-size: 0.72rem;
-  color: #475569;
+  color: #000;
   font-style: italic;
   line-height: 1.4;
-  border-top: 1px solid #94a3b8;
+  border-top: 1px solid #000;
   padding-top: 0.35rem;
 }
 
@@ -1470,14 +1470,14 @@ textarea::placeholder {
 .lab-report__disclaimer {
   margin: 0 0 0.45rem;
   font-size: 0.68rem;
-  color: var(--lr-muted);
+  color: #000;
   line-height: 1.4;
 }
 
 .lab-report__lab-note {
   margin: 0 0 0.45rem;
   font-size: 0.75rem;
-  color: #334155;
+  color: #000;
 }
 
 .lab-report__contact-bar {
@@ -1497,7 +1497,7 @@ textarea::placeholder {
   justify-content: space-between;
   margin-top: 0.35rem;
   font-size: 0.65rem;
-  color: var(--lr-muted);
+  color: #000;
 }
 
 .lab-report .software-credit--print {
@@ -1588,18 +1588,26 @@ textarea::placeholder {
 
 .lab-report__signatories {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0;
-  margin-top: 0.15rem;
-  padding: 0.18rem 0 0.2rem;
-  border-top: 1px solid #0f172a;
+  margin-top: 0.06rem;
+  padding: 0.2rem 0 0.45rem;
+  border-top: 1px solid #000;
+  box-sizing: border-box;
+  max-height: none;
+  overflow: visible;
 }
 
 .lab-report__signatory {
   flex: 1;
+  min-width: 0;
   text-align: left;
-  padding: 0 0.25rem;
-  border-right: 1px solid #0f172a;
+  padding: 0.1rem 0.2rem 0.35rem;
+  border-right: 1px solid #000;
+  box-sizing: border-box;
+  max-height: 2.55rem;
+  overflow: hidden;
 }
 
 .lab-report__signatory:first-child {
@@ -1613,16 +1621,23 @@ textarea::placeholder {
 
 .lab-report__signatory-name {
   font-weight: 700;
-  font-size: 0.6rem;
-  color: #0f172a;
-  line-height: 1.15;
+  font-size: 0.7rem;
+  color: #000 !important;
+  line-height: 1.1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lab-report__signatory-quals {
-  font-size: 0.52rem;
-  color: #334155;
-  line-height: 1.15;
-  white-space: pre-line;
+.lab-report__signatory-line {
+  font-size: 0.58rem;
+  color: #000 !important;
+  line-height: 1.1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media print {
@@ -1698,7 +1713,7 @@ textarea::placeholder {
     width: 0.9rem;
     font-size: 0.55rem;
     line-height: 1.15;
-    color: #64748b;
+    color: #000;
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     text-align: center;
@@ -1717,7 +1732,13 @@ textarea::placeholder {
   }
 
   .lab-report__val--patient,
-  .lab-report__val--strong {
+  .lab-report__val--strong,
+  .lab-report__signatory-name,
+  .lab-report__signatory-line,
+  .lab-report__lbl,
+  .lab-report__val,
+  .lab-report__disclaimer,
+  .lab-report__clinical-note {
     color: #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

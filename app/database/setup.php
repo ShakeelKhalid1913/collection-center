@@ -215,7 +215,7 @@ function runSetup(): array
 
         // Seed Default Doctor Signatories
         $signatoriesSeed = [
-            ['SIG-01', 'ORG-001', 1, 'Dr Alina', "M.B.B.S, M Phill Hematology\nAssistant Professor\nConsultant Pathologist", 'Assistant Professor / Consultant Pathologist', 1, 0],
+            ['SIG-01', 'ORG-001', 1, 'Dr Alina', "M.B.B.S, M Phill Hematology", 'Consultant Pathologist', 1, 0],
             ['SIG-02', 'ORG-001', 2, 'Dr M Mujeeb Ur Rehman', "M.B.B.S (Pak) R.M.P (PMC)\nPMC Reg # 712493-01-M", 'Consultant Physician', 1, 1],
             ['SIG-03', 'ORG-001', 3, 'IMRAN AFZAL (MLT)', "Medical Lab Technology", 'Head Lab Technologist', 1, 2],
         ];

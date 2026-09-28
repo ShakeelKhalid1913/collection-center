@@ -31,9 +31,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $deptOpts = ['' => '— Optional: select department —'] + TEST_DEPARTMENTS;
 
+$q = trim((string)($_GET['q'] ?? ''));
+$deptFilter = trim((string)($_GET['dept'] ?? ''));
+
+$allTests = array_values(array_filter(
+    mock('mock_tests'),
+    static function (array $t) use ($q, $deptFilter): bool {
+        if ($deptFilter !== '' && strcasecmp((string)($t['category'] ?? ''), $deptFilter) !== 0) {
+            return false;
+        }
+        if ($q !== '') {
+            $hay = strtolower(($t['code'] ?? '') . ' ' . ($t['name'] ?? ''));
+            if (!str_contains($hay, strtolower($q))) {
+                return false;
+            }
+        }
+        return true;
+    }
+));
+
+$perPage = 50;
+$totalTests = count($allTests);
+$totalPages = max(1, (int)ceil($totalTests / $perPage));
+$page = max(1, min($totalPages, (int)($_GET['page'] ?? 1)));
+$offset = ($page - 1) * $perPage;
+$pageTests = array_slice($allTests, $offset, $perPage);
+
 $rows = [];
-foreach (mock('mock_tests') as $t) {
+foreach ($pageTests as $t) {
     $rows[] = [e($t['code']), e($t['name']), e($t['category']), e(format_money((float) $t['price'])), e($t['sample'])];
+}
+
+$from = $totalTests === 0 ? 0 : $offset + 1;
+$to = min($offset + $perPage, $totalTests);
+
+$queryBase = array_filter([
+    'q' => $q !== '' ? $q : null,
+    'dept' => $deptFilter !== '' ? $deptFilter : null,
+], static fn($v) => $v !== null && $v !== '');
+
+$buildUrl = static function (int $p) use ($queryBase): string {
+    $qs = http_build_query(array_merge($queryBase, ['page' => $p]));
+    return '/portals/admin/tests.php' . ($qs !== '' ? '?' . $qs : '');
+};
+
+$filterDeptOpts = ['' => 'All departments'] + TEST_DEPARTMENTS;
+$filterHtml = '<form method="get" class="grid gap-3 p-4 sm:grid-cols-3 border-b border-slate-200 bg-slate-50/80">'
+    . '<div class="sm:col-span-2"><label class="field-label" for="q">Search</label>'
+    . '<input type="search" id="q" name="q" class="field" value="' . e($q) . '" placeholder="Code or test name">'
+    . '</div>'
+    . select_field('Department', 'dept', $filterDeptOpts, $deptFilter, true)
+    . '<div class="sm:col-span-3 flex flex-wrap gap-2">'
+    . '<button type="submit" class="btn btn-primary text-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> Filter</button>'
+    . '<a href="/portals/admin/tests.php" class="btn btn-secondary text-sm">Clear</a>'
+    . '</div></form>';
+
+$paginationHtml = '';
+if ($totalPages > 1) {
+    $links = [];
+    if ($page > 1) {
+        $links[] = '<a class="btn btn-secondary text-xs" href="' . e($buildUrl($page - 1)) . '">&larr; Prev</a>';
+    }
+    for ($p = 1; $p <= $totalPages; $p++) {
+        if ($p === $page) {
+            $links[] = '<span class="inline-flex items-center px-2.5 py-1 text-xs font-bold rounded bg-teal-700 text-white">' . $p . '</span>';
+        } else {
+            $links[] = '<a class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded border border-slate-200 text-slate-700 hover:bg-slate-50" href="' . e($buildUrl($p)) . '">' . $p . '</a>';
+        }
+    }
+    if ($page < $totalPages) {
+        $links[] = '<a class="btn btn-secondary text-xs" href="' . e($buildUrl($page + 1)) . '">Next &rarr;</a>';
+    }
+    $paginationHtml = '<div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 bg-slate-50">'
+        . '<span class="text-xs text-slate-500">Showing ' . $from . '–' . $to . ' of ' . $totalTests . ' · Page ' . $page . '/' . $totalPages . '</span>'
+        . '<div class="flex flex-wrap items-center gap-1.5">' . implode('', $links) . '</div>'
+        . '</div>';
 }
 
 $content = page_header(
@@ -52,7 +124,9 @@ $content .= card(
     form_field('Normal range', 'range', 'text', '—', '', true) .
     '<div class="flex items-end">' . btn_submit('Add test') . '</div>' .
     '</form>' .
-    data_table(['Code', 'Name', 'Department', 'Price', 'Sample type'], $rows),
+    $filterHtml .
+    data_table(['Code', 'Name', 'Department', 'Price', 'Sample type'], $rows) .
+    $paginationHtml,
     'overflow-hidden'
 );
 

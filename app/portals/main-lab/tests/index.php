@@ -211,39 +211,132 @@ $formHtml .= <<<HTML
 </form>
 HTML;
 
-$tests = test_repo()->getTests($orgId);
+$q = trim((string)($_GET['q'] ?? ''));
+$deptFilter = trim((string)($_GET['dept'] ?? ''));
+$sampleFilter = trim((string)($_GET['sample'] ?? ''));
+
+$allTests = array_values(array_filter(
+    test_repo()->getTests($orgId),
+    static function (array $t) use ($q, $deptFilter, $sampleFilter): bool {
+        if (($t['category'] ?? '') === 'Radiology') {
+            return false;
+        }
+        if ($deptFilter !== '' && strcasecmp((string)($t['category'] ?? ''), $deptFilter) !== 0) {
+            return false;
+        }
+        if ($sampleFilter !== '' && strcasecmp((string)($t['sample_type'] ?? ''), $sampleFilter) !== 0) {
+            return false;
+        }
+        if ($q !== '') {
+            $hay = strtolower(($t['code'] ?? '') . ' ' . ($t['name'] ?? ''));
+            if (!str_contains($hay, strtolower($q))) {
+                return false;
+            }
+        }
+        return true;
+    }
+));
+
+$sampleOpts = ['' => 'All specimens'];
+foreach (test_repo()->getTests($orgId) as $t) {
+    if (($t['category'] ?? '') === 'Radiology') {
+        continue;
+    }
+    $s = trim((string)($t['sample_type'] ?? ''));
+    if ($s !== '' && $s !== '—') {
+        $sampleOpts[$s] = $s;
+    }
+}
+ksort($sampleOpts, SORT_NATURAL | SORT_FLAG_CASE);
+
+$perPage = 50;
+$totalTests = count($allTests);
+$totalPages = max(1, (int)ceil($totalTests / $perPage));
+$page = max(1, min($totalPages, (int)($_GET['page'] ?? 1)));
+$offset = ($page - 1) * $perPage;
+$tests = array_slice($allTests, $offset, $perPage);
+
 $testIds = array_column($tests, 'id');
 $paramsGrouped = test_repo()->getParametersByTestIds($testIds);
 
+$queryBase = array_filter([
+    'q' => $q !== '' ? $q : null,
+    'dept' => $deptFilter !== '' ? $deptFilter : null,
+    'sample' => $sampleFilter !== '' ? $sampleFilter : null,
+    'edit' => $isEdit ? (string)$editingTest['id'] : null,
+], static fn($v) => $v !== null && $v !== '');
+
+$buildUrl = static function (int $p) use ($queryBase): string {
+    $qs = http_build_query(array_merge($queryBase, ['page' => $p]));
+    return '/portals/main-lab/tests/index.php' . ($qs !== '' ? '?' . $qs : '');
+};
+
 $rows = [];
 foreach ($tests as $t) {
-    if ($t['category'] === 'Radiology') {
-        continue;
-    }
-
     $pCount = count($paramsGrouped[$t['id']] ?? []);
     $badgeClass = $pCount > 0 ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600';
     $pCountBadge = '<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded ' . $badgeClass . '">' . $pCount . ' parameter' . ($pCount === 1 ? '' : 's') . '</span>';
-    
-    $editUrl = '/portals/main-lab/tests/index.php?edit=' . urlencode($t['id']);
+
+    $editQs = http_build_query(array_merge($queryBase, ['edit' => $t['id'], 'page' => $page]));
+    $editUrl = '/portals/main-lab/tests/index.php?' . $editQs;
     $delForm = '<form method="post" class="inline" style="display:inline;" onsubmit="return confirm(\'Delete test ' . e($t['name']) . '?\');">
         <input type="hidden" name="action" value="delete">
         <input type="hidden" name="test_id" value="' . e($t['id']) . '">
         <button type="submit" class="text-red-600 hover:text-red-800 hover:underline border-0 bg-transparent cursor-pointer p-0 text-xs font-medium ml-2">Delete</button>
     </form>';
-    
-    $actions = '<a href="' . $editUrl . '" class="text-teal-700 hover:text-teal-900 font-semibold hover:underline text-xs"><i class="fa-solid fa-pen-to-square"></i> Edit</a>' . $delForm;
+
+    $actions = '<a href="' . e($editUrl) . '" class="text-teal-700 hover:text-teal-900 font-semibold hover:underline text-xs"><i class="fa-solid fa-pen-to-square"></i> Edit</a>' . $delForm;
 
     $rows[] = [
-        '<strong class="text-slate-800">' . e($t['code']) . '</strong>', 
-        e($t['name']), 
-        '<span class="chip">' . e($t['category']) . '</span>', 
-        e(format_money((float) $t['price'])), 
-        e($t['sample_type'] ?? 'Blood'), 
-        e($t['reference_value'] ?: ($t['normal_range'] ?? '—')), 
-        $pCountBadge, 
-        $actions
+        '<strong class="text-slate-800">' . e($t['code']) . '</strong>',
+        e($t['name']),
+        '<span class="chip">' . e($t['category']) . '</span>',
+        e(format_money((float) $t['price'])),
+        e($t['sample_type'] ?? 'Blood'),
+        e($t['reference_value'] ?: ($t['normal_range'] ?? '—')),
+        $pCountBadge,
+        $actions,
     ];
+}
+
+$from = $totalTests === 0 ? 0 : $offset + 1;
+$to = min($offset + $perPage, $totalTests);
+$listHeading = 'Configured Tests (' . $totalTests . ' match' . ($totalTests === 1 ? '' : 'es') . ') — showing ' . $from . '–' . $to;
+
+$filterDeptOpts = ['' => 'All departments'] + TEST_DEPARTMENTS;
+$qVal = e($q);
+$filterHtml = '<form method="get" class="grid gap-3 p-4 sm:grid-cols-4 border-b border-slate-200 bg-slate-50/80">'
+    . ($isEdit ? '<input type="hidden" name="edit" value="' . e((string)$editingTest['id']) . '">' : '')
+    . '<div class="sm:col-span-2"><label class="field-label" for="q">Search</label>'
+    . '<input type="search" id="q" name="q" class="field" value="' . $qVal . '" placeholder="Code or test name (e.g. CBC, sugar)">'
+    . '</div>'
+    . select_field('Department', 'dept', $filterDeptOpts, $deptFilter, true)
+    . select_field('Specimen', 'sample', $sampleOpts, $sampleFilter, true)
+    . '<div class="sm:col-span-4 flex flex-wrap gap-2">'
+    . '<button type="submit" class="btn btn-primary text-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> Filter</button>'
+    . '<a href="/portals/main-lab/tests/index.php" class="btn btn-secondary text-sm">Clear</a>'
+    . '</div></form>';
+
+$paginationHtml = '';
+if ($totalPages > 1) {
+    $links = [];
+    if ($page > 1) {
+        $links[] = '<a class="btn btn-secondary text-xs" href="' . e($buildUrl($page - 1)) . '">&larr; Prev</a>';
+    }
+    for ($p = 1; $p <= $totalPages; $p++) {
+        if ($p === $page) {
+            $links[] = '<span class="inline-flex items-center px-2.5 py-1 text-xs font-bold rounded bg-teal-700 text-white">' . $p . '</span>';
+        } else {
+            $links[] = '<a class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded border border-slate-200 text-slate-700 hover:bg-slate-50" href="' . e($buildUrl($p)) . '">' . $p . '</a>';
+        }
+    }
+    if ($page < $totalPages) {
+        $links[] = '<a class="btn btn-secondary text-xs" href="' . e($buildUrl($page + 1)) . '">Next &rarr;</a>';
+    }
+    $paginationHtml = '<div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 bg-slate-50">'
+        . '<span class="text-xs text-slate-500">Page ' . $page . ' of ' . $totalPages . ' · ' . $perPage . ' per page</span>'
+        . '<div class="flex flex-wrap items-center gap-1.5">' . implode('', $links) . '</div>'
+        . '</div>';
 }
 
 $content = page_header(
@@ -254,8 +347,10 @@ $content .= $message;
 $content .= card(
     panel_head($formTitle) .
     $formHtml .
-    panel_head('All Configured Tests (' . count($tests) . ')') .
-    data_table(['Code', 'Name', 'Department', 'Price', 'Sample', 'Reference Range', 'Parameters', 'Actions'], $rows),
+    panel_head($listHeading) .
+    $filterHtml .
+    data_table(['Code', 'Name', 'Department', 'Price', 'Sample', 'Reference Range', 'Parameters', 'Actions'], $rows) .
+    $paginationHtml,
     'overflow-hidden'
 );
 

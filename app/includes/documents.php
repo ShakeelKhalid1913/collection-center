@@ -445,17 +445,41 @@ function render_report_signatories(array $signatories): string
     }
     $html = '<div class="lab-report__signatories">';
     foreach ($signatories as $sig) {
-        $name = e($sig['name']);
-        $quals = e($sig['qualifications'] ?? '');
-        $desig = e($sig['designation'] ?? '');
-        
+        $name = e(trim((string)($sig['name'] ?? '')));
+        $qualsRaw = trim((string)($sig['qualifications'] ?? ''));
+        $desigRaw = trim((string)($sig['designation'] ?? ''));
+
+        // Max 2 detail lines under the name (box stays ~3 lines tall)
+        $details = [];
+        foreach (preg_split('/\R/', $qualsRaw) ?: [] as $line) {
+            $line = trim((string)$line);
+            if ($line === '') {
+                continue;
+            }
+            $details[] = $line;
+            if (count($details) >= 2) {
+                break;
+            }
+        }
+        if ($desigRaw !== '' && count($details) < 2) {
+            $flat = strtolower(implode(' ', $details));
+            if ($flat === '' || !str_contains($flat, strtolower($desigRaw))) {
+                $details[] = $desigRaw;
+            }
+        }
+        // Prefer designation as 2nd line when quals were long/noisy
+        if ($desigRaw !== '' && count($details) >= 2) {
+            $last = $details[count($details) - 1];
+            if (strcasecmp($last, $desigRaw) !== 0 && str_contains(strtolower($desigRaw), strtolower($last))) {
+                $details[count($details) - 1] = $desigRaw;
+            }
+        }
+        $details = array_slice($details, 0, 2);
+
         $html .= '<div class="lab-report__signatory">';
         $html .= '<div class="lab-report__signatory-name">' . $name . '</div>';
-        if ($quals !== '') {
-            $html .= '<div class="lab-report__signatory-quals">' . nl2br($quals) . '</div>';
-        }
-        if ($desig !== '') {
-            $html .= '<div class="lab-report__signatory-quals">' . $desig . '</div>';
+        foreach ($details as $d) {
+            $html .= '<div class="lab-report__signatory-line">' . e($d) . '</div>';
         }
         $html .= '</div>';
     }
