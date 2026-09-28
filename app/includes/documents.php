@@ -4,8 +4,27 @@ declare(strict_types=1);
 
 /**
  * Shared helpers for printable receipts & lab reports (header/footer branding).
- * Report layout follows clinical Infinity-style: brand → IDs → patient/doctor grid → title → results.
+ * Report layout: brand → compact patient grid → department title → results.
  */
+
+/**
+ * Compact stacked label/value cell for the report patient header.
+ * When $optional is true, empty / dash values are omitted to save space.
+ * Pass raw (unescaped) values — this helper escapes for output.
+ */
+function report_meta_cell(string $label, string $value, bool $strong = false, bool $optional = false): string
+{
+    $trimmed = trim($value);
+    if ($optional && ($trimmed === '' || $trimmed === '—')) {
+        return '';
+    }
+    $display = $trimmed !== '' ? e($trimmed) : '—';
+    $valClass = 'lab-report__val' . ($strong ? ' lab-report__val--strong' : '');
+    return '<div class="lab-report__cell">'
+        . '<span class="lab-report__lbl">' . e($label) . '</span>'
+        . '<span class="' . $valClass . '">' . $display . '</span>'
+        . '</div>';
+}
 
 function branding_settings(?string $orgId = null): array
 {
@@ -185,6 +204,7 @@ function load_document_context(?string $labNo): array
         'email' => '',
         'address' => '',
         'relation_of' => '',
+        'referring_doctor' => '',
     ];
 
     if ($entry) {
@@ -204,6 +224,7 @@ function load_document_context(?string $labNo): array
                 'email' => $p['email'] ?? '',
                 'address' => $p['address'] ?? '',
                 'relation_of' => $p['relation_of'] ?? '',
+                'referring_doctor' => $p['referring_doctor'] ?? $p['emergency_name'] ?? '',
             ];
         }
     }
@@ -295,10 +316,19 @@ function load_document_context(?string $labNo): array
 function format_datetime_report(?string $iso): string
 {
     if (!$iso) {
-        return date('d/m/Y h:i A');
+        return date('d-M-Y g:i A');
     }
     $ts = strtotime($iso);
-    return $ts ? date('d/m/Y h:i A', $ts) : $iso;
+    return $ts ? date('d-M-Y g:i A', $ts) : $iso;
+}
+
+function format_date_report(?string $iso = null): string
+{
+    if (!$iso) {
+        return date('d-M-Y');
+    }
+    $ts = strtotime($iso);
+    return $ts ? date('d-M-Y', $ts) : date('d-M-Y');
 }
 
 function render_letterhead_image(array $settings): string
@@ -393,9 +423,9 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $logoImg = brand_logo('brand-logo brand-logo--report');
     $labName = e($settings['name'] ?? '');
     $tagline = e(($settings['header'] ?? '') !== '' ? $settings['header'] : 'Quality is our Promise');
-    $address = e($settings['address'] ?? '');
-    $phone = e($settings['phone'] ?? '');
-    $email = e($settings['email'] ?? '');
+    $labAddress = e($settings['address'] ?? '');
+    $labPhone = e($settings['phone'] ?? '');
+    $labEmail = e($settings['email'] ?? '');
 
     $brandBlock = $letterhead !== ''
         ? $letterhead
@@ -409,36 +439,62 @@ function render_report_document(array $settings, array $patient, array $resultLi
             </div>
             HTML;
 
-    $mrNo = e($patient['id'] ?? '—');
-    $pname = e($patient['name'] ?? '—');
-    $fhName = e(($patient['relation_of'] ?? '') !== '' ? $patient['relation_of'] : '—');
-    $age = e((string)($patient['age'] ?? '—'));
-    $gender = e($patient['gender'] ?? '—');
+    $mrNo = (string)($patient['id'] ?? '—');
+    $pname = (string)($patient['name'] ?? '—');
+    $fhNameRaw = trim((string)($patient['relation_of'] ?? ''));
+    $age = (string)($patient['age'] ?? '—');
+    $gender = (string)($patient['gender'] ?? '—');
     $ageGender = trim($age . ($age !== '—' && $gender !== '—' ? ' years / ' : ' / ') . $gender, ' /');
-    $phoneP = e(($patient['phone'] ?? '') !== '' ? $patient['phone'] : '—');
+    $phoneP = ($patient['phone'] ?? '') !== '' ? (string)$patient['phone'] : '—';
+    $patientAddress = ($patient['address'] ?? '') !== '' ? (string)$patient['address'] : '—';
 
-    $labNo = (string)($entry['lab_no'] ?? '—');
-    $labNoE = e($labNo);
-    $barcodeSafe = preg_replace('/[^A-Za-z0-9\-]/', '', $labNo) ?: 'LAB';
-    $registeredAt = e($entry['branch'] ?? $settings['name'] ?? 'Main Lab');
-    $registeredOn = e(format_datetime_report($entry['created_at'] ?? null));
-    $receivedOn = e(format_datetime_report($entry['created_at'] ?? null));
-    $reportedOn = e(date('d/m/Y h:i A'));
-    $reference = e(($entry['doctor'] ?? '') !== '' ? $entry['doctor'] : 'Walk-in / Self');
-    $route = e($entry['route'] ?? '—');
-    $priority = e($entry['priority'] ?? 'Normal');
+    $labNo = (string)($entry['lab_no'] ?? '');
+    $labNoDisplay = $labNo !== '' ? $labNo : '—';
+    $registeredAt = trim((string)($entry['branch'] ?? ''));
+    $receivedOn = format_datetime_report($entry['created_at'] ?? null);
+    $reportedOn = format_datetime_report(null);
+    $resultDate = e(format_date_report(null));
 
-    $cnicRow = '';
+    $doctorRaw = trim((string)($entry['doctor'] ?? ''));
+    if ($doctorRaw === '') {
+        $doctorRaw = trim((string)($patient['referring_doctor'] ?? ''));
+    }
+    if ($doctorRaw === '') {
+        $doctorRaw = 'Walk-in / Self';
+    }
+
+    // Mandatory cells — always printed
+    $metaCells = report_meta_cell('Patient Name', $pname, true)
+        . report_meta_cell('MR No', $mrNo, true)
+        . report_meta_cell('Phone', $phoneP)
+        . report_meta_cell('Doctor Name', $doctorRaw, true)
+        . report_meta_cell('Age / Gender', $ageGender)
+        . report_meta_cell('Address', $patientAddress);
+
+    // Optional cells — only when filled (saves vertical space)
+    $metaCells .= report_meta_cell('Case No', $labNoDisplay, false, true)
+        . report_meta_cell('F/H Name', $fhNameRaw, false, true)
+        . report_meta_cell('Registered at', $registeredAt, false, true)
+        . report_meta_cell('Received on', $receivedOn, false, true)
+        . report_meta_cell('Reported On', $reportedOn, false, true);
+
     if (!empty($patient['cnic'])) {
-        $cnicRow = '<div class="lab-report__row"><span class="lab-report__lbl">CNIC</span><span class="lab-report__val">' . e($patient['cnic']) . '</span></div>';
+        $metaCells .= report_meta_cell('CNIC', (string)$patient['cnic'], false, true);
     }
-    $bloodRow = '';
     if (!empty($patient['blood_group'])) {
-        $bloodRow = '<div class="lab-report__row"><span class="lab-report__lbl">Blood group</span><span class="lab-report__val">' . e($patient['blood_group']) . '</span></div>';
+        $metaCells .= report_meta_cell('Blood group', (string)$patient['blood_group'], false, true);
     }
-    $emailRow = '';
     if (!empty($patient['email'])) {
-        $emailRow = '<div class="lab-report__row"><span class="lab-report__lbl">Email</span><span class="lab-report__val">' . e($patient['email']) . '</span></div>';
+        $metaCells .= report_meta_cell('Email', (string)$patient['email'], false, true);
+    }
+
+    $route = trim((string)($entry['route'] ?? ''));
+    $priority = trim((string)($entry['priority'] ?? ''));
+    if ($route !== '' && strcasecmp($route, '—') !== 0) {
+        $metaCells .= report_meta_cell('Route', $route, false, true);
+    }
+    if ($priority !== '' && strcasecmp($priority, 'Normal') !== 0) {
+        $metaCells .= report_meta_cell('Priority', $priority, false, true);
     }
 
     $title = e(strtoupper($reportTitle));
@@ -484,8 +540,8 @@ function render_report_document(array $settings, array $patient, array $resultLi
 
         $rows .= '<tr>
             <td class="lab-report__param-cell">' . e($line['test'] ?? '') . '</td>
-            <td>' . $unitVal . '</td>
             <td class="font-mono text-slate-700">' . $rangeVal . '</td>
+            <td>' . $unitVal . '</td>
             <td class="' . $resClass . '" style="text-align: right;">' . $resVal . $arrow . '</td>
         </tr>';
 
@@ -523,8 +579,8 @@ function render_report_document(array $settings, array $patient, array $resultLi
     $footerBlock = $footerNote !== '' ? '<p class="lab-report__lab-note">' . $footerNote . '</p>' : '';
     $credit = software_credit_footer(true);
     $printStamp = e(date('h:i:s A'));
-    $addrLine = trim($address . ($phone !== '' ? '  ·  ' . $phone : '') . ($email !== '' ? '  ·  ' . $email : ''));
-    
+    $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
+
     $signatoriesHtml = render_report_signatories($signatories);
 
     return <<<HTML
@@ -532,39 +588,8 @@ function render_report_document(array $settings, array $patient, array $resultLi
         <header class="lab-report__header">
             {$brandBlock}
 
-            <div class="lab-report__id-bar">
-                <div class="lab-report__id-block">
-                    <span class="lab-report__id-label">Patient No</span>
-                    <span class="lab-report__barcode" aria-hidden="true">*{$barcodeSafe}*</span>
-                    <span class="lab-report__id-code">{$mrNo}</span>
-                </div>
-                <div class="lab-report__id-block lab-report__id-block--right">
-                    <span class="lab-report__id-label">Case No</span>
-                    <span class="lab-report__barcode" aria-hidden="true">*{$barcodeSafe}*</span>
-                    <span class="lab-report__id-code">{$labNoE}</span>
-                </div>
-            </div>
-
             <div class="lab-report__meta">
-                <div class="lab-report__meta-col">
-                    <div class="lab-report__row"><span class="lab-report__lbl">MR No</span><span class="lab-report__val">{$mrNo}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Name</span><span class="lab-report__val lab-report__val--strong">{$pname}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">F/H Name</span><span class="lab-report__val">{$fhName}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Age / Gender</span><span class="lab-report__val">{$ageGender}</span></div>
-                    {$cnicRow}
-                    <div class="lab-report__row"><span class="lab-report__lbl">Phone</span><span class="lab-report__val">{$phoneP}</span></div>
-                    {$bloodRow}
-                    {$emailRow}
-                </div>
-                <div class="lab-report__meta-col">
-                    <div class="lab-report__row"><span class="lab-report__lbl">Registered At</span><span class="lab-report__val">{$registeredAt}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Registered On</span><span class="lab-report__val">{$registeredOn}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Received On</span><span class="lab-report__val">{$receivedOn}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Reported On</span><span class="lab-report__val">{$reportedOn}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Reference</span><span class="lab-report__val">{$reference}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Route</span><span class="lab-report__val">{$route}</span></div>
-                    <div class="lab-report__row"><span class="lab-report__lbl">Priority</span><span class="lab-report__val">{$priority}</span></div>
-                </div>
+                {$metaCells}
             </div>
 
             <div class="lab-report__title-wrap">
@@ -577,9 +602,9 @@ function render_report_document(array $settings, array $patient, array $resultLi
                 <thead>
                     <tr>
                         <th style="width: 38%;">TEST</th>
-                        <th style="width: 16%;">UNIT</th>
-                        <th style="width: 28%;">REFERENCE RANGE</th>
-                        <th style="width: 18%; text-align: right;">RESULT</th>
+                        <th style="width: 26%;">REFERENCE RANGE</th>
+                        <th style="width: 14%;">UNIT</th>
+                        <th style="width: 22%; text-align: right;">RESULT [{$resultDate}]</th>
                     </tr>
                 </thead>
                 <tbody>{$rows}</tbody>
