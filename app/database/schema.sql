@@ -221,3 +221,31 @@ CREATE TABLE IF NOT EXISTS collection_centers (
     patients_today  INT DEFAULT 0,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS waste_records (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL,
+    title           VARCHAR(255) NOT NULL,
+    notes           TEXT,
+    record_date     DATE NOT NULL,
+    mou_image       LONGBLOB NULL,
+    mou_image_mime  VARCHAR(64) NULL,
+    slip_image      LONGBLOB NULL,
+    slip_image_mime VARCHAR(64) NULL,
+    created_by      VARCHAR(128) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_waste_org_date (organization_id, record_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS doctor_shares (
+    id                  VARCHAR(64) PRIMARY KEY,
+    organization_id     VARCHAR(64) NOT NULL,
+    doctor_name         VARCHAR(255) NOT NULL,
+    commission_percent  DECIMAL(5,2) NOT NULL DEFAULT 0,
+    notes               TEXT,
+    is_active           TINYINT(1) DEFAULT 1,
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_doctor_shares_org (organization_id),
+    UNIQUE KEY uq_doctor_share_org_name (organization_id, doctor_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

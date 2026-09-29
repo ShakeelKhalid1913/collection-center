@@ -32,37 +32,31 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
         ],
         'main-lab' => [
-            nav_group('Overview', [
+            nav_group('', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Patients', [
+            nav_group('Primary', [
                 nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
-                nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
-                nav_item("{$base}/patients/history.php", 'Patient History', $activeKey, 'history', null, 'fa-solid fa-clock-rotate-left'),
+                nav_item("{$base}/results/entry.php", 'Result Entry', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
+                nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
             ]),
-            nav_group('Samples', [
-                nav_item("{$base}/samples/pending.php", 'Pending Samples', $activeKey, 'samples-pending', $badges['samples_pending'] ?: null, 'fa-solid fa-vial'),
-                nav_item("{$base}/samples/tracking.php", 'Sample Tracking', $activeKey, 'samples-tracking', null, 'fa-solid fa-truck-fast'),
-            ]),
-            nav_group('Results', [
-                nav_item("{$base}/results/pending.php", 'Pending Results', $activeKey, 'results-pending', null, 'fa-solid fa-hourglass-half'),
-                nav_item("{$base}/results/entry.php", 'Enter Results', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
-                nav_item("{$base}/results/verification.php", 'Verification', $activeKey, 'verification', $badges['results_verify'] ?: null, 'fa-solid fa-user-check'),
-                nav_item("{$base}/results/critical.php", 'Critical Results', $activeKey, 'critical', $badges['critical'] ?: null, 'fa-solid fa-triangle-exclamation'),
-            ]),
-            nav_group('Reports', [
-                nav_item("{$base}/reports/history.php", 'Reports History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
-                nav_item("{$base}/reports/generate.php", 'Generate Report', $activeKey, 'reports-generate', null, 'fa-solid fa-file-pdf'),
-                nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
+            nav_group('Operations', [
+                nav_item("{$base}/waste-record.php", 'Waste Record', $activeKey, 'waste-record', null, 'fa-solid fa-trash-can'),
+                nav_item("{$base}/delete-entry.php", 'Delete Entry', $activeKey, 'delete-entry', null, 'fa-solid fa-user-xmark'),
+                nav_item("{$base}/doctors-share.php", "Doctor's Share", $activeKey, 'doctors-share', null, 'fa-solid fa-user-doctor'),
             ]),
             nav_group('Catalog', [
-                nav_item("{$base}/tests/index.php", 'Tests', $activeKey, 'tests', null, 'fa-solid fa-flask'),
-                nav_item("{$base}/tests/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-stacked'),
-                nav_item("{$base}/collection-centers.php", 'Collection Centers', $activeKey, 'collection-centers', null, 'fa-solid fa-building'),
+                nav_item("{$base}/tests/index.php", 'Add Test', $activeKey, 'tests', null, 'fa-solid fa-flask'),
+                nav_item("{$base}/tests/prices.php", 'Add / Update Price', $activeKey, 'prices', null, 'fa-solid fa-tags'),
             ]),
             nav_group('Settings', [
+                nav_item("{$base}/settings/report-template.php", 'Header & Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
+                nav_item("{$base}/archive.php", 'All Dates History', $activeKey, 'archive', null, 'fa-solid fa-clock-rotate-left'),
+            ]),
+            nav_group('More', [
+                nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
+                nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/settings/profile.php", 'Lab Profile', $activeKey, 'settings-profile', null, 'fa-solid fa-hospital'),
-                nav_item("{$base}/settings/report-template.php", 'Header / Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users'),
             ]),
         ],

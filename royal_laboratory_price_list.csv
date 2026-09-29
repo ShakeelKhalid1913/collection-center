@@ -1,0 +1,280 @@
+﻿MTID,CatTest,Price,Sampling,Reporting
+1,COMPLETE BLOOD COUNT (CBC),600,3-5cc EDTA Vial,SAME DAY
+2,HBSAG (ICT),300,3-5cc Clotted Blood,SAME DAY
+4,HEMAGLOBIN(HB),200,3-5cc EDTA Vial,SAME DAY
+5,RANDOM BLOOD SUGAR (RBS),100,3-5cc Clotted Blood,SAME DAY
+6,FASTING BLOOD SUGAR (FBS),100,3-5cc Clotted Blood,SAME DAY
+7,Blood Group & Rh Factor,150,3-5cc EDTA Vial,SAME DAY
+8,LIPID PROFILE,850,3-5cc Clotted Blood,SAME DAY
+9,Malarial Parasite ICT (MP),450,3-5cc EDTA Vial,SAME DAY
+10,LIVER FUNCTIONS REPORT(LFTs),700,3-5cc Clotted Blood,Same Day
+11,VITAMIN B12,2000,3-5cc Clotted Blood,AFTER THREE DAY
+14,T4,1000,"3-5cc, Clotted/ EDTA Vial",SAME DAY
+15,RENAL FUNCTION TEST(RFTs),600,3-5cc Clotted Blood,Same Day
+16,HCV BY PCR QUANTITATION,3000,3-5cc Clotted Blood,AFTER THREE DAY
+17,URINE COMPLETE EXAMINATION,250,Urine (Random/Spot),SAME DAY
+18,CROSS MATCHING WITH SCREENING,1500,"3-5cc, Clotted/ EDTA Vial",Same Day
+19,SERUM CALCIUM,400,3-5cc Tourniquet Free Clott,Same Day
+20,C-REACTIVE PROTEIN TEST(CRP),600,"3-5cc, Clotted/ EDTA Vial",SAME DAY
+21,Dengue Profile,1300,3-5cc Clotted Blood,Same Day
+22,H Pylori,500,3-5cc Clotted Blood,SAME DAY
+23,LDH (Serum),600,3-5cc Clotted Blood,AFTER THREE DAY
+24,Beta HCG,1200,3-5cc Clotted Blood,Same Day
+25,VDRL,400,3-5cc Clotted Blood,SAME DAY
+26,"Cuagulation Profile PT/INR,APTT",1600,Sodium Citrate Tube,Same Day
+27,RA FACTOR QNT,800,3-5cc Clotted Blood,Same Day
+28,SERUM ELECTROLYTES,700,3-5cc Clotted Blood,SAME DAY
+29,Stool Routine Examination,1000,Stool Sample,Same Day
+30,Serum Amylase,600,3-5cc Clotted Blood,SAME DAY
+31,ASOT TITER QNT,1200,3-5cc Clotted Blood,SAME DAY
+32,ASO TITER,800,3-5cc Clotted Blood,Same Day
+33,Creatinine Clearance,800,3-5cc Clotted Blood,Same Day
+34,Dengue Serology,1200,3-5cc Clotted Blood,Same Day
+35,DONOR SCREENING REPORT,1500,3-5cc Clotted Blood,SAME DAY
+36,Erythrocyte Sedimentation Rate (ESR),200,Whole Blood in ESR Tube,Same Day
+37,H.Pylori Stool Antigen,1000,3-5cc Clotted Blood,Same Day
+38,LECTATE DEHYDROGENASE (LDH) REPORT,1000,3-5cc Clotted Blood,Same Day
+39,Mycodot,800,3-5cc Clotted Blood,SAME DAY
+40,PERIPHERAL SMEAR,1200,3-5cc EDTA Vial,Within 24 hrs
+41,SERUM PHOSPHORUS REPORT,500,3-5cc Clotted Blood,SAME DAY
+42,SEMEN ANALYSIS,700,Semen Sample (Fresh Collec,Same Day
+43,Sputum AFB Report,1000,SAME DAY,
+44,STONE ANALYSIS REPORT,1600,AFTER THREE DAY,
+45,CARDIAC ENZYMES REPORT (TROP I),1200,3-5cc Clotted Blood,Same Day
+46,Urine Pregnancy Report (UPT),200,Urine in Container,Same Day
+47,CARDIAC ENZYMES REPORT (TROP T),600,3-5cc EDTA Vial,Same Day
+48,BT/CT,800,3-5cc EDTA Vial,Same Day
+49,Typhidot Test (IgG & IgM),500,3-5cc Clotted Blood,Same Day
+50,ALBUMIN (SPOT URINE),600,Urine (Random/Spot),Same Day
+52,OGTT (75 grams Glucose Tolerance Test),1000,3-5cc Clotted Blood,Same Day
+53,URIC ACID,350,3-5cc Clotted Blood,Same Day
+54,CHOLESTEROL,300,3-5cc Clotted Blood,Same Day
+55,HbA1C,1050,3-5cc EDTA Vial,Same Day
+56,eGFR,1000,3-5cc Clotted Blood,Same Day
+57,Gamma GT,1500,3-5cc Clotted Blood,Same Day
+58,ALBUMIN,800,3-5cc Clotted Blood,Same Day
+59,TOTAL PROTEIN,800,3-5cc Clotted Blood,Same Day
+60,A/G RATIO,2000,3-5cc Clotted Blood,AFTER THREE DAY
+61,Anti CCP,2500,3-5cc Clotted Blood,AFTER THREE DAY
+62,Intact Parathyroid hormone (PTH),2500,3-5cc Clotted Blood,AFTER THREE DAY
+63,Bicarbonates (HCO3),1000,3-5cc Clotted Blood,AFTER THREE DAY
+64,H. Pylori Abs (IgA),2000,3-5cc Clotted Blood,After 03 Days
+65,Helicobacter pylori Abs (IgG),2000,3-5cc Clotted Blood,AFTER THREE DAY
+67,Serum Lipase,1400,3-5cc Clotted Blood,AFTER THREE DAY
+68,CA-125,2500,3-5cc Clotted Blood,AFTER THREE DAY
+69,Alpha Fetoprotein (AFP),2000,3-5cc Clotted Blood,AFTER THREE DAY
+70,Magnesium SERUM ELECTROLYTES,1200,3-5cc Clotted Blood,AFTER THREE DAY
+71,VIRAL PROFILE,1600,"3-5cc, Clotted/ EDTA Vial",Same Day
+73,MP by Slide,800,3-5cc EDTA Vial,Same Day
+74,25-Hydroxy Vit-D3 Level,2000,3-5cc Clotted Blood,After 03 Days
+75,Ferritin,1200,"3-5cc, Clotted/ EDTA Vial",Same Day
+76,free T3,1200,"3-5cc, Clotted/ EDTA Vial",Same Day
+81,ANA TITER,1600,3-5cc Clotted Blood,Same Day
+82,G6PD,2000,Whole Blood/3-5cc EDTA Vi,Same Day
+83,L.D Bodies,300,Wound Screaping,Same Day
+84,A/G Ratio,0,,
+85,ACE (Angiotensin Converting Enzyme),0,,
+86,Acid Phosphatase,0,,
+87,ACTH,0,,
+88,Albumin,0,,
+89,Aldolase,0,,
+90,Aldosterone Level,0,,
+91,Alkaline Phosphate,400,3-5cc Clotted Blood,Same Day
+92,ALPHA,1,-Anti Trypsin Level (L-1) 0,
+93,Alpha-MDBH,0,,
+94,Ammonia (NH3),0,,
+96,Amylase (Urine),0,,
+97,ANA,0,,
+98,Anti HAV lgG,0,,
+99,Anti HAV lgM,0,,
+100,Anti HBc (Total),0,,
+101,Anti HBc lgG,0,,
+102,Anti HBc lgM,0,,
+103,Anti HBe,0,,
+104,Anti HBs (ELISA),0,,
+105,Anti HCV (ELISA),1000,,
+106,Anti HCV (Screening),350,3-5cc Clotted Blood,Same Day
+107,Anti HDV (Total),0,,
+108,Anti HDV IgG,0,,
+109,Anti HDV IgM,0,,
+110,Anti HEV lgG,0,,
+111,Anti HEV lgM,0,,
+112,Anti HGB,0,,
+113,Anti HGV IgG,0,,
+114,Anti HGV IgM,0,,
+115,Anti HSV IgG (1+2),0,,
+116,Anti HSV IgM (1+2),0,,
+117,Anti Sperm Antibodies,0,,
+118,APTT (Activated Partial Thromboplastin Tim,300,Sodium Citrate Tube,Same Day
+119,Ascitic Fluid For Analysis (C/E),0,,
+120,ASOT,0,,
+122,Beta HCG,0,,
+123,Bicarbonate (HCO3),0,,
+124,Bilirubin Direct (Conjugated),0,,
+125,Bilirubin Indirect (Unconjugated),0,,
+126,Bilirubin Total,0,,
+127,Bleeding Time,300,,
+130,Brucella Test,2500,3-5cc Clotted Blood,After 03 Days
+132,C-3,0,,
+134,CA,125,2500,
+136,CA,72,-4 0,
+141,Chloride,0,,
+143,Chylomicrons,0,,
+144,CK-MB,0,,
+145,Clotting Time,300,,
+146,Coomb's Test (Direct),0,,
+147,Coomb's Test (Indirect),0,,
+148,Copper,0,,
+149,Cortisol (A.M.),0,,
+150,Cortisol (P.M.),0,,
+151,Cortisol (Random Urine),0,,
+152,Cortisol (Urine,24,Hours) 0,
+153,C-Peptide Level,0,,
+154,C-Peptide Level (Urine),0,,
+155,CPK,0,,
+156,Creatinine,350,3-5cc Clotted Blood,Same Day
+157,Creatinine (Urine),0,,
+160,Cross Matching With Elisa,0,,
+163,CSF For Analysis,0,,
+164,Cyst Fluid for C/E,0,,
+165,D-Dimer,0,,
+167,DHEA SO4,0,,
+168,DLC (Differential Lecucyte Count),0,,
+169,Eosinophil Count,0,,
+171,"Estradiol (Estrogen Level, E2)",0,,
+172,F.N.A.C.,0,,
+173,Factor - XIII,0,,
+174,FDP's,0,,
+175,Ferritin,0,,
+176,Fibrinogen (Factor-1),0,,
+177,Fluid For C/E,0,,
+181,GH (Growth Hormone),0,,
+182,Globulins,0,,
+187,HBeAg,0,,
+188,HBsAg (ELISA),1000,,
+190,HBV DNA by PCR (QL),0,,
+191,HBV DNA by PCR (QN),0,,
+192,HCT (Haemtocrit) (PCV),0,,
+193,HCV Genotyping,0,,
+194,HCV RNA by PCR (QL),4000,,
+195,HCV RNA by PCR (QN),0,,
+196,HCV Serotyping,0,,
+197,HDL (Cholesterol),0,,
+198,HDV Antigen,0,,
+199,"Helicobacter Pylori Abs (lgG,IgM)",0,,
+200,Hepatitis Virological Profile,1400,3-5cc Clotted Blood,Same Day
+201,HIV (Aids) by ELISA,0,,
+202,HIV (Aids) by Screening,300,3-5cc Clotted Blood,Same Day
+203,Homocystine Level,0,,
+205,Ig E (Immunoglobulin E),1600,3-5cc Clotted Blood,After 03 Days
+206,INR,0,,
+207,Insulin,0,,
+208,Iron (Fe),600,,
+209,Joint Fluid For Analysis,0,,
+210,Kidney Stone for Analysis,0,,
+211,LDH (Lactic Dehydrogenase),0,,
+212,LDL Cholestrol,0,,
+214,LH (Luteinhizing Hormone),1600,3-5cc Clotted Blood,After 03 Days
+217,Lithium (Li),0,,
+218,Magnesium,0,,
+219,Malarial Parasite Smear (MP),0,,
+220,Mantoux Test (Heafs Test),0,,
+221,MCA,0,,
+222,MCH,0,,
+223,MCHC,0,,
+224,MCV,0,,
+225,Morphine Derivatives,0,,
+226,MTB By PCR (QL),0,,
+227,Mycodot (Screening),0,,
+228,Mycodot IgG,0,,
+229,Mycodot IgM,0,,
+230,Peritoneal Fluid For Analysis,0,,
+231,Phosphorous (Phosphate) (PO4),0,,
+232,Platelet Count,0,,
+233,Pleural Fluid For Analysis,0,,
+234,Potassium (K),300,,
+235,Pregnancy Test,0,,
+236,Progesterone,0,,
+237,Prolactin,1200,3-5cc Clotted Blood,After 03 Days
+238,PSA,2500,,
+239,PT (Prothrombin Time),350,Sodium Citrate Tube,Same Day
+240,PTH (Parathyroid Hormone),0,,
+241,RA FACTOR,500,3-5cc Clotted Blood,Same Day
+242,RBC's Count,0,,
+243,RBC's Morphology,0,,
+244,Retics Count (Reticulocyte),0,,
+246,RH Antibodies,0,,
+247,Rubella lgG,0,,
+248,Rubella lgM,0,,
+251,SGOT (AST),400,3-5cc Clotted Blood,Same Day
+252,SGPT (ALT),350,3-5cc Clotted Blood,Same Day
+253,Sodium (Na),0,,
+254,Sputum For AFB Smear / Z.N.,0,,
+255,Stool For C/E,0,,
+256,Stool for H.Pylori Antigen,0,,
+257,Stool For Occult Blood,0,,
+258,Sugar,1,Hour ABF 0,
+259,Sugar,1,Hour After 75 Grams 0,
+260,Sugar,1,/2 Hour ABF 0,
+261,Sugar,1,/2 Hrs After 50 Grams 0,
+262,Sugar,1,/2 Hrs After 75 Grams 0,
+263,Sugar,1,-1/2 Hrs ABF 0,
+264,Sugar,1,-1/2 Hrs After 75 Grams 0,
+265,Sugar,2,-1/2 Hrs ABF 0,
+266,Sugar,2,-Hours ABF 0,
+267,Sugar,2,-Hours After 50 Grams 0,
+268,Sugar,2,-Hours After 75 Grams 0,
+269,Sugar,3,-Hours ABF 0,
+270,Sugar After Dinner,0,,
+271,Sugar After Lunch,0,,
+272,Sugar Before Dinner,0,,
+273,Sugar Before Lunch,0,,
+276,T3 (Tri-Iodoethronine),1000,3-5cc Clotted Blood,After 03 Days
+277,T3 Uptake,0,,
+279,T4 (Free),0,,
+281,Tuberculosis (TB),600,,
+282,Testosterone,0,,
+283,TIBC (Total Iron Binding Capacity),600,,
+284,Torch Profile,0,,
+286,Total Protein,0,,
+287,Toxoplasma lgG,0,,
+288,Toxoplasma lgM,0,,
+289,TPHA (Triponema Pallidium),0,,
+290,Transferrin Saturation (Iron),0,,
+291,Triglycerides,300,3-5cc Clotted Blood,Same Day
+294,TSH (Thyroid Stimulating Hormone),1000,3-5cc Clotted Blood,After 03 Days
+295,Typhidot IgG,0,,
+296,Typhidot IgM,0,,
+298,Ultrasound-Abdominal,0,,
+299,Ultrasound-Obstetrical Examination,0,,
+301,Urea (Urine),0,,
+302,Urea Clearance,0,,
+304,Uric Acid (Urine),0,,
+305,Urinary Protein,0,,
+306,Urinary Protein (24 Hrs),0,,
+307,Urine,0,,
+309,Urine For C/S,0,,
+310,Urine Sugar,0,,
+311,Urine Sugar,1,Hr ABF 0,
+312,Urine Sugar,1,/2 Hr ABF 0,
+313,Urine Sugar,1,-1/2 Hrs ABF 0,
+314,Urine Sugar,2,Hrs ABF 0,
+315,Urine Sugar,2,-1/2 Hr ABF 0,
+316,Urine Sugar,3,Hrs ABF 0,
+317,Urine Sugar After Dinner,0,,
+318,Urine Sugar After Lunch,0,,
+319,Urine Sugar Before Dinner,0,,
+320,Urine Sugar Before Lunch,0,,
+324,VLDL,0,,
+325,VMA (Vanillymandellic Acid),0,,
+326,WBC Count (TLC),0,,
+327,WBC's Morphology,0,,
+328,Widal Test,0,,
+329,FSH,1600,3-5cc Clotted Blood,After 03 Days
+330,Urea,400,3-5cc Clotted Blood,Same Day
+331,COMPLETE BLOOD COUNT (DENGU),90,3-5cc EDTA Vial,Same Day
+332,Breast Milk Complete Examination,1000,MILK,Same Day
+333,Department of,2500,3-5cc Clotted Blood,Same Day
+334,"T3,T4.TSH",2500,"3-5cc, Clotted/ EDTA Vial",Within 24 hrs
+335,"HCV,HBsAg,HIV",950,3-5cc EDTA Vial,Same Day
+336,HCV+HBsAg,600,"3-5cc, Clotted/ EDTA Vial",Same Day

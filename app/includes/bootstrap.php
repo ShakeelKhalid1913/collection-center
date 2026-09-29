@@ -17,6 +17,8 @@ require_once __DIR__ . '/../repositories/TestRepository.php';
 require_once __DIR__ . '/../repositories/LabEntryRepository.php';
 require_once __DIR__ . '/../repositories/ResultRepository.php';
 require_once __DIR__ . '/../repositories/SettingRepository.php';
+require_once __DIR__ . '/../repositories/WasteRecordRepository.php';
+require_once __DIR__ . '/../repositories/DoctorShareRepository.php';
 
 use App\Database\Database;
 use App\Repositories\UserRepository;
@@ -25,6 +27,8 @@ use App\Repositories\TestRepository;
 use App\Repositories\LabEntryRepository;
 use App\Repositories\ResultRepository;
 use App\Repositories\SettingRepository;
+use App\Repositories\WasteRecordRepository;
+use App\Repositories\DoctorShareRepository;
 
 const APP_NAME = 'Health LMS Pro';
 
@@ -215,6 +219,18 @@ function setting_repo(): SettingRepository
 {
     static $repo = null;
     return $repo ??= new SettingRepository();
+}
+
+function waste_repo(): WasteRecordRepository
+{
+    static $repo = null;
+    return $repo ??= new WasteRecordRepository();
+}
+
+function doctor_share_repo(): DoctorShareRepository
+{
+    static $repo = null;
+    return $repo ??= new DoctorShareRepository();
 }
 
 /**

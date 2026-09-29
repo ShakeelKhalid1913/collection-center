@@ -340,8 +340,9 @@ if ($totalPages > 1) {
 }
 
 $content = page_header(
-    'Tests Catalog',
-    'Configure pathology tests, multiple parameters (e.g. CBC), reference ranges, and department classification.'
+    'Add Test',
+    'Add new laboratory tests not already in the system, or edit existing catalog items.',
+    btn_primary('/portals/main-lab/tests/prices.php', 'Add / Update Price', 'fa-solid fa-tags')
 );
 $content .= $message;
 $content .= card(
@@ -354,5 +355,5 @@ $content .= card(
     'overflow-hidden'
 );
 
-render_page('Tests Catalog', 'main-lab', 'tests', $content);
+render_page('Add Test', 'main-lab', 'tests', $content);
 

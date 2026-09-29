@@ -184,4 +184,43 @@ class LabEntryRepository
         );
         return (float)($row['total'] ?? 0);
     }
+
+    public function deleteByLabNo(string $labNo, string $orgId = 'ORG-001'): bool
+    {
+        $entry = $this->findByLabNo($labNo);
+        if (!$entry || (string)($entry['organization_id'] ?? '') !== $orgId) {
+            return false;
+        }
+
+        $this->db->execute('DELETE FROM results WHERE lab_no = :lab_no', ['lab_no' => $labNo]);
+        $this->db->execute('DELETE FROM samples WHERE lab_no = :lab_no', ['lab_no' => $labNo]);
+        $this->db->execute('DELETE FROM lab_entry_tests WHERE lab_entry_id = :id', ['id' => $entry['id']]);
+
+        return $this->db->execute(
+            'DELETE FROM lab_entries WHERE lab_no = :lab_no AND organization_id = :org',
+            ['lab_no' => $labNo, 'org' => $orgId]
+        );
+    }
+
+    public function searchEntries(string $orgId = 'ORG-001', string $q = '', ?string $dateFrom = null, ?string $dateTo = null, int $limit = 200): array
+    {
+        $sql = 'SELECT * FROM lab_entries WHERE organization_id = :org';
+        $params = ['org' => $orgId];
+
+        if ($q !== '') {
+            $sql .= ' AND (lab_no LIKE :q OR patient_name LIKE :q OR patient_id LIKE :q OR doctor LIKE :q OR tests LIKE :q)';
+            $params['q'] = '%' . $q . '%';
+        }
+        if ($dateFrom !== null && $dateFrom !== '') {
+            $sql .= ' AND DATE(created_at) >= :date_from';
+            $params['date_from'] = $dateFrom;
+        }
+        if ($dateTo !== null && $dateTo !== '') {
+            $sql .= ' AND DATE(created_at) <= :date_to';
+            $params['date_to'] = $dateTo;
+        }
+
+        $sql .= " ORDER BY created_at DESC LIMIT {$limit}";
+        return $this->db->fetchAll($sql, $params);
+    }
 }
