@@ -781,14 +781,6 @@ function render_report_sheet(
     if ($isFirstPage) {
         $letterhead = render_letterhead_image($settings);
         $logoImg = brand_logo('brand-logo brand-logo--report');
-        $labName = e($settings['name'] ?? '');
-        $tagline = e(($settings['header'] ?? '') !== '' ? $settings['header'] : 'Quality is our Promise');
-        $contactBits = array_filter([
-            trim((string)($settings['address'] ?? '')),
-            trim((string)($settings['phone'] ?? '')),
-            trim((string)($settings['email'] ?? '')),
-        ], static fn($v) => $v !== '');
-        $contactLine = e(implode('  ·  ', $contactBits));
 
         $qrPayload = $labNoRaw !== ''
             ? (isset($_SERVER['HTTP_HOST'])
@@ -800,16 +792,7 @@ function render_report_sheet(
         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);
         $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="56" height="56"></div>';
 
-        // Always keep lab name / tagline / contact visible (even when a header image is set)
-        $textBrand = '<div class="lab-report__brand-text">'
-            . '<p class="lab-report__lab-name">' . $labName . '</p>'
-            . '<p class="lab-report__tagline">' . $tagline . '</p>';
-        if ($contactLine !== '') {
-            $textBrand .= '<p class="lab-report__lab-contact">' . $contactLine . '</p>';
-        }
-        $textBrand .= '</div>';
-
-        // Single compact row: mark (letterhead or logo) | text | QR — mark align left/center/right
+        // Header row: logo / letterhead + QR only (no lab name text)
         $imgPos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
             (string)($settings['header_image_position'] ?? 'left')
         );
@@ -819,9 +802,8 @@ function render_report_sheet(
 
         $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
             . '<div class="lab-report__letterhead">'
-            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . '">'
+            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
             . $mark
-            . $textBrand
             . '</div>'
             . '</div>'
             . $qrHtml

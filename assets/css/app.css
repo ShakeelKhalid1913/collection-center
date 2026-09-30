@@ -1545,6 +1545,25 @@ textarea::placeholder {
   justify-self: center;
 }
 
+.lab-report__brand--logo-only {
+  width: 100%;
+}
+
+.lab-report__brand--logo-only.lab-report__brand--img-left {
+  justify-content: flex-start;
+}
+
+.lab-report__brand--logo-only.lab-report__brand--img-center {
+  display: flex;
+  justify-content: center;
+}
+
+.lab-report__brand--logo-only.lab-report__brand--img-right {
+  display: flex;
+  justify-content: flex-end;
+  flex-direction: row;
+}
+
 /* Branding settings: drag-to-snap align control */
 .header-align__track {
   position: relative;
