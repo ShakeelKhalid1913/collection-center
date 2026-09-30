@@ -1499,14 +1499,28 @@ textarea::placeholder {
 
 .lab-report__title-wrap {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
-  margin-top: 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid #0f172a;
-  padding: 0.32rem 0;
-  text-align: left;
+  gap: 0.35rem 1rem;
+  margin: 0.35rem 0 0.25rem;
+  border-bottom: 2.5px solid #0f172a;
+  padding-bottom: 0.2rem;
+}
+
+.lab-report__header--continued {
+  margin-bottom: 0.35rem;
+}
+
+.lab-report__continued-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  font-size: 0.72rem;
+  color: #0f172a;
+  border-bottom: 1.5px solid #0f172a;
+  padding: 0.2rem 0 0.35rem;
 }
 
 .lab-report__title {
@@ -1622,11 +1636,22 @@ textarea::placeholder {
 
 .lab-report__test-head td {
   background: #ffffff !important;
-  padding: 0.55rem 0.5rem 0.15rem !important;
+  padding: 0.65rem 0.5rem 0.25rem !important;
   font-size: 0.9rem;
   font-weight: 800;
   color: #0f172a;
   border: none !important;
+}
+
+.lab-report__panel-banner {
+  display: block;
+  border-top: 2.5px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+  background: #f1f5f9;
+  padding: 0.28rem 0.45rem;
+  margin: 0.15rem 0 0.1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .lab-report__section-head td {
@@ -1636,8 +1661,30 @@ textarea::placeholder {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.35rem 0.5rem 0.1rem !important;
+  padding: 0.4rem 0.5rem 0.15rem !important;
   border: none !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+.lab-report__sir-legend {
+  margin-top: 0.35rem;
+  padding: 0.28rem 0.5rem;
+  background: #e2e8f0;
+  border: 1px solid #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+}
+
+.lab-report__clinical-note {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: #000;
+  font-style: italic;
+  line-height: 1.25;
+  border-top: 1px solid #000;
+  padding-top: 0.15rem;
 }
 
 .lab-report__subtable-row td {
@@ -1667,8 +1714,24 @@ textarea::placeholder {
 .lab-report__arrow {
   font-size: 0.95rem;
   line-height: 1;
-  font-weight: bold;
-  margin-left: 2px;
+  font-weight: 900;
+  margin-left: 3px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Rank colors: Low = blue, Normal = green, High = red */
+.lab-report__arrow--low {
+  color: #2563eb !important;
+}
+
+.lab-report__arrow--normal {
+  color: #16a34a !important;
+}
+
+.lab-report__arrow--high,
+.lab-report__arrow--critical {
+  color: #dc2626 !important;
 }
 
 .lab-report__subtable-wrap {
@@ -1704,14 +1767,34 @@ textarea::placeholder {
   text-align: left;
 }
 
-.lab-report__clinical-note {
-  margin-top: 0.55rem;
-  font-size: 0.72rem;
-  color: #000;
-  font-style: italic;
-  line-height: 1.4;
-  border-top: 1px solid #000;
-  padding-top: 0.35rem;
+.lab-report--page-break {
+  page-break-after: always;
+  break-after: page;
+}
+
+.print-stack {
+  display: block;
+}
+
+/* Print stationery toggles */
+.print-stack.lab-print--hide-header .lab-report__letterhead,
+.print-stack.lab-print--hide-header .lab-letterhead-image,
+.print-stack.lab-print--hide-header .lab-report__brand {
+  display: none !important;
+}
+
+.print-stack.lab-print--hide-qr .lab-report__qr {
+  display: none !important;
+}
+
+.print-stack.lab-print--hide-all .lab-report__letterhead,
+.print-stack.lab-print--hide-all .lab-letterhead-image,
+.print-stack.lab-print--hide-all .lab-report__brand,
+.print-stack.lab-print--hide-all .lab-report__qr,
+.print-stack.lab-print--hide-all .lab-report__footer-branding,
+.print-stack.lab-print--hide-all .software-credit,
+.print-stack.lab-print--hide-all .software-credit--print {
+  display: none !important;
 }
 
 .lab-report__empty {
@@ -2121,5 +2204,32 @@ textarea::placeholder {
   .lab-report__signatories,
   .lab-report__signatory {
     border-color: #000 !important;
+  }
+
+  .lab-report__arrow--low {
+    color: #2563eb !important;
+  }
+
+  .lab-report__arrow--normal {
+    color: #16a34a !important;
+  }
+
+  .lab-report__arrow--high,
+  .lab-report__arrow--critical {
+    color: #dc2626 !important;
+  }
+
+  .lab-report__arrow {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .lab-report--page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .print-stack > .lab-report + .lab-report {
+    margin-top: 0;
   }
 }

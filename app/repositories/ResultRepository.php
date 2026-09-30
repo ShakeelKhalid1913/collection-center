@@ -23,10 +23,15 @@ class ResultRepository
             return;
         }
         $done = true;
-        try {
-            $this->db->execute('ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1');
-        } catch (\Throwable $ignored) {
-            // Column already exists
+        foreach ([
+            'ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1',
+            'ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1',
+        ] as $sql) {
+            try {
+                $this->db->execute($sql);
+            } catch (\Throwable $ignored) {
+                // Column already exists
+            }
         }
     }
 
@@ -45,15 +50,110 @@ class ResultRepository
     public function getResultsByLabNo(string $labNo): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM results WHERE lab_no = :lab_no ORDER BY sort_order ASC, id ASC",
+            "SELECT * FROM results WHERE lab_no = :lab_no ORDER BY print_page ASC, sort_order ASC, id ASC",
             ['lab_no' => $labNo]
         );
+    }
+
+    /**
+     * Assign each booked test name to a print page (1-based).
+     * Array key order is used as print order within each page.
+     *
+     * @param array<string,int|string> $testToPage
+     */
+    public function assignPrintPages(string $labNo, array $testToPage): bool
+    {
+        $byPage = [];
+        foreach ($testToPage as $testName => $page) {
+            $testName = trim((string)$testName);
+            if ($testName === '') {
+                continue;
+            }
+            $byPage[max(1, (int)$page)][] = $testName;
+        }
+        if ($byPage === []) {
+            return true;
+        }
+        ksort($byPage, SORT_NUMERIC);
+
+        $ok = true;
+        $sort = 1;
+        foreach ($byPage as $pageNo => $tests) {
+            foreach ($tests as $testName) {
+                $rows = $this->db->fetchAll(
+                    "SELECT id FROM results WHERE lab_no = :lab_no AND test = :test ORDER BY sort_order ASC, id ASC",
+                    ['lab_no' => $labNo, 'test' => $testName]
+                );
+                if ($rows === []) {
+                    // Soft fallback: match ignoring case
+                    $rows = $this->db->fetchAll(
+                        "SELECT id FROM results WHERE lab_no = :lab_no AND LOWER(test) = LOWER(:test) ORDER BY sort_order ASC, id ASC",
+                        ['lab_no' => $labNo, 'test' => $testName]
+                    );
+                }
+                foreach ($rows as $row) {
+                    $ok = $this->db->execute(
+                        "UPDATE results SET print_page = :page, sort_order = :sort WHERE id = :id AND lab_no = :lab_no",
+                        [
+                            'page' => $pageNo,
+                            'sort' => $sort++,
+                            'id' => $row['id'],
+                            'lab_no' => $labNo,
+                        ]
+                    ) && $ok;
+                }
+            }
+        }
+        return $ok;
+    }
+
+    /**
+     * Build map from parallel page_map_test[] / page_map_page[] POST arrays
+     * (avoids broken PHP keys when test names contain brackets/spaces).
+     *
+     * @param array<int,string> $tests
+     * @param array<int,string|int> $pages
+     * @return array<string,int>
+     */
+    public static function pageMapFromParallel(array $tests, array $pages): array
+    {
+        $map = [];
+        foreach ($tests as $i => $testName) {
+            $testName = trim((string)$testName);
+            if ($testName === '') {
+                continue;
+            }
+            $map[$testName] = max(1, (int)($pages[$i] ?? 1));
+        }
+        return $map;
+    }
+
+    /**
+     * Remember current print_page per test name for this visit.
+     *
+     * @return array<string,int>
+     */
+    public function getPrintPageByTest(string $labNo): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT test, MIN(print_page) AS print_page FROM results WHERE lab_no = :lab_no GROUP BY test",
+            ['lab_no' => $labNo]
+        );
+        $map = [];
+        foreach ($rows as $r) {
+            $t = trim((string)($r['test'] ?? ''));
+            if ($t !== '') {
+                $map[$t] = max(1, (int)($r['print_page'] ?? 1));
+            }
+        }
+        return $map;
     }
 
     public function ensureResultsInitialized(string $labNo, string $testsString, string $patientName, string $orgId = 'ORG-001'): array
     {
         $testRepo = new TestRepository();
         $existing = $this->getResultsByLabNo($labNo);
+        $savedPages = $this->getPrintPageByTest($labNo);
 
         // Expand packages → individual test names, then resolve each to catalog
         $rawNames = array_filter(array_map('trim', explode(',', $testsString)));
@@ -163,14 +263,22 @@ class ResultRepository
                 }
 
                 if ($detailed === [] || count($detailed) < count($params)) {
+                    // Keep any existing page assignment for this test
+                    $keepPage = 1;
+                    foreach ($detailed as $old) {
+                        $keepPage = max($keepPage, (int)($old['print_page'] ?? 1));
+                    }
+                    if (isset($savedPages[$label])) {
+                        $keepPage = max(1, (int)$savedPages[$label]);
+                    }
                     foreach ($detailed as $old) {
                         $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
                     }
                     foreach ($params as $p) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
-                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible)
-                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, '', :sort, 1)",
+                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, '', :sort, 1, :print_page)",
                             [
                                 'id' => $resId,
                                 'lab_no' => $labNo,
@@ -182,6 +290,7 @@ class ResultRepository
                                 'range' => $p['reference_range'] ?? $p['normal_value'] ?? '',
                                 'sub_table' => $p['sub_table'] ?? null,
                                 'sort' => $sortOrder++,
+                                'print_page' => $keepPage,
                             ]
                         );
                     }
@@ -198,9 +307,10 @@ class ResultRepository
 
             if ($existingForTest === []) {
                 $resId = 'RES-' . bin2hex(random_bytes(5));
+                $keepPage = max(1, (int)($savedPages[$label] ?? 1));
                 $this->db->execute(
-                    "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible)
-                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1)",
+                    "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1, :print_page)",
                     [
                         'id' => $resId,
                         'lab_no' => $labNo,
@@ -210,6 +320,7 @@ class ResultRepository
                         'unit' => $obj['unit'] ?? '—',
                         'range' => $obj['normal_range'] ?? $obj['reference_value'] ?? $obj['normal_value'] ?? '—',
                         'sort' => $sortOrder++,
+                        'print_page' => $keepPage,
                     ]
                 );
             }

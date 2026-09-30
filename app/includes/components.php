@@ -295,11 +295,26 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     $file = e(preg_replace('/[^a-zA-Z0-9_\-]+/', '-', $pdfFilename) ?: 'lab-report');
 
     return <<<HTML
-    <div class="no-print flex flex-wrap gap-2 items-center">
+    <div class="no-print flex flex-wrap gap-3 items-center" data-print-toolbar>
         <button type="button" onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print" aria-hidden="true"></i> Print</button>
         <button type="button" class="btn btn-secondary" data-download-pdf data-pdf-name="{$file}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF</button>
         <a href="{$waLink}" target="_blank" rel="noopener" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
         <span class="text-xs text-slate-500" data-pdf-status></span>
+        <div class="flex flex-wrap items-center gap-3 ml-auto text-sm text-slate-700 border border-slate-200 bg-white rounded-lg px-3 py-2">
+            <span class="text-[10px] uppercase font-bold tracking-wide text-slate-400">Print options</span>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" data-print-toggle="hide-header" class="rounded border-slate-300">
+                Hide Header Image
+            </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" data-print-toggle="hide-qr" class="rounded border-slate-300">
+                Hide QR Code
+            </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none font-semibold">
+                <input type="checkbox" data-print-toggle="hide-all" class="rounded border-slate-300">
+                Hide All / Full Blanking
+            </label>
+        </div>
     </div>
     HTML;
 }

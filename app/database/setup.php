@@ -179,6 +179,10 @@ function runSetup(): array
             "ALTER TABLE results ADD COLUMN sub_table TEXT NULL",
             "ALTER TABLE results ADD COLUMN sort_order INT DEFAULT 0",
             "ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1",
+            "ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1",
+            "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
+            "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
+            "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
             "ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL",
         ] as $alter) {
             try {

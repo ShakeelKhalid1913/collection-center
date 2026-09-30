@@ -41,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'normal_value' => $_POST['normal_value'] ?? '',
                     'reference_value' => $_POST['reference_value'] ?? '',
                     'methodology' => $_POST['methodology'] ?? '',
+                    'result_type' => $_POST['result_type'] ?? 'Numeric',
+                    'result_options' => trim((string)($_POST['result_options'] ?? '')),
+                    'report_template' => $_POST['report_template'] ?? 'default',
                     'organization_id' => $orgId,
                 ];
 
@@ -155,6 +158,8 @@ $valUnit = e($editingTest['unit'] ?? '');
 $valNorm = e($editingTest['normal_value'] ?? '');
 $valRef = e($editingTest['reference_value'] ?? ($editingTest['normal_range'] ?? ''));
 $valMethod = e($editingTest['methodology'] ?? '');
+$valResultType = $editingTest['result_type'] ?? 'Numeric';
+$valResultOptions = e($editingTest['result_options'] ?? '');
 
 $formHtml = <<<HTML
 <form method="post" class="grid gap-3 p-4 sm:grid-cols-3 sm:p-6 border-b border-slate-200">
@@ -177,7 +182,8 @@ $formHtml .= form_field('Sample Type', 'sample', 'text', $valSample);
 $formHtml .= form_field('Unit (general)', 'unit', 'text', $valUnit, 'e.g. g/dl, mg/dl', true);
 $formHtml .= form_field('Normal Value', 'normal_value', 'text', $valNorm, 'e.g. 12.0 - 16.5', true);
 $formHtml .= form_field('Reference Range', 'reference_value', 'text', $valRef, 'e.g. 12.0 - 16.5', true);
-$formHtml .= select_field('Result Type', 'result_type', $resultTypeOpts, 'Numeric', true);
+$formHtml .= select_field('Result Type', 'result_type', $resultTypeOpts, $valResultType, true);
+$formHtml .= form_field('Dropdown Options', 'result_options', 'text', $valResultOptions, 'e.g. Positive|Negative or Reactive|Non-Reactive', true);
 
 $btnText = $isEdit ? 'Update Test' : 'Add Test';
 

@@ -13,6 +13,26 @@ class TestRepository
     public function __construct()
     {
         $this->db = Database::getInstance();
+        $this->ensureSchema();
+    }
+
+    private function ensureSchema(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        foreach ([
+            "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
+            "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
+            "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
+        ] as $sql) {
+            try {
+                $this->db->execute($sql);
+            } catch (\Throwable $ignored) {
+            }
+        }
     }
 
     public function getTests(string $orgId = 'ORG-001'): array
@@ -71,8 +91,8 @@ class TestRepository
             return ['success' => false, 'error' => 'Code and name are required.'];
         }
         $ok = $this->db->execute(
-            "INSERT INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range, normal_value, reference_value, methodology)
-             VALUES (:id, :org_id, :code, :name, :category, :price, :sample_type, :unit, :normal_range, :normal_value, :reference_value, :methodology)",
+            "INSERT INTO tests (id, organization_id, code, name, category, price, sample_type, unit, normal_range, normal_value, reference_value, methodology, result_type, result_options, report_template)
+             VALUES (:id, :org_id, :code, :name, :category, :price, :sample_type, :unit, :normal_range, :normal_value, :reference_value, :methodology, :result_type, :result_options, :report_template)",
             [
                 'id' => $id,
                 'org_id' => $data['organization_id'] ?? 'ORG-001',
@@ -86,6 +106,9 @@ class TestRepository
                 'normal_value' => $data['normal_value'] ?? '',
                 'reference_value' => $data['reference_value'] ?? '',
                 'methodology' => $data['methodology'] ?? '',
+                'result_type' => $data['result_type'] ?? 'Numeric',
+                'result_options' => $data['result_options'] ?? '',
+                'report_template' => $data['report_template'] ?? 'default',
             ]
         );
         return ['success' => $ok, 'id' => $id];
@@ -252,7 +275,7 @@ class TestRepository
     {
         $sets = [];
         $params = ['id' => $testId];
-        $allowed = ['code', 'name', 'category', 'price', 'sample_type', 'unit', 'normal_range', 'normal_value', 'reference_value', 'methodology'];
+        $allowed = ['code', 'name', 'category', 'price', 'sample_type', 'unit', 'normal_range', 'normal_value', 'reference_value', 'methodology', 'result_type', 'result_options', 'report_template'];
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $sets[] = "{$field} = :{$field}";

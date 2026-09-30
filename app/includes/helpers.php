@@ -148,3 +148,79 @@ function user_initials(string $name): string
     }
     return $initials !== '' ? $initials : 'U';
 }
+
+/**
+ * Auto high/low flag from a numeric result and reference range.
+ * Supports "low - high", "< N", and "> N".
+ */
+function compute_result_flag(string $value, string $range): string
+{
+    $value = trim($value);
+    $range = trim($range);
+    if ($value === '' || $range === '' || $range === '—' || !is_numeric($value)) {
+        return '';
+    }
+    $num = (float)$value;
+
+    if (preg_match('/^([0-9]+(?:\.[0-9]+)?)\s*[\-–]\s*([0-9]+(?:\.[0-9]+)?)$/', $range, $m)) {
+        $low = (float)$m[1];
+        $high = (float)$m[2];
+        if ($num < $low) {
+            return 'L';
+        }
+        if ($num > $high) {
+            return 'H';
+        }
+        return '';
+    }
+
+    if (preg_match('/^<\s*([0-9]+(?:\.[0-9]+)?)$/', $range, $m)) {
+        return $num >= (float)$m[1] ? 'H' : '';
+    }
+
+    if (preg_match('/^>\s*([0-9]+(?:\.[0-9]+)?)$/', $range, $m)) {
+        return $num <= (float)$m[1] ? 'L' : '';
+    }
+
+    return '';
+}
+
+/**
+ * Parse dropdown options from a range/options string.
+ * Accepts "Options: A|B", "Positive / Negative", "S / I / R", or comma lists.
+ *
+ * @return list<string>|null
+ */
+function parse_result_options(?string $raw): ?array
+{
+    $raw = trim((string)$raw);
+    if ($raw === '' || $raw === '—') {
+        return null;
+    }
+
+    if (preg_match('/^Options:\s*(.+)$/i', $raw, $m)) {
+        $raw = trim($m[1]);
+    }
+
+    if (preg_match('/^S\s*[\/|,]\s*I\s*[\/|,]\s*R$/i', $raw)) {
+        return ['S', 'I', 'R'];
+    }
+
+    $parts = preg_split('/\s*[|\/,]\s*/', $raw) ?: [];
+    $parts = array_values(array_filter(array_map('trim', $parts), static fn($p) => $p !== ''));
+    if (count($parts) < 2) {
+        return null;
+    }
+
+    foreach ($parts as $p) {
+        // Numeric ranges are not option lists
+        if (is_numeric($p) || preg_match('/^[<>]=?\s*[0-9]/', $p) || preg_match('/[0-9]+\s*[\-–]\s*[0-9]+/', $p)) {
+            return null;
+        }
+        if (strlen($p) > 40) {
+            return null;
+        }
+    }
+
+    return $parts;
+}

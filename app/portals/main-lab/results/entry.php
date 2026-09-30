@@ -52,14 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         $range = trim((string)($item['range'] ?? ''));
         $isVisible = isset($item['show']) ? 1 : 0;
 
-        if ($flag === '' && $val !== '' && is_numeric($val) && preg_match('/^([0-9\.]+)\s*[\-–]\s*([0-9\.]+)$/', $range, $m)) {
-            $numVal = (float)$val;
-            $low = (float)$m[1];
-            $high = (float)$m[2];
-            if ($numVal < $low) {
-                $flag = 'L';
-            } elseif ($numVal > $high) {
-                $flag = 'H';
+        if ($val === '') {
+            $flag = '';
+        } else {
+            $auto = compute_result_flag($val, $range);
+            // Auto-only: prefer computed flag whenever range is numeric
+            if ($auto !== '' || is_numeric($val)) {
+                $flag = $auto;
             }
         }
 
@@ -77,12 +76,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         result_repo()->saveResultsBatch($postLabNo, $batchData);
     }
 
+    $pageMap = [];
+    if (!empty($_POST['page_map_test']) && is_array($_POST['page_map_test'])) {
+        $pageMap = \App\Repositories\ResultRepository::pageMapFromParallel(
+            $_POST['page_map_test'],
+            $_POST['page_map_page'] ?? []
+        );
+    } elseif (!empty($_POST['page_map']) && is_array($_POST['page_map'])) {
+        $pageMap = $_POST['page_map'];
+    }
+    if ($pageMap !== []) {
+        result_repo()->assignPrintPages($postLabNo, $pageMap);
+    }
+
     if ($notes !== '') {
         lab_repo()->updateEntry($postLabNo, ['clinical_notes' => $notes]);
     }
 
-    if (!empty($_POST['send_verify'])) {
-        result_repo()->verifyAllByLabNo($postLabNo, current_user()['name'] ?? 'Laboratory Staff');
+    if (!empty($_POST['send_verify']) || !empty($_POST['goto_preview'])) {
+        if (!empty($_POST['send_verify'])) {
+            result_repo()->verifyAllByLabNo($postLabNo, current_user()['name'] ?? 'Laboratory Staff');
+        }
         header('Location: /portals/main-lab/reports/preview.php?lab_no=' . urlencode($postLabNo));
         exit;
     }
@@ -163,6 +177,30 @@ foreach ($testNames as $i => $tn) {
 }
 
 $activeRows = $byTest[$activeTest] ?? [];
+
+// Resolve catalog meta for dropdown options on the active test
+$activeTestMeta = test_repo()->findByCode($activeTest, $orgId);
+$testResultType = strtolower((string)($activeTestMeta['result_type'] ?? 'numeric'));
+$testResultOptions = parse_result_options((string)($activeTestMeta['result_options'] ?? ''));
+if ($testResultOptions === null && $testResultType === 'options') {
+    $testResultOptions = parse_result_options((string)($activeTestMeta['normal_range'] ?? $activeTestMeta['reference_value'] ?? ''));
+}
+
+// Page grouping state (per test)
+$pageAssignments = [];
+$maxPage = 1;
+foreach ($resultRows as $rr) {
+    $tn = trim((string)($rr['test'] ?? 'Test'));
+    $pg = max(1, (int)($rr['print_page'] ?? 1));
+    $pageAssignments[$tn] = $pg;
+    $maxPage = max($maxPage, $pg);
+}
+foreach ($testNames as $tn) {
+    if (!isset($pageAssignments[$tn])) {
+        $pageAssignments[$tn] = 1;
+    }
+}
+
 $tableBody = '';
 $currentSection = null;
 $firstInput = true;
@@ -179,23 +217,33 @@ foreach ($activeRows as $r) {
     $paramName = e($r['parameter'] ?: ($r['test'] ?? 'Test'));
     $val = e($r['value'] ?? '');
     $unit = e($r['unit'] ?? '');
-    $range = e($r['reference_range'] ?: ($r['range'] ?? '—'));
+    $rangeRaw = (string)($r['reference_range'] ?: ($r['range'] ?? '—'));
+    $range = e($rangeRaw);
     $flag = strtolower((string)($r['flag'] ?? ''));
+    if ($flag === '' && ($r['value'] ?? '') !== '') {
+        $flag = strtolower(compute_result_flag((string)$r['value'], $rangeRaw));
+    }
     $shown = !isset($r['is_visible']) || (int)$r['is_visible'] === 1;
     $showChecked = $shown ? ' checked' : '';
     $rowDim = $shown ? '' : ' opacity-50';
     $autofocus = $firstInput ? ' autofocus' : '';
     $firstInput = false;
 
-    $valClass = 'field text-sm font-bold w-28 text-center';
+    $valClass = 'field text-sm font-bold w-28 text-center result-value-input';
     if ($flag === 'l' || $flag === 'h' || $flag === 'critical') {
         $valClass .= ' text-blue-700 border-blue-400';
     }
 
-    $flagOpts = '<option value="">—</option>'
-        . '<option value="L"' . ($flag === 'l' ? ' selected' : '') . '>Low</option>'
-        . '<option value="H"' . ($flag === 'h' ? ' selected' : '') . '>High</option>'
-        . '<option value="critical"' . ($flag === 'critical' ? ' selected' : '') . '>Critical</option>';
+    $flagDisplay = '—';
+    if ($flag === 'l') {
+        $flagDisplay = '<span class="font-bold" style="color:#2563eb" title="Low">↓ Low</span>';
+    } elseif ($flag === 'h') {
+        $flagDisplay = '<span class="font-bold" style="color:#dc2626" title="High">↑ High</span>';
+    } elseif ($flag === 'critical') {
+        $flagDisplay = '<span class="font-bold" style="color:#dc2626" title="Critical">! Critical</span>';
+    } elseif (($r['value'] ?? '') !== '' && is_numeric((string)$r['value'])) {
+        $flagDisplay = '<span class="font-bold" style="color:#16a34a" title="Normal">✓ Normal</span>';
+    }
 
     $subHtml = '';
     if (!empty($r['sub_table'])) {
@@ -204,8 +252,25 @@ foreach ($activeRows as $r) {
             . e((string)$r['sub_table']) . '</pre></details>';
     }
 
+    $rowOptions = parse_result_options($rangeRaw);
+    if ($rowOptions === null && count($activeRows) === 1 && $testResultOptions !== null) {
+        $rowOptions = $testResultOptions;
+    }
+
+    if ($rowOptions !== null) {
+        $optHtml = '<option value="">—</option>';
+        foreach ($rowOptions as $opt) {
+            $sel = strcasecmp((string)($r['value'] ?? ''), $opt) === 0 ? ' selected' : '';
+            $optHtml .= '<option value="' . e($opt) . '"' . $sel . '>' . e($opt) . '</option>';
+        }
+        $valueControl = '<select name="results[' . $rId . '][value]" class="field text-sm w-36 result-value-input" data-result-input' . $autofocus . '>'
+            . $optHtml . '</select>';
+    } else {
+        $valueControl = '<input type="text" name="results[' . $rId . '][value]" value="' . $val . '" class="' . $valClass . '" placeholder="—" data-result-input data-ref-range="' . $range . '"' . $autofocus . '>';
+    }
+
     $tableBody .= <<<HTML
-    <tr class="border-b border-slate-100{$rowDim}">
+    <tr class="border-b border-slate-100{$rowDim}" data-result-row>
         <td class="px-3 py-2 align-top">
             <label class="inline-flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" name="results[{$rId}][show]" value="1" class="mt-1"{$showChecked}>
@@ -217,21 +282,41 @@ foreach ($activeRows as $r) {
             </label>
             <input type="hidden" name="results[{$rId}][unit]" value="{$unit}">
             <input type="hidden" name="results[{$rId}][range]" value="{$range}">
+            <input type="hidden" name="results[{$rId}][flag]" value="{$flag}" data-auto-flag>
         </td>
         <td class="px-3 py-2 text-sm text-slate-600 align-top">{$unit}</td>
         <td class="px-3 py-2 text-sm text-slate-600 font-mono align-top">{$range}</td>
-        <td class="px-3 py-2 align-top">
-            <input type="text" name="results[{$rId}][value]" value="{$val}" class="{$valClass}" placeholder="—"{$autofocus}>
-        </td>
-        <td class="px-3 py-2 align-top">
-            <select name="results[{$rId}][flag]" class="field text-xs w-24">{$flagOpts}</select>
-        </td>
+        <td class="px-3 py-2 align-top">{$valueControl}</td>
+        <td class="px-3 py-2 align-top text-sm" data-flag-display>{$flagDisplay}</td>
     </tr>
     HTML;
 }
 
 if ($tableBody === '') {
     $tableBody = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No parameters for this test yet. Add the test from the catalog, or pick another test on the left.</td></tr>';
+}
+
+// Build page-grouping board
+$pageBoard = '';
+for ($p = 1; $p <= $maxPage; $p++) {
+    $chips = '';
+    foreach ($testNames as $tn) {
+        if ((int)$pageAssignments[$tn] !== $p) {
+            continue;
+        }
+        $chips .= '<div class="page-group-chip flex items-center justify-between gap-2 bg-white border border-slate-200 rounded px-2 py-1.5 text-xs cursor-grab" draggable="true" data-test-name="' . e($tn) . '">'
+            . '<span class="font-semibold text-slate-800 truncate">' . e($tn) . '</span>'
+            . '<input type="hidden" name="page_map_test[]" value="' . e($tn) . '">'
+            . '<input type="hidden" name="page_map_page[]" value="' . $p . '" data-page-map>'
+            . '</div>';
+    }
+    if ($chips === '') {
+        $chips = '<div class="text-[11px] text-slate-400 italic px-1 py-2">Drop tests here</div>';
+    }
+    $pageBoard .= '<div class="page-group-page border border-dashed border-slate-300 rounded-lg p-2 bg-slate-50 space-y-1.5" data-page="' . $p . '">'
+        . '<div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Page ' . $p . '</div>'
+        . '<div class="page-group-list space-y-1.5 min-h-[2rem]" data-page-list="' . $p . '">' . $chips . '</div>'
+        . '</div>';
 }
 
 $prevBtn = $prevTest
@@ -247,12 +332,12 @@ $baseUrlJs = e($baseUrl);
 
 $content = page_header(
     'Enter Results',
-    'Type values like the printed report. Tick Show to include a row on the report.'
+    'Type values like the printed report. Tick Show to include a row on the report. Enter jumps to the next row.'
 );
 $content .= $message;
 
 $content .= <<<HTML
-<form method="post" id="results-workspace">
+<form method="post" id="results-workspace" data-results-entry>
 <input type="hidden" name="lab_no" value="{$labNoSafe}">
 <input type="hidden" name="active_test" value="{$activeTestLabel}">
 
@@ -264,12 +349,12 @@ $content .= <<<HTML
     <a href="{$historyLink}" class="text-sm font-semibold text-teal-700 hover:underline ml-auto">Patient history</a>
 </div>
 
-<div class="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] items-start">
+<div class="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
     <aside class="space-y-3 lg:sticky lg:top-4">
         <div class="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
             <button type="submit" class="btn btn-primary w-full justify-center"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Results</button>
             <button type="submit" name="send_verify" value="1" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Save &amp; Verify</button>
-            <a href="{$previewLink}" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-file-pdf mr-1"></i> View / Print Report</a>
+            <button type="submit" name="goto_preview" value="1" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-file-pdf mr-1"></i> Save &amp; View / Print</button>
             <a href="{$addTestLink}" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-plus mr-1"></i> Add / Change Tests</a>
             <a href="/portals/main-lab/results/pending.php" class="btn btn-secondary w-full justify-center">Back to list</a>
         </div>
@@ -287,7 +372,18 @@ $content .= <<<HTML
                 </select>
             </div>
             <div class="flex gap-2">{$prevBtn}{$nextBtn}</div>
-            <p class="text-xs text-slate-500 leading-relaxed">Each booked test (CBC, sugar, etc.) has its own parameter sheet. Move through them here — same patient, same lab number.</p>
+            <p class="text-xs text-slate-500 leading-relaxed">Each booked test has its own parameter sheet. Flags auto-calculate from reference ranges. Press Enter to move down.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-lg p-3 space-y-2" data-page-grouping>
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Page grouping</div>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Drag tests onto pages, then click <strong>Save</strong> or <strong>Save &amp; View / Print</strong></p>
+                </div>
+                <button type="button" class="btn btn-secondary text-xs" data-add-page>+ Add Page</button>
+            </div>
+            <div class="space-y-2" data-page-board>{$pageBoard}</div>
         </div>
 
         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
@@ -312,7 +408,7 @@ $content .= <<<HTML
 
         <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2">
             <strong class="text-indigo-950 text-sm tracking-wide">{$activeTestLabel}</strong>
-            <span class="text-xs text-indigo-800">Untick <em>Show</em> to hide a line on the printed report</span>
+            <span class="text-xs text-indigo-800">Untick <em>Show</em> to hide a line · Flag is auto ↑/↓</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -334,7 +430,7 @@ $content .= <<<HTML
 
         <div class="border-t border-slate-200 p-4 space-y-2">
             <label class="block text-xs font-bold uppercase tracking-wide text-rose-700">Notes for report</label>
-            <textarea name="clinical_notes" rows="4" class="field w-full text-sm" placeholder="Optional note for the doctor (e.g. correlate with clinical picture)…">{$notes}</textarea>
+            <textarea name="clinical_notes" rows="3" class="field w-full text-sm" placeholder="Optional note for the doctor (e.g. correlate with clinical picture)…">{$notes}</textarea>
         </div>
 
         <div class="border-t border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap gap-2 justify-between">
@@ -342,7 +438,7 @@ $content .= <<<HTML
                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Results</button>
                 <button type="submit" name="send_verify" value="1" class="btn btn-secondary"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Save &amp; Verify</button>
             </div>
-            <a href="{$previewLink}" class="btn btn-secondary"><i class="fa-solid fa-print mr-1"></i> Print Report</a>
+            <button type="submit" name="goto_preview" value="1" class="btn btn-secondary"><i class="fa-solid fa-print mr-1"></i> Save &amp; Print Report</button>
         </div>
     </div>
 </div>

@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS samples (
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS results (
+    CREATE TABLE IF NOT EXISTS results (
     id              VARCHAR(64) PRIMARY KEY,
     lab_no          VARCHAR(32) NOT NULL,
     patient         VARCHAR(255) NOT NULL,
@@ -176,6 +176,8 @@ CREATE TABLE IF NOT EXISTS results (
     sub_table       TEXT NULL,
     flag            VARCHAR(16) NULL,
     sort_order      INT DEFAULT 0,
+    print_page      INT NOT NULL DEFAULT 1,
+    is_visible      TINYINT(1) NOT NULL DEFAULT 1,
     verified_at     DATETIME NULL,
     verified_by     VARCHAR(64) NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

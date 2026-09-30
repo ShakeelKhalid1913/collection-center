@@ -343,6 +343,7 @@ function load_document_context(?string $labNo): array
                 'range' => $r['reference_range'] ?: ($r['normal_value'] ?? '—'),
                 'sub_table' => $r['sub_table'] ?? '',
                 'flag' => $r['flag'] ?? '',
+                'print_page' => max(1, (int)($r['print_page'] ?? 1)),
             ];
         }
 
@@ -368,6 +369,7 @@ function load_document_context(?string $labNo): array
                     'range' => $meta['range'] ?? '—',
                     'sub_table' => '',
                     'flag' => '',
+                    'print_page' => 1,
                 ];
             }
         }
@@ -570,6 +572,9 @@ function render_report_signatories(array $signatories): string
 
 /**
  * Compact clinical lab report (Infinity-style header / clean B&W table).
+ * Supports page grouping: lines with print_page produce independent sheets.
+ *
+ * @param array{hide_header?:bool,hide_qr?:bool,hide_all?:bool} $options
  */
 function render_report_document(
     array $settings,
@@ -578,60 +583,62 @@ function render_report_document(
     ?array $entry = null,
     string $reportTitle = 'DEPARTMENT OF LABORATORY MEDICINE',
     array $signatories = [],
-    string $specimen = 'Serum'
+    string $specimen = 'Serum',
+    array $options = []
 ): string {
-    $letterhead = render_letterhead_image($settings);
-    $logoImg = brand_logo('brand-logo brand-logo--report');
-    $labName = e($settings['name'] ?? '');
-    $tagline = e(($settings['header'] ?? '') !== '' ? $settings['header'] : 'Quality is our Promise');
-    $labAddress = e($settings['address'] ?? '');
-    $labPhone = e($settings['phone'] ?? '');
-    $labEmail = e($settings['email'] ?? '');
+    $pages = [];
+    foreach ($resultLines as $line) {
+        $pageNo = max(1, (int)($line['print_page'] ?? 1));
+        $pages[$pageNo][] = $line;
+    }
+    if ($pages === []) {
+        $pages[1] = [];
+    }
+    ksort($pages, SORT_NUMERIC);
+    $totalPages = count($pages);
 
-    $labNoRaw = (string)($entry['lab_no'] ?? '');
-    $qrPayload = $labNoRaw !== ''
-        ? (isset($_SERVER['HTTP_HOST'])
-            ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
-                . '://' . $_SERVER['HTTP_HOST']
-                . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
-            : $labNoRaw)
-        : ($settings['name'] ?? 'Lab Report');
-    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=0&data=' . rawurlencode($qrPayload);
-    $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="72" height="72"></div>';
+    $sheets = '';
+    $index = 0;
+    foreach ($pages as $pageNo => $pageLines) {
+        $index++;
+        $sheets .= render_report_sheet(
+            $settings,
+            $patient,
+            $pageLines,
+            $entry,
+            $reportTitle,
+            $signatories,
+            $specimen,
+            $index,
+            $totalPages,
+            $index < $totalPages
+        );
+    }
 
-    $brandInner = $letterhead !== ''
-        ? $letterhead
-        : <<<HTML
-            <div class="lab-report__brand">
-                <div class="lab-report__logo">{$logoImg}</div>
-                <div>
-                    <p class="lab-report__lab-name">{$labName}</p>
-                    <p class="lab-report__tagline">{$tagline}</p>
-                </div>
-            </div>
-            HTML;
+    return '<div class="print-stack" data-print-stack>' . $sheets . '</div>';
+}
 
-    $brandBlock = '<div class="lab-report__top">' . $brandInner . $qrHtml . '</div>';
-
-    $metaBlock = build_patient_document_meta($patient, $entry, 'report');
-
-    $title = e(strtoupper($reportTitle));
-    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
-    $resultDate = e(format_date_report(null));
-
+/**
+ * Build result table rows for one report page.
+ */
+function build_report_result_rows(array $resultLines): string
+{
     $rows = '';
     $currentTestTitle = null;
     $currentSection = null;
+    $showSirLegend = false;
 
-    // Count rows per test so single-parameter tests (FBS, HB) don't print the name twice
     $testRowCounts = [];
+    $uniqueTests = [];
     foreach ($resultLines as $line) {
         $tt = trim((string)($line['test_title'] ?? ''));
         if ($tt === '') {
             continue;
         }
         $testRowCounts[$tt] = ($testRowCounts[$tt] ?? 0) + 1;
+        $uniqueTests[$tt] = true;
     }
+    $multiTestSheet = count($uniqueTests) > 1;
 
     foreach ($resultLines as $line) {
         $testTitle = trim((string)($line['test_title'] ?? ''));
@@ -641,32 +648,42 @@ function render_report_document(
         if ($testTitle !== '' && $testTitle !== $currentTestTitle) {
             $currentTestTitle = $testTitle;
             $currentSection = null;
-            // Only show a panel heading for multi-parameter tests (e.g. CBC), or when
-            // the parameter label differs from the test name.
-            $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
+            $needsHeading = $multiTestSheet
+                || ($testRowCounts[$testTitle] ?? 0) > 1
                 || strcasecmp($testTitle, $paramRaw) !== 0;
             if ($needsHeading) {
-                $rows .= '<tr class="lab-report__test-head"><td colspan="4"><strong>' . e($testTitle) . '</strong></td></tr>';
+                $rows .= '<tr class="lab-report__test-head"><td colspan="4">'
+                    . '<div class="lab-report__panel-banner"><strong>' . e($testTitle) . '</strong></div>'
+                    . '</td></tr>';
             }
         }
 
         if ($section !== '' && $section !== $currentSection) {
             $currentSection = $section;
             $rows .= '<tr class="lab-report__section-head"><td colspan="4"><span>' . e($section) . '</span></td></tr>';
+            if (preg_match('/antibiotic|sensitivity|culture/i', $section)) {
+                $showSirLegend = true;
+            }
         }
 
         $flagRaw = strtolower((string)($line['flag'] ?? ''));
         $resClass = 'lab-report__result';
         $arrow = '';
+        $resultRaw = trim((string)($line['result'] ?? ''));
+        $isPending = $resultRaw === '' || strcasecmp($resultRaw, 'Pending') === 0;
+
         if ($flagRaw === 'l') {
             $resClass .= ' lab-report__result--low';
-            $arrow = ' <span class="lab-report__arrow">&darr;</span>';
+            $arrow = ' <span class="lab-report__arrow lab-report__arrow--low">&darr;</span>';
         } elseif ($flagRaw === 'h') {
             $resClass .= ' lab-report__result--high';
-            $arrow = ' <span class="lab-report__arrow">&uarr;</span>';
+            $arrow = ' <span class="lab-report__arrow lab-report__arrow--high">&uarr;</span>';
         } elseif ($flagRaw === 'critical') {
             $resClass .= ' lab-report__result--critical';
-            $arrow = ' <span class="lab-report__flag">!</span>';
+            $arrow = ' <span class="lab-report__arrow lab-report__arrow--critical">!</span>';
+        } elseif (!$isPending && is_numeric($resultRaw)) {
+            // In-range numeric result → green marker
+            $arrow = ' <span class="lab-report__arrow lab-report__arrow--normal">&#10003;</span>';
         }
 
         $resVal = e($line['result'] ?? 'Pending');
@@ -706,30 +723,126 @@ function render_report_document(
         }
     }
 
+    if ($showSirLegend) {
+        $rows .= '<tr class="lab-report__legend-row"><td colspan="4">'
+            . '<div class="lab-report__sir-legend">S = Sensitive &nbsp;|&nbsp; I = Intermediate &nbsp;|&nbsp; R = Resistant</div>'
+            . '</td></tr>';
+    }
+
     if ($rows === '') {
         $rows = '<tr><td colspan="4" class="lab-report__empty">No tests on this entry yet.</td></tr>';
     }
 
-    $footerNote = e($settings['footer'] ?? '');
-    $footerBlock = $footerNote !== '' ? '<p class="lab-report__lab-note">' . $footerNote . '</p>' : '';
-    $credit = software_credit_footer(true);
-    $printStamp = e(date('d-M-Y h:i:s A'));
-    $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
+    return $rows;
+}
 
-    $signatoriesHtml = render_report_signatories($signatories);
+/**
+ * One physical report sheet.
+ * Page 1: full letterhead + patient info.
+ * Page 2+: slim continuation bar only (no full patient block again).
+ */
+function render_report_sheet(
+    array $settings,
+    array $patient,
+    array $resultLines,
+    ?array $entry,
+    string $reportTitle,
+    array $signatories,
+    string $specimen,
+    int $pageIndex,
+    int $totalPages,
+    bool $forceBreakAfter
+): string {
+    $labAddress = e($settings['address'] ?? '');
+    $labPhone = e($settings['phone'] ?? '');
+    $labEmail = e($settings['email'] ?? '');
+    $labNoRaw = (string)($entry['lab_no'] ?? '');
+    $title = e(strtoupper($reportTitle));
+    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
+    $resultDate = e(format_date_report(null));
+    $rows = build_report_result_rows($resultLines);
+    $pageLabel = 'Page ' . $pageIndex . ' of ' . max(1, $totalPages);
+    $breakClass = $forceBreakAfter ? ' lab-report--page-break' : '';
+    $isFirstPage = $pageIndex <= 1;
+    $isLastPage = $pageIndex >= $totalPages;
 
-    return <<<HTML
-    <div class="print-area lab-report">
+    if ($isFirstPage) {
+        $letterhead = render_letterhead_image($settings);
+        $logoImg = brand_logo('brand-logo brand-logo--report');
+        $labName = e($settings['name'] ?? '');
+        $tagline = e(($settings['header'] ?? '') !== '' ? $settings['header'] : 'Quality is our Promise');
+
+        $qrPayload = $labNoRaw !== ''
+            ? (isset($_SERVER['HTTP_HOST'])
+                ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+                    . '://' . $_SERVER['HTTP_HOST']
+                    . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
+                : $labNoRaw)
+            : ($settings['name'] ?? 'Lab Report');
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=0&data=' . rawurlencode($qrPayload);
+        $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="72" height="72"></div>';
+
+        $brandInner = $letterhead !== ''
+            ? $letterhead
+            : <<<HTML
+                <div class="lab-report__brand">
+                    <div class="lab-report__logo">{$logoImg}</div>
+                    <div>
+                        <p class="lab-report__lab-name">{$labName}</p>
+                        <p class="lab-report__tagline">{$tagline}</p>
+                    </div>
+                </div>
+                HTML;
+
+        $brandBlock = '<div class="lab-report__top">'
+            . '<div class="lab-report__letterhead">' . $brandInner . '</div>'
+            . $qrHtml
+            . '</div>';
+        $metaBlock = build_patient_document_meta($patient, $entry, 'report');
+        $headerHtml = <<<HTML
         <header class="lab-report__header">
             {$brandBlock}
-
             {$metaBlock}
-
             <div class="lab-report__title-wrap">
                 <h2 class="lab-report__title">{$title}</h2>
                 <span class="lab-report__specimen"><strong>Specimen:</strong> {$specimenE}</span>
             </div>
         </header>
+        HTML;
+    } else {
+        $patientName = e(trim((string)($patient['name'] ?? ($entry['patient_name'] ?? '—'))));
+        $labNoE = e($labNoRaw !== '' ? $labNoRaw : '—');
+        $headerHtml = <<<HTML
+        <header class="lab-report__header lab-report__header--continued">
+            <div class="lab-report__continued-bar">
+                <span><strong>{$patientName}</strong> · Lab No: <strong>{$labNoE}</strong></span>
+                <span>{$title} — continued · {$pageLabel}</span>
+            </div>
+        </header>
+        HTML;
+    }
+
+    $noteHtml = $isLastPage
+        ? '<div class="lab-report__clinical-note">Note: Lab values should always be correlated with clinical picture. Normal Range(s) and Unit(s) shown are most recent results</div>'
+        : '';
+
+    $footerNote = e($settings['footer'] ?? '');
+    $footerBlock = ($isLastPage && $footerNote !== '') ? '<p class="lab-report__lab-note">' . $footerNote . '</p>' : '';
+    $credit = $isLastPage ? software_credit_footer(true) : '';
+    $printStamp = e(date('d-M-Y h:i:s A'));
+    $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
+    $signatoriesHtml = $isLastPage ? render_report_signatories($signatories) : '';
+    $disclaimer = $isLastPage
+        ? '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically verified report — not valid for legal proceedings unless stamped.</p>'
+        : '';
+    $contactBar = ($isLastPage && $addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
+    $sideNote = $isFirstPage
+        ? '<aside class="lab-report__side-note" aria-hidden="true">All Results Should Be Interpreted And Correlated By Physician. Electronically Verified Report. No Signature(s) required. Not Valid for Legal Proceeding.</aside>'
+        : '';
+
+    return <<<HTML
+    <div class="print-area lab-report{$breakClass}">
+        {$headerHtml}
 
         <section class="lab-report__body">
             <table class="lab-report__table">
@@ -743,20 +856,20 @@ function render_report_document(
                 </thead>
                 <tbody>{$rows}</tbody>
             </table>
-            <div class="lab-report__clinical-note">Note: Lab values should always be correlated with clinical picture. Normal Range(s) and Unit(s) shown are most recent results</div>
+            {$noteHtml}
         </section>
 
-        <aside class="lab-report__side-note" aria-hidden="true">
-            All Results Should Be Interpreted And Correlated By Physician. Electronically Verified Report. No Signature(s) required. Not Valid for Legal Proceeding.
-        </aside>
+        {$sideNote}
 
         <footer class="lab-report__footer">
-            <p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically verified report — not valid for legal proceedings unless stamped.</p>
-            {$footerBlock}
-            {$signatoriesHtml}
-            <div class="lab-report__contact-bar">{$addrLine}</div>
+            <div class="lab-report__footer-branding">
+                {$disclaimer}
+                {$footerBlock}
+                {$signatoriesHtml}
+                {$contactBar}
+            </div>
             <div class="lab-report__bottom-line">
-                <span>Page 1 of 1</span>
+                <span>{$pageLabel}</span>
                 <span>{$printStamp}</span>
             </div>
             {$credit}

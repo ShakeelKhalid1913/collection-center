@@ -233,7 +233,7 @@
   function initPdfDownload() {
     document.querySelectorAll('[data-download-pdf]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const area = document.querySelector('.print-area');
+        const area = document.querySelector('[data-print-stack]') || document.querySelector('.print-area');
         const status = btn.parentElement?.querySelector('[data-pdf-status]');
         if (!area) {
           if (status) status.textContent = 'Nothing to export on this page.';
@@ -253,7 +253,7 @@
               image: { type: 'jpeg', quality: 0.98 },
               html2canvas: { scale: 2, useCORS: true, logging: false },
               jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+              pagebreak: { mode: ['css', 'legacy'] },
             })
             .from(area)
             .save();
@@ -264,13 +264,168 @@
         } catch (err) {
           console.error(err);
           if (status) status.textContent = 'PDF failed — use Print → Save as PDF.';
-          // Fallback
           window.print();
         } finally {
           btn.disabled = false;
         }
       });
     });
+  }
+
+  function computeFlagJs(value, range) {
+    const v = String(value || '').trim();
+    const r = String(range || '').trim();
+    if (!v || !r || r === '—' || Number.isNaN(Number(v))) return '';
+    const num = Number(v);
+    let m = r.match(/^([0-9]+(?:\.[0-9]+)?)\s*[\-–]\s*([0-9]+(?:\.[0-9]+)?)$/);
+    if (m) {
+      const low = Number(m[1]);
+      const high = Number(m[2]);
+      if (num < low) return 'L';
+      if (num > high) return 'H';
+      return '';
+    }
+    m = r.match(/^<\s*([0-9]+(?:\.[0-9]+)?)$/);
+    if (m) return num >= Number(m[1]) ? 'H' : '';
+    m = r.match(/^>\s*([0-9]+(?:\.[0-9]+)?)$/);
+    if (m) return num <= Number(m[1]) ? 'L' : '';
+    return '';
+  }
+
+  function flagDisplayHtml(flag, value) {
+    const f = String(flag || '').toLowerCase();
+    const v = String(value || '').trim();
+    if (f === 'l') return '<span class="font-bold" style="color:#2563eb" title="Low">↓ Low</span>';
+    if (f === 'h') return '<span class="font-bold" style="color:#dc2626" title="High">↑ High</span>';
+    if (f === 'critical') return '<span class="font-bold" style="color:#dc2626" title="Critical">! Critical</span>';
+    if (v !== '' && !Number.isNaN(Number(v))) {
+      return '<span class="font-bold" style="color:#16a34a" title="Normal">✓ Normal</span>';
+    }
+    return '—';
+  }
+
+  function initResultEntry() {
+    const form = document.querySelector('[data-results-entry]');
+    if (!form) return;
+
+    form.querySelectorAll('[data-result-input]').forEach((input) => {
+      const refreshFlag = () => {
+        const row = input.closest('[data-result-row]');
+        if (!row) return;
+        const range = input.getAttribute('data-ref-range') || row.querySelector('input[name*="[range]"]')?.value || '';
+        const flag = input.tagName === 'SELECT' ? '' : computeFlagJs(input.value, range);
+        const hidden = row.querySelector('[data-auto-flag]');
+        const display = row.querySelector('[data-flag-display]');
+        if (hidden) hidden.value = flag;
+        if (display) display.innerHTML = flagDisplayHtml(flag, input.value);
+        input.classList.toggle('text-blue-700', flag === 'L');
+        input.classList.toggle('border-blue-400', flag === 'L');
+        input.classList.toggle('text-red-600', flag === 'H' || flag === 'critical');
+        input.classList.toggle('border-red-400', flag === 'H' || flag === 'critical');
+        input.classList.toggle('text-green-700', flag === '' && input.value.trim() !== '' && !Number.isNaN(Number(input.value)));
+        input.classList.toggle('border-green-400', flag === '' && input.value.trim() !== '' && !Number.isNaN(Number(input.value)));
+      };
+
+      input.addEventListener('input', refreshFlag);
+      input.addEventListener('change', refreshFlag);
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const inputs = Array.from(form.querySelectorAll('[data-result-input]'));
+        const idx = inputs.indexOf(input);
+        if (idx >= 0 && idx < inputs.length - 1) {
+          inputs[idx + 1].focus();
+          if (typeof inputs[idx + 1].select === 'function') inputs[idx + 1].select();
+        }
+      });
+    });
+
+    initPageGrouping(form);
+  }
+
+  function initPageGrouping(form) {
+    const board = form.querySelector('[data-page-board]');
+    const addBtn = form.querySelector('[data-add-page]');
+    if (!board) return;
+
+    let dragChip = null;
+
+    function bindChip(chip) {
+      chip.addEventListener('dragstart', () => {
+        dragChip = chip;
+        chip.classList.add('opacity-60');
+      });
+      chip.addEventListener('dragend', () => {
+        chip.classList.remove('opacity-60');
+        dragChip = null;
+      });
+    }
+
+    function bindPage(pageEl) {
+      const list = pageEl.querySelector('[data-page-list]');
+      if (!list) return;
+      pageEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        pageEl.classList.add('ring-2', 'ring-teal-400');
+      });
+      pageEl.addEventListener('dragleave', () => {
+        pageEl.classList.remove('ring-2', 'ring-teal-400');
+      });
+      pageEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        pageEl.classList.remove('ring-2', 'ring-teal-400');
+        if (!dragChip) return;
+        const emptyHint = list.querySelector('.italic');
+        if (emptyHint) emptyHint.remove();
+        list.appendChild(dragChip);
+        const pageNo = pageEl.getAttribute('data-page') || '1';
+        const hidden = dragChip.querySelector('[data-page-map]');
+        if (hidden) hidden.value = pageNo;
+      });
+    }
+
+    board.querySelectorAll('.page-group-chip').forEach(bindChip);
+    board.querySelectorAll('.page-group-page').forEach(bindPage);
+
+    addBtn?.addEventListener('click', () => {
+      const pages = board.querySelectorAll('.page-group-page');
+      const next = pages.length + 1;
+      const el = document.createElement('div');
+      el.className = 'page-group-page border border-dashed border-slate-300 rounded-lg p-2 bg-slate-50 space-y-1.5';
+      el.setAttribute('data-page', String(next));
+      el.innerHTML = `
+        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Page ${next}</div>
+        <div class="page-group-list space-y-1.5 min-h-[2rem]" data-page-list="${next}">
+          <div class="text-[11px] text-slate-400 italic px-1 py-2">Drop tests here</div>
+        </div>`;
+      board.appendChild(el);
+      bindPage(el);
+    });
+  }
+
+  function initPrintToggles() {
+    const stack = document.querySelector('[data-print-stack]');
+    const toolbar = document.querySelector('[data-print-toolbar]');
+    if (!stack || !toolbar) return;
+
+    const headerCb = toolbar.querySelector('[data-print-toggle="hide-header"]');
+    const qrCb = toolbar.querySelector('[data-print-toggle="hide-qr"]');
+    const allCb = toolbar.querySelector('[data-print-toggle="hide-all"]');
+
+    function apply() {
+      const hideAll = !!allCb?.checked;
+      stack.classList.toggle('lab-print--hide-all', hideAll);
+      stack.classList.toggle('lab-print--hide-header', hideAll || !!headerCb?.checked);
+      stack.classList.toggle('lab-print--hide-qr', hideAll || !!qrCb?.checked);
+      if (hideAll) {
+        if (headerCb) headerCb.checked = true;
+        if (qrCb) qrCb.checked = true;
+      }
+    }
+
+    [headerCb, qrCb, allCb].forEach((cb) => cb?.addEventListener('change', apply));
+    apply();
   }
 
   function initTestParameters() {
@@ -314,7 +469,6 @@
       });
     });
     
-    // Attach to any existing remove buttons (if pre-rendered in edit mode)
     list.querySelectorAll('[data-remove-param]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.target.closest('div.grid').remove();
@@ -326,4 +480,6 @@
   initCatalogSearch();
   initPdfDownload();
   initTestParameters();
+  initResultEntry();
+  initPrintToggles();
 })();
