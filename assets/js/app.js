@@ -476,10 +476,75 @@
     });
   }
 
+  function initHeaderAlign() {
+    const root = document.querySelector('[data-header-align]');
+    if (!root) return;
+
+    const input = root.querySelector('[data-header-align-input]');
+    const label = root.querySelector('[data-header-align-label]');
+    const thumb = root.querySelector('[data-header-align-thumb]');
+    const track = root.querySelector('[data-header-align-track]');
+    const zones = Array.from(root.querySelectorAll('[data-align]')).filter((el) => el.matches('.header-align__zone'));
+
+    function setAlign(pos) {
+      const next = pos === 'center' || pos === 'right' ? pos : 'left';
+      if (input) input.value = next;
+      if (label) label.textContent = next.charAt(0).toUpperCase() + next.slice(1);
+      if (thumb) thumb.setAttribute('data-align', next);
+      zones.forEach((z) => z.classList.toggle('is-active', z.getAttribute('data-align') === next));
+    }
+
+    zones.forEach((z) => {
+      z.addEventListener('click', () => setAlign(z.getAttribute('data-align') || 'left'));
+    });
+
+    function posFromClientX(clientX) {
+      if (!track) return 'left';
+      const rect = track.getBoundingClientRect();
+      const ratio = (clientX - rect.left) / Math.max(1, rect.width);
+      if (ratio < 0.33) return 'left';
+      if (ratio < 0.66) return 'center';
+      return 'right';
+    }
+
+    let dragging = false;
+
+    thumb?.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      thumb.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+
+    thumb?.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      setAlign(posFromClientX(e.clientX));
+    });
+
+    const endDrag = () => {
+      dragging = false;
+    };
+    thumb?.addEventListener('pointerup', endDrag);
+    thumb?.addEventListener('pointercancel', endDrag);
+
+    // HTML5 drag fallback
+    thumb?.addEventListener('dragstart', (e) => {
+      e.dataTransfer?.setData('text/plain', 'header-align');
+    });
+    track?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      setAlign(posFromClientX(e.clientX));
+    });
+    track?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      setAlign(posFromClientX(e.clientX));
+    });
+  }
+
   initBilling();
   initCatalogSearch();
   initPdfDownload();
   initTestParameters();
   initResultEntry();
   initPrintToggles();
+  initHeaderAlign();
 })();

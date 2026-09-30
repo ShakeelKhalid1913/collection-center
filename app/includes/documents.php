@@ -119,6 +119,9 @@ function branding_settings(?string $orgId = null): array
         'header_image_url' => $hasImage
             ? '/branding-header.php?org=' . rawurlencode($orgId) . '&v=' . (int)($set['header_image_ver'] ?? 1)
             : '',
+        'header_image_position' => \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
+            (string)($set['header_image_position'] ?? 'left')
+        ),
     ];
 }
 
@@ -200,6 +203,7 @@ function save_branding_request(string $orgId): array
         'logo_text' => $_POST['logo'] ?? 'HLP',
         'bill_header' => $_POST['bill_header'] ?? '',
         'bill_footer' => $_POST['bill_footer'] ?? '',
+        'header_image_position' => $_POST['header_image_position'] ?? 'left',
     ], $orgId);
 
     if (!$ok) {
@@ -222,6 +226,9 @@ function save_branding_request(string $orgId): array
 
 function branding_header_image_field(array $settings): string
 {
+    $pos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
+        (string)($settings['header_image_position'] ?? 'left')
+    );
     $preview = '';
     if (!empty($settings['has_header_image']) && !empty($settings['header_image_url'])) {
         $url = e($settings['header_image_url']);
@@ -237,16 +244,35 @@ function branding_header_image_field(array $settings): string
         HTML;
     }
 
+    $leftOn = $pos === 'left' ? ' is-active' : '';
+    $centerOn = $pos === 'center' ? ' is-active' : '';
+    $rightOn = $pos === 'right' ? ' is-active' : '';
+    $thumbLabel = $pos === 'center' ? 'Center' : ($pos === 'right' ? 'Right' : 'Left');
+
     return <<<HTML
     <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 space-y-3">
         <div>
             <p class="text-sm font-semibold text-slate-800">Header image (PNG / JPG)</p>
-            <p class="text-xs text-slate-500 mt-1">If the lab sends a letterhead as an image, upload it here. It is fitted across the top of bills and reports. Recommended: wide PNG, under 2&nbsp;MB.</p>
+            <p class="text-xs text-slate-500 mt-1">Upload the lab letterhead/logo. Drag the handle below to place it Left, Center, or Right on the report. Recommended: under 2&nbsp;MB.</p>
         </div>
         {$preview}
         <div>
             <label class="field-label" for="header_image">Upload header image <span class="text-slate-400 font-normal">(optional)</span></label>
             <input type="file" id="header_image" name="header_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-teal-800">
+        </div>
+        <div class="header-align" data-header-align>
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <label class="field-label mb-0">Header image position</label>
+                <span class="text-xs font-semibold text-teal-800" data-header-align-label>{$thumbLabel}</span>
+            </div>
+            <input type="hidden" name="header_image_position" value="{$pos}" data-header-align-input>
+            <div class="header-align__track" data-header-align-track>
+                <button type="button" class="header-align__zone{$leftOn}" data-align="left" title="Left">Left</button>
+                <button type="button" class="header-align__zone{$centerOn}" data-align="center" title="Center">Center</button>
+                <button type="button" class="header-align__zone{$rightOn}" data-align="right" title="Right">Right</button>
+                <div class="header-align__thumb" data-header-align-thumb data-align="{$pos}" draggable="true" title="Drag to move">⠿</div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1.5">Drag the handle, or click Left / Center / Right. Saves with branding.</p>
         </div>
     </div>
     HTML;
@@ -783,14 +809,17 @@ function render_report_sheet(
         }
         $textBrand .= '</div>';
 
-        // Single compact row: mark (letterhead or logo) | text | QR
+        // Single compact row: mark (letterhead or logo) | text | QR — mark align left/center/right
+        $imgPos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
+            (string)($settings['header_image_position'] ?? 'left')
+        );
         $mark = $letterhead !== ''
             ? '<div class="lab-report__mark lab-report__mark--letterhead">' . $letterhead . '</div>'
             : '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>';
 
-        $brandBlock = '<div class="lab-report__top">'
+        $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
             . '<div class="lab-report__letterhead">'
-            . '<div class="lab-report__brand">'
+            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . '">'
             . $mark
             . $textBrand
             . '</div>'

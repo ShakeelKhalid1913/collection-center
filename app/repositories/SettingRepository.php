@@ -30,6 +30,11 @@ class SettingRepository
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
                 ['org_id' => $orgId]
             );
+            if ($row) {
+                $row['header_image_position'] = self::normalizeHeaderImagePosition(
+                    (string)($row['header_image_position'] ?? 'left')
+                );
+            }
             return $row ?: [];
         } catch (\Throwable $ignored) {
             try {
@@ -53,7 +58,11 @@ class SettingRepository
                 $row['has_header_image'] = !empty($row['header_image']) || !empty($row['header_image_mime']);
                 unset($row['header_image']);
                 if (!isset($row['header_image_position'])) {
-                    $row['header_image_position'] = 'top';
+                    $row['header_image_position'] = 'left';
+                } else {
+                    $row['header_image_position'] = self::normalizeHeaderImagePosition(
+                        (string)$row['header_image_position']
+                    );
                 }
             }
             return $row;
@@ -93,7 +102,7 @@ class SettingRepository
             'bill_header_text' => $data['bill_header_text'] ?? $data['bill_header'] ?? ($existing['bill_header_text'] ?? $data['header_text'] ?? $data['header'] ?? ''),
             'bill_footer_text' => $data['bill_footer_text'] ?? $data['bill_footer'] ?? ($existing['bill_footer_text'] ?? $data['footer_text'] ?? $data['footer'] ?? ''),
             'header_image_position' => self::normalizeHeaderImagePosition(
-                (string)($data['header_image_position'] ?? $existing['header_image_position'] ?? 'top')
+                (string)($data['header_image_position'] ?? $existing['header_image_position'] ?? 'left')
             ),
         ];
 
@@ -215,7 +224,11 @@ class SettingRepository
     public static function normalizeHeaderImagePosition(string $position): string
     {
         $position = strtolower(trim($position));
-        return in_array($position, ['top', 'after_meta', 'end'], true) ? $position : 'top';
+        // Legacy vertical values → left
+        if (in_array($position, ['top', 'after_meta', 'end'], true)) {
+            return 'left';
+        }
+        return in_array($position, ['left', 'center', 'right'], true) ? $position : 'left';
     }
 
     private function ensureHeaderImagePositionColumn(): void
@@ -227,7 +240,7 @@ class SettingRepository
         $done = true;
         try {
             $this->db->execute(
-                "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'top'"
+                "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'"
             );
         } catch (\Throwable $ignored) {
             // Column already exists

@@ -169,6 +169,7 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN header_image LONGBLOB NULL",
             "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
             "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'",
             "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
