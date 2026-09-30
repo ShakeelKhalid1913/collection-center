@@ -148,7 +148,7 @@ function runSetup(): array
 
         // Seed Settings
         $pdo->exec("INSERT IGNORE INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text) VALUES 
-            ('ORG-001', 'Health LMS Pro Diagnostics', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333', 'reports@healthlmspro.pk', 'Health LMS Pro — Diagnostic & Laboratory Services', 'This report is electronically verified. For queries call reception.', 'HLP')
+            ('ORG-001', 'Health LMS Pro Diagnostics', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333', 'reports@healthlmspro.pk', 'Health LMS Pro — Diagnostic & Laboratory Services', 'Get well soon. Thank you.', 'HLP')
         ");
 
         // Seed Collection Centers

@@ -71,20 +71,20 @@ function build_patient_document_meta(array $patient, ?array $entry, string $cont
         $doctorRaw = 'Walk-in / Self';
     }
 
-    // Identical field set on test report + billing report (matches sample patient header)
+    // Client order: Age up (was under MR), MR where Phone was, Phone under Age.
+    // Route / Priority removed from printed report.
     $metaCells = report_meta_cell('Patient Name', $pname, true)
-        . report_meta_cell('MR No', $mrNo, true)
-        . report_meta_cell('Father / Husband Name', $fhName !== '' ? $fhName : '—')
-        . report_meta_cell('Phone', $phoneP)
-        . report_meta_cell('Doctor Name', $doctorRaw, true)
         . report_meta_cell('Age / Gender', $ageGender)
+        . report_meta_cell('Father / Husband Name', $fhName !== '' ? $fhName : '—')
+        . report_meta_cell('MR No', $mrNo, true)
+        . report_meta_cell('Doctor Name', $doctorRaw, true)
+        . report_meta_cell('Phone', $phoneP)
         . report_meta_cell('Address', $patientAddress)
         . report_meta_cell('Case No', $labNoDisplay)
         . report_meta_cell('Registered at', $registeredAt !== '' ? $registeredAt : '—')
         . report_meta_cell('Received on', $receivedOn)
         . report_meta_cell('Registered On', $registeredOn)
-        . report_meta_cell('Reported On', $reportedOn)
-        . report_meta_cell('Specimen Taken', 'Taken In Lab');
+        . report_meta_cell('Reported On', $reportedOn);
 
     if ($cnic !== '') {
         $metaCells .= report_meta_cell('CNIC', $cnic, false, true);
@@ -94,15 +94,6 @@ function build_patient_document_meta(array $patient, ?array $entry, string $cont
     }
     if (!empty($patient['email'])) {
         $metaCells .= report_meta_cell('Email', (string)$patient['email'], false, true);
-    }
-
-    $route = trim((string)($entry['route'] ?? ''));
-    $priority = trim((string)($entry['priority'] ?? ''));
-    if ($route !== '' && strcasecmp($route, '—') !== 0) {
-        $metaCells .= report_meta_cell('Route', $route, false, true);
-    }
-    if ($priority !== '' && strcasecmp($priority, 'Normal') !== 0) {
-        $metaCells .= report_meta_cell('Priority', $priority, false, true);
     }
 
     return '<div class="lab-report__meta">' . $metaCells . '</div>';
@@ -629,16 +620,13 @@ function build_report_result_rows(array $resultLines): string
     $showSirLegend = false;
 
     $testRowCounts = [];
-    $uniqueTests = [];
     foreach ($resultLines as $line) {
         $tt = trim((string)($line['test_title'] ?? ''));
         if ($tt === '') {
             continue;
         }
         $testRowCounts[$tt] = ($testRowCounts[$tt] ?? 0) + 1;
-        $uniqueTests[$tt] = true;
     }
-    $multiTestSheet = count($uniqueTests) > 1;
 
     foreach ($resultLines as $line) {
         $testTitle = trim((string)($line['test_title'] ?? ''));
@@ -648,8 +636,7 @@ function build_report_result_rows(array $resultLines): string
         if ($testTitle !== '' && $testTitle !== $currentTestTitle) {
             $currentTestTitle = $testTitle;
             $currentSection = null;
-            $needsHeading = $multiTestSheet
-                || ($testRowCounts[$testTitle] ?? 0) > 1
+            $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
                 || strcasecmp($testTitle, $paramRaw) !== 0;
             if ($needsHeading) {
                 $rows .= '<tr class="lab-report__test-head"><td colspan="4">'
@@ -758,7 +745,6 @@ function render_report_sheet(
     $labEmail = e($settings['email'] ?? '');
     $labNoRaw = (string)($entry['lab_no'] ?? '');
     $title = e(strtoupper($reportTitle));
-    $specimenE = e($specimen !== '' ? $specimen : 'Serum');
     $resultDate = e(format_date_report(null));
     $rows = build_report_result_rows($resultLines);
     $pageLabel = 'Page ' . $pageIndex . ' of ' . max(1, $totalPages);
@@ -771,6 +757,12 @@ function render_report_sheet(
         $logoImg = brand_logo('brand-logo brand-logo--report');
         $labName = e($settings['name'] ?? '');
         $tagline = e(($settings['header'] ?? '') !== '' ? $settings['header'] : 'Quality is our Promise');
+        $contactBits = array_filter([
+            trim((string)($settings['address'] ?? '')),
+            trim((string)($settings['phone'] ?? '')),
+            trim((string)($settings['email'] ?? '')),
+        ], static fn($v) => $v !== '');
+        $contactLine = e(implode('  ·  ', $contactBits));
 
         $qrPayload = $labNoRaw !== ''
             ? (isset($_SERVER['HTTP_HOST'])
@@ -779,23 +771,30 @@ function render_report_sheet(
                     . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
                 : $labNoRaw)
             : ($settings['name'] ?? 'Lab Report');
-        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=0&data=' . rawurlencode($qrPayload);
-        $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="72" height="72"></div>';
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);
+        $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="56" height="56"></div>';
 
-        $brandInner = $letterhead !== ''
-            ? $letterhead
-            : <<<HTML
-                <div class="lab-report__brand">
-                    <div class="lab-report__logo">{$logoImg}</div>
-                    <div>
-                        <p class="lab-report__lab-name">{$labName}</p>
-                        <p class="lab-report__tagline">{$tagline}</p>
-                    </div>
-                </div>
-                HTML;
+        // Always keep lab name / tagline / contact visible (even when a header image is set)
+        $textBrand = '<div class="lab-report__brand-text">'
+            . '<p class="lab-report__lab-name">' . $labName . '</p>'
+            . '<p class="lab-report__tagline">' . $tagline . '</p>';
+        if ($contactLine !== '') {
+            $textBrand .= '<p class="lab-report__lab-contact">' . $contactLine . '</p>';
+        }
+        $textBrand .= '</div>';
+
+        // Single compact row: mark (letterhead or logo) | text | QR
+        $mark = $letterhead !== ''
+            ? '<div class="lab-report__mark lab-report__mark--letterhead">' . $letterhead . '</div>'
+            : '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>';
 
         $brandBlock = '<div class="lab-report__top">'
-            . '<div class="lab-report__letterhead">' . $brandInner . '</div>'
+            . '<div class="lab-report__letterhead">'
+            . '<div class="lab-report__brand">'
+            . $mark
+            . $textBrand
+            . '</div>'
+            . '</div>'
             . $qrHtml
             . '</div>';
         $metaBlock = build_patient_document_meta($patient, $entry, 'report');
@@ -805,7 +804,6 @@ function render_report_sheet(
             {$metaBlock}
             <div class="lab-report__title-wrap">
                 <h2 class="lab-report__title">{$title}</h2>
-                <span class="lab-report__specimen"><strong>Specimen:</strong> {$specimenE}</span>
             </div>
         </header>
         HTML;
@@ -822,22 +820,26 @@ function render_report_sheet(
         HTML;
     }
 
-    $noteHtml = $isLastPage
-        ? '<div class="lab-report__clinical-note">Note: Lab values should always be correlated with clinical picture. Normal Range(s) and Unit(s) shown are most recent results</div>'
-        : '';
+    // No "Note: lab values..." line — only interpret disclaimer + Get well soon footer
+    $noteHtml = '';
 
-    $footerNote = e($settings['footer'] ?? '');
-    $footerBlock = ($isLastPage && $footerNote !== '') ? '<p class="lab-report__lab-note">' . $footerNote . '</p>' : '';
+    $footerNote = trim((string)($settings['footer'] ?? ''));
+    if ($footerNote === '' || preg_match('/electronically verified/i', $footerNote)) {
+        $footerNote = 'Get well soon. Thank you.';
+    }
+    $footerBlock = ($isLastPage && $footerNote !== '')
+        ? '<p class="lab-report__lab-note">' . e($footerNote) . '</p>'
+        : '';
     $credit = $isLastPage ? software_credit_footer(true) : '';
     $printStamp = e(date('d-M-Y h:i:s A'));
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $signatoriesHtml = $isLastPage ? render_report_signatories($signatories) : '';
     $disclaimer = $isLastPage
-        ? '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically verified report — not valid for legal proceedings unless stamped.</p>'
+        ? '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician.</p>'
         : '';
     $contactBar = ($isLastPage && $addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
     $sideNote = $isFirstPage
-        ? '<aside class="lab-report__side-note" aria-hidden="true">All Results Should Be Interpreted And Correlated By Physician. Electronically Verified Report. No Signature(s) required. Not Valid for Legal Proceeding.</aside>'
+        ? '<aside class="lab-report__side-note" aria-hidden="true">All Results Should Be Interpreted And Correlated By Physician. Not Valid for Legal Proceeding.</aside>'
         : '';
 
     return <<<HTML

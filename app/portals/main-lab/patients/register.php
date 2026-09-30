@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'phone' => $_POST['phone'] ?? '',
             'age' => (int)($_POST['age'] ?? 0),
             'gender' => $_POST['gender'] ?? 'Female',
+            'blood_group' => trim((string)($_POST['blood_group'] ?? '')),
             'relation_of' => trim($_POST['relation_of'] ?? ''),
             'doctor' => trim($_POST['doctor'] ?? ''),
             'referring_doctor' => trim($_POST['doctor'] ?? ''),
@@ -34,6 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$blood = [
+    '' => '— Optional —',
+    'A+' => 'A+', 'A-' => 'A-',
+    'B+' => 'B+', 'B-' => 'B-',
+    'AB+' => 'AB+', 'AB-' => 'AB-',
+    'O+' => 'O+', 'O-' => 'O-',
+    'Unknown' => 'Unknown',
+];
+
 $content = page_header('Register Patient', 'Shared patient database across all portals.');
 $content .= $message;
 $content .= card(
@@ -43,7 +53,8 @@ $content .= card(
     form_field('Father / Husband Name', 'relation_of', 'text', null, 'F/H name', true) .
     form_field('Mobile', 'phone') .
     form_field('Age', 'age', 'number') .
-    select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male']) .
+    select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male', 'Other' => 'Other']) .
+    select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Walk-in / Self', true) .
     '<div class="sm:col-span-2">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .

@@ -39,7 +39,7 @@ $content .= card(
     '<hr class="border-slate-200">' .
     '<p class="text-sm font-semibold text-slate-800">Lab report letterhead</p>' .
     form_field('Report header line', 'header', 'text', $s['header'], 'e.g. Quality Diagnostics — Pathology Reports') .
-    form_field('Report footer', 'footer', 'text', $s['footer'], 'e.g. Electronically verified. Call reception for queries.') .
+    form_field('Report footer', 'footer', 'text', $s['footer'], 'e.g. Get well soon. Thank you.') .
     '<hr class="border-slate-200">' .
     '<p class="text-sm font-semibold text-slate-800">Cash bill / receipt letterhead</p>' .
     '<p class="text-xs text-slate-500">Leave blank to reuse report header/footer.</p>' .

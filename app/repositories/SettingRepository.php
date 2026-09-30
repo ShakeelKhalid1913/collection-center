@@ -25,19 +25,36 @@ class SettingRepository
                         bill_header_text, bill_footer_text,
                         header_image_mime,
                         header_image_ver,
+                        header_image_position,
                         CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
                 ['org_id' => $orgId]
             );
             return $row ?: [];
         } catch (\Throwable $ignored) {
-            $row = $this->db->fetchOne(
-                "SELECT * FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
-                ['org_id' => $orgId]
-            ) ?: [];
+            try {
+                $row = $this->db->fetchOne(
+                    "SELECT organization_id, lab_name, address, phone, email,
+                            header_text, footer_text, logo_text,
+                            bill_header_text, bill_footer_text,
+                            header_image_mime,
+                            header_image_ver,
+                            CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image
+                     FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+                    ['org_id' => $orgId]
+                ) ?: [];
+            } catch (\Throwable $ignored2) {
+                $row = $this->db->fetchOne(
+                    "SELECT * FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+                    ['org_id' => $orgId]
+                ) ?: [];
+            }
             if ($row !== []) {
                 $row['has_header_image'] = !empty($row['header_image']) || !empty($row['header_image_mime']);
                 unset($row['header_image']);
+                if (!isset($row['header_image_position'])) {
+                    $row['header_image_position'] = 'top';
+                }
             }
             return $row;
         }
@@ -75,12 +92,17 @@ class SettingRepository
             'logo_text' => $data['logo_text'] ?? $data['logo'] ?? ($existing['logo_text'] ?? 'HLP'),
             'bill_header_text' => $data['bill_header_text'] ?? $data['bill_header'] ?? ($existing['bill_header_text'] ?? $data['header_text'] ?? $data['header'] ?? ''),
             'bill_footer_text' => $data['bill_footer_text'] ?? $data['bill_footer'] ?? ($existing['bill_footer_text'] ?? $data['footer_text'] ?? $data['footer'] ?? ''),
+            'header_image_position' => self::normalizeHeaderImagePosition(
+                (string)($data['header_image_position'] ?? $existing['header_image_position'] ?? 'top')
+            ),
         ];
+
+        $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position)",
                 $payload
             );
         } else {
@@ -94,7 +116,8 @@ class SettingRepository
                     footer_text = :footer_text,
                     logo_text = :logo_text,
                     bill_header_text = :bill_header_text,
-                    bill_footer_text = :bill_footer_text
+                    bill_footer_text = :bill_footer_text,
+                    header_image_position = :header_image_position
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -186,6 +209,28 @@ class SettingRepository
             return true;
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    public static function normalizeHeaderImagePosition(string $position): string
+    {
+        $position = strtolower(trim($position));
+        return in_array($position, ['top', 'after_meta', 'end'], true) ? $position : 'top';
+    }
+
+    private function ensureHeaderImagePositionColumn(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $this->db->execute(
+                "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'top'"
+            );
+        } catch (\Throwable $ignored) {
+            // Column already exists
         }
     }
 }

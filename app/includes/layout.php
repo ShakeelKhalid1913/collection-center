@@ -131,7 +131,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
 <div id="app-shell" class="min-h-full">
     <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
 
-    <aside id="sidebar" class="app-sidebar fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] -translate-x-full flex-col transition-transform duration-200 lg:translate-x-0">
+    <aside id="sidebar" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] -translate-x-full flex-col transition-transform duration-200 lg:translate-x-0">
         <div class="app-brand">
             <div class="app-brand__row">
                 <div class="app-brand__icon">{$logo}</div>
@@ -155,7 +155,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     </aside>
 
     <div class="lg:pl-[var(--sidebar-width)]">
-        <header class="app-topbar">
+        <header class="app-topbar no-print">
             <button type="button" id="sidebar-toggle" class="topbar-menu-btn lg:hidden" aria-label="Open menu">
                 <i class="fa-solid fa-bars" aria-hidden="true"></i>
             </button>
