@@ -1403,7 +1403,76 @@ textarea::placeholder {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.25rem;
-  min-height: 5rem;
+  min-height: 0;
+}
+
+/* Full-width letterhead banner — image + QR side by side (never overlap) */
+.lab-report__top--banner {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.lab-report__banner {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.lab-report__banner .lab-letterhead-image {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  overflow: hidden;
+  background: #fff;
+}
+
+.lab-report__banner .lab-letterhead-image__img,
+.lab-report__banner img {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: 1.85in !important;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.lab-report__top--banner .lab-report__qr {
+  position: static;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0;
+  background: #fff;
+}
+
+.lab-report__top--banner.lab-report__top--img-left .lab-report__banner .lab-letterhead-image__img,
+.lab-report__top--banner.lab-report__top--img-left .lab-report__banner img {
+  object-position: left center;
+}
+
+.lab-report__top--banner.lab-report__top--img-center .lab-report__banner .lab-letterhead-image__img,
+.lab-report__top--banner.lab-report__top--img-center .lab-report__banner img {
+  object-position: center center;
+}
+
+.lab-report__top--banner.lab-report__top--img-right .lab-report__banner .lab-letterhead-image__img,
+.lab-report__top--banner.lab-report__top--img-right .lab-report__banner img {
+  object-position: right center;
+}
+
+.lab-report__top--banner.lab-report__top--img-right {
+  flex-direction: row-reverse;
+}
+
+.lab-report__top--banner.lab-report__top--img-left .lab-report__qr,
+.lab-report__top--banner.lab-report__top--img-center .lab-report__qr,
+.lab-report__top--banner.lab-report__top--img-right .lab-report__qr {
+  left: auto;
+  right: auto;
 }
 
 .lab-report__letterhead {
@@ -1969,7 +2038,8 @@ textarea::placeholder {
 .print-stack.lab-print--hide-header .lab-letterhead-image,
 .print-stack.lab-print--hide-header .lab-report__brand,
 .print-stack.lab-print--hide-header .lab-report__brand-text,
-.print-stack.lab-print--hide-header .lab-report__letterhead-stack {
+.print-stack.lab-print--hide-header .lab-report__letterhead-stack,
+.print-stack.lab-print--hide-header .lab-report__banner {
   visibility: hidden !important;
 }
 
@@ -1982,6 +2052,7 @@ textarea::placeholder {
 .print-stack.lab-print--hide-all .lab-report__brand,
 .print-stack.lab-print--hide-all .lab-report__brand-text,
 .print-stack.lab-print--hide-all .lab-report__letterhead-stack,
+.print-stack.lab-print--hide-all .lab-report__banner,
 .print-stack.lab-print--hide-all .lab-report__qr {
   visibility: hidden !important;
 }
@@ -2322,12 +2393,14 @@ textarea::placeholder {
   .print-stack.lab-print--hide-header .lab-report__brand,
   .print-stack.lab-print--hide-header .lab-report__brand-text,
   .print-stack.lab-print--hide-header .lab-report__letterhead-stack,
+  .print-stack.lab-print--hide-header .lab-report__banner,
   .print-stack.lab-print--hide-qr .lab-report__qr,
   .print-stack.lab-print--hide-all .lab-report__letterhead,
   .print-stack.lab-print--hide-all .lab-letterhead-image,
   .print-stack.lab-print--hide-all .lab-report__brand,
   .print-stack.lab-print--hide-all .lab-report__brand-text,
   .print-stack.lab-print--hide-all .lab-report__letterhead-stack,
+  .print-stack.lab-print--hide-all .lab-report__banner,
   .print-stack.lab-print--hide-all .lab-report__qr,
   .print-stack.lab-print--hide-all .lab-report__footer-branding,
   .print-stack.lab-print--hide-all .software-credit,
@@ -2386,11 +2459,18 @@ textarea::placeholder {
   }
 
   .lab-letterhead-image__img {
-    max-height: 4.75rem !important;
-    height: 4.75rem !important;
-    width: auto !important;
+    max-height: 1.85in !important;
+    height: auto !important;
+    width: 100% !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  .lab-report__banner .lab-letterhead-image__img,
+  .lab-report__banner img {
+    max-height: 1.85in !important;
+    width: 100% !important;
+    height: auto !important;
   }
 
   .lab-report__qr img {

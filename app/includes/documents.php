@@ -792,22 +792,26 @@ function render_report_sheet(
         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);
         $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="56" height="56"></div>';
 
-        // Header row: logo / letterhead + QR only (no lab name text)
         $imgPos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
             (string)($settings['header_image_position'] ?? 'left')
         );
-        $mark = $letterhead !== ''
-            ? '<div class="lab-report__mark lab-report__mark--letterhead">' . $letterhead . '</div>'
-            : '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>';
 
-        $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
-            . '<div class="lab-report__letterhead">'
-            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
-            . $mark
-            . '</div>'
-            . '</div>'
-            . $qrHtml
-            . '</div>';
+        if ($letterhead !== '') {
+            // Full-width letterhead banner; QR sits on the right over/beside it
+            $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '">'
+                . '<div class="lab-report__banner">' . $letterhead . '</div>'
+                . $qrHtml
+                . '</div>';
+        } else {
+            $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
+                . '<div class="lab-report__letterhead">'
+                . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
+                . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
+                . '</div>'
+                . '</div>'
+                . $qrHtml
+                . '</div>';
+        }
         $metaBlock = build_patient_document_meta($patient, $entry, 'report');
         $headerHtml = <<<HTML
         <header class="lab-report__header">
