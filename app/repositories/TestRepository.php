@@ -24,6 +24,9 @@ class TestRepository
         }
         $done = true;
         foreach ([
+            "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
+            "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
+            "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
             "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
             "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
@@ -33,6 +36,14 @@ class TestRepository
             } catch (\Throwable $ignored) {
             }
         }
+    }
+
+    public function updateMethodology(string $testId, string $methodology): bool
+    {
+        return $this->db->execute(
+            "UPDATE tests SET methodology = :methodology WHERE id = :id",
+            ['id' => $testId, 'methodology' => $methodology]
+        );
     }
 
     public function getTests(string $orgId = 'ORG-001'): array

@@ -343,13 +343,17 @@ class ResultRepository
             $visible = array_key_exists('is_visible', $item)
                 ? ((int)$item['is_visible'] ? 1 : 0)
                 : null;
+            $hasSub = array_key_exists('sub_table', $item);
+            $subVal = $hasSub ? ($item['sub_table'] !== null && trim((string)$item['sub_table']) !== '' ? (string)$item['sub_table'] : null) : null;
+
             $this->db->execute(
                 "UPDATE results SET 
                     value = :value, 
                     unit = COALESCE(:unit, unit), 
                     reference_range = COALESCE(:range, reference_range), 
                     flag = :flag,
-                    is_visible = COALESCE(:is_visible, is_visible)
+                    is_visible = COALESCE(:is_visible, is_visible),
+                    sub_table = CASE WHEN :has_sub = 1 THEN :sub_table ELSE sub_table END
                  WHERE id = :id AND lab_no = :lab_no",
                 [
                     'id' => $id,
@@ -359,6 +363,8 @@ class ResultRepository
                     'range' => $item['reference_range'] ?? null,
                     'flag' => $item['flag'] ?? '',
                     'is_visible' => $visible,
+                    'has_sub' => $hasSub ? 1 : 0,
+                    'sub_table' => $subVal,
                 ]
             );
         }

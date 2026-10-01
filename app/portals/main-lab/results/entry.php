@@ -62,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
             }
         }
 
+        $subTable = array_key_exists('sub_table', $item) ? trim((string)$item['sub_table']) : null;
+
         $batchData[] = [
             'id' => $rId,
             'value' => $val,
@@ -69,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
             'reference_range' => $item['range'] ?? null,
             'flag' => $flag,
             'is_visible' => $isVisible,
+            'sub_table' => $subTable,
         ];
     }
 
@@ -91,6 +94,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
 
     if ($notes !== '') {
         lab_repo()->updateEntry($postLabNo, ['clinical_notes' => $notes]);
+    }
+
+    if (isset($_POST['test_methodology'])) {
+        $testMethodology = trim((string)$_POST['test_methodology']);
+        $testToUpdateId = trim((string)($_POST['active_test_id'] ?? ''));
+        if ($testToUpdateId !== '') {
+            test_repo()->updateMethodology($testToUpdateId, $testMethodology);
+        } elseif ($activeTest !== '') {
+            $tObj = test_repo()->findByCode($activeTest, $orgId);
+            if ($tObj && !empty($tObj['id'])) {
+                test_repo()->updateMethodology((string)$tObj['id'], $testMethodology);
+            }
+        }
     }
 
     if (!empty($_POST['send_verify']) || !empty($_POST['goto_preview'])) {
@@ -178,8 +194,10 @@ foreach ($testNames as $i => $tn) {
 
 $activeRows = $byTest[$activeTest] ?? [];
 
-// Resolve catalog meta for dropdown options on the active test
+// Resolve catalog meta for dropdown options and methodology on the active test
 $activeTestMeta = test_repo()->findByCode($activeTest, $orgId);
+$activeTestId = (string)($activeTestMeta['id'] ?? '');
+$activeTestMethodology = (string)($activeTestMeta['methodology'] ?? '');
 $testResultType = strtolower((string)($activeTestMeta['result_type'] ?? 'numeric'));
 $testResultOptions = parse_result_options((string)($activeTestMeta['result_options'] ?? ''));
 if ($testResultOptions === null && $testResultType === 'options') {
@@ -245,12 +263,18 @@ foreach ($activeRows as $r) {
         $flagDisplay = '<span class="font-bold" style="color:#16a34a" title="Normal">✓ Normal</span>';
     }
 
-    $subHtml = '';
-    if (!empty($r['sub_table'])) {
-        $subHtml = '<details class="mt-1 text-xs text-slate-500"><summary class="cursor-pointer text-teal-700 font-semibold">Reference table</summary>'
-            . '<pre class="mt-1 whitespace-pre-wrap font-mono bg-slate-50 border border-slate-200 rounded p-2">'
-            . e((string)$r['sub_table']) . '</pre></details>';
-    }
+    $subValRaw = (string)($r['sub_table'] ?? '');
+    $hasSub = trim($subValRaw) !== '';
+    $subSummaryText = $hasSub ? 'Reference Criteria Table (' . strlen($subValRaw) . ' chars)' : '+ Add Reference Criteria Table';
+    $subHtml = '<details class="mt-1 text-xs text-slate-500"' . ($hasSub ? ' open' : '') . '>'
+        . '<summary class="cursor-pointer font-medium text-slate-500 hover:text-slate-700 inline-flex items-center gap-1 py-0.5">'
+        . '<i class="fa-solid fa-table-list text-[10px]"></i> ' . e($subSummaryText)
+        . '</summary>'
+        . '<div class="mt-1 p-2 bg-slate-50 rounded border border-slate-200 space-y-1">'
+        . '<label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Criteria / Sub-table (Criteria: Range):</label>'
+        . '<textarea name="results[' . $rId . '][sub_table]" class="field text-xs font-mono w-full rounded border border-slate-300 p-1.5 leading-normal" rows="2" placeholder="e.g. 0-2 yrs: 10-20&#10;>2 yrs: 20-40">' . e($subValRaw) . '</textarea>'
+        . '</div>'
+        . '</details>';
 
     $rowOptions = parse_result_options($rangeRaw);
     if ($rowOptions === null && count($activeRows) === 1 && $testResultOptions !== null) {
@@ -327,6 +351,8 @@ $nextBtn = $nextTest
     : '<span class="btn btn-secondary text-xs flex-1 opacity-40 pointer-events-none">Next →</span>';
 
 $activeTestLabel = e($activeTest);
+$activeTestIdSafe = e($activeTestId);
+$activeTestMethodologySafe = e($activeTestMethodology);
 $posLabel = $testCount > 0 ? (($testIndex + 1) . ' of ' . $testCount) : '0 of 0';
 $baseUrlJs = e($baseUrl);
 
@@ -426,6 +452,25 @@ $content .= <<<HTML
                     {$tableBody}
                 </tbody>
             </table>
+        </div>
+
+        <div class="border-t border-slate-200 p-4 bg-slate-50/70 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                        <i class="fa-solid fa-microscope text-teal-700 mr-1.5"></i>
+                        Test Methodology &amp; Clinical Notes ({$activeTestLabel})
+                    </label>
+                    <p class="text-[11px] text-slate-500 mt-0.5">
+                        Belongs to the <strong>{$activeTestLabel}</strong> test entity in the test catalog. Automatically prints as a clinical narrative box under this test on the patient report.
+                    </p>
+                </div>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-100 text-teal-800">
+                    tests.methodology
+                </span>
+            </div>
+            <textarea name="test_methodology" rows="5" class="field w-full font-mono text-xs leading-relaxed" placeholder="Enter methodology paragraphs, kit details, principle, interpretation, comments... (e.g. Methodologies: ..., Comments: ..., Interpretation: ...)">{$activeTestMethodologySafe}</textarea>
+            <input type="hidden" name="active_test_id" value="{$activeTestIdSafe}">
         </div>
 
         <div class="border-t border-slate-200 p-4 space-y-2">

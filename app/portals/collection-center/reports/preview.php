@@ -11,10 +11,10 @@ $ctx = load_document_context($labNo !== '' ? $labNo : null);
 
 $previewUrl = '/portals/collection-center/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 
-$content = page_header(
+$content = '<div class="no-print">' . page_header(
     'Report Preview',
     'Collection Center print/PDF preview — uses lab branding header, address & footer. Optional CNIC / blood group / email only if entered.'
-);
+) . '</div>';
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
 $content .= '<div class="mt-6 no-print flex flex-wrap gap-2">' .
     btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode((string)($ctx['entry']['lab_no'] ?? '')), 'Receipt') .

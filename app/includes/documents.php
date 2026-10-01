@@ -343,6 +343,15 @@ function load_document_context(?string $labNo): array
             );
         }
 
+        $testTitles = array_unique(array_filter(array_column($results, 'test')));
+        $testMethodologies = [];
+        foreach ($testTitles as $tt) {
+            $tObj = test_repo()->findByCode($tt, $settings['organization_id'] ?? 'ORG-001');
+            if ($tObj && !empty($tObj['methodology'])) {
+                $testMethodologies[$tt] = trim((string)$tObj['methodology']);
+            }
+        }
+
         foreach ($results as $r) {
             if (($r['value'] ?? '') === '' && ($r['parameter'] ?? '') === '') {
                 continue;
@@ -351,14 +360,16 @@ function load_document_context(?string $labNo): array
             if (isset($r['is_visible']) && (int)$r['is_visible'] === 0) {
                 continue;
             }
+            $tTitle = $r['test'] ?? '';
             $lines[] = [
-                'test_title' => $r['test'] ?? '',
+                'test_title' => $tTitle,
                 'section' => $r['section'] ?? '',
-                'test' => $r['parameter'] ?: ($r['test'] ?? 'Result'),
+                'test' => $r['parameter'] ?: ($tTitle !== '' ? $tTitle : 'Result'),
                 'result' => ($r['value'] !== null && $r['value'] !== '') ? $r['value'] : 'Pending',
                 'unit' => $r['unit'] ?? '—',
                 'range' => $r['reference_range'] ?: ($r['normal_value'] ?? '—'),
                 'sub_table' => $r['sub_table'] ?? '',
+                'methodology' => $testMethodologies[$tTitle] ?? '',
                 'flag' => $r['flag'] ?? '',
                 'print_page' => max(1, (int)($r['print_page'] ?? 1)),
             ];
@@ -645,6 +656,61 @@ function build_report_result_rows(array $resultLines): string
     $currentSection = null;
     $showSirLegend = false;
 
+    // Cache or collect test-level methodologies
+    $testMethodologies = [];
+    foreach ($resultLines as $l) {
+        $tt = trim((string)($l['test_title'] ?? ''));
+        if ($tt !== '' && !empty($l['methodology']) && !isset($testMethodologies[$tt])) {
+            $testMethodologies[$tt] = trim((string)$l['methodology']);
+        }
+    }
+
+    $getMethodology = static function (string $title) use (&$testMethodologies): string {
+        if ($title === '') {
+            return '';
+        }
+        if (array_key_exists($title, $testMethodologies)) {
+            return $testMethodologies[$title];
+        }
+        $meta = test_repo()->findByCode($title);
+        $m = trim((string)($meta['methodology'] ?? ''));
+        $testMethodologies[$title] = $m;
+        return $m;
+    };
+
+    $renderMethodology = static function (string $text): string {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+        $paras = preg_split('/\n\s*\n/', $text) ?: [$text];
+        $methodologyHtml = '';
+        foreach ($paras as $para) {
+            $para = trim((string)$para);
+            if ($para === '') continue;
+            if (preg_match('/^([A-Za-z0-9\s\/\-_]+:)(.*)$/s', $para, $pm)) {
+                $titlePart = trim($pm[1]);
+                $contentPart = trim($pm[2] ?? '');
+                $methodologyHtml .= '<div class="lab-report__methodology-heading">' . e($titlePart) . '</div>';
+                if ($contentPart !== '') {
+                    $methodologyHtml .= '<div class="lab-report__methodology-p">' . nl2br(e($contentPart)) . '</div>';
+                }
+            } else {
+                $methodologyHtml .= '<div class="lab-report__methodology-p">' . nl2br(e($para)) . '</div>';
+            }
+        }
+        if ($methodologyHtml === '') {
+            return '';
+        }
+        return '<tr class="lab-report__methodology-row">
+            <td colspan="4">
+                <div class="lab-report__methodology-box">
+                    ' . $methodologyHtml . '
+                </div>
+            </td>
+        </tr>';
+    };
+
     $testRowCounts = [];
     foreach ($resultLines as $line) {
         $tt = trim((string)($line['test_title'] ?? ''));
@@ -660,6 +726,13 @@ function build_report_result_rows(array $resultLines): string
         $paramRaw = trim((string)($line['test'] ?? ''));
 
         if ($testTitle !== '' && $testTitle !== $currentTestTitle) {
+            // Render previous test's methodology before starting next test
+            if ($currentTestTitle !== null) {
+                $prevM = $getMethodology($currentTestTitle);
+                if ($prevM !== '') {
+                    $rows .= $renderMethodology($prevM);
+                }
+            }
             $currentTestTitle = $testTitle;
             $currentSection = null;
             $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
@@ -683,7 +756,13 @@ function build_report_result_rows(array $resultLines): string
         $resClass = 'lab-report__result';
         $arrow = '';
         $resultRaw = trim((string)($line['result'] ?? ''));
-        $isPending = $resultRaw === '' || strcasecmp($resultRaw, 'Pending') === 0;
+        if ($resultRaw === '-' || $resultRaw === '—' || $resultRaw === '') {
+            $resVal = '—';
+            $isPending = false;
+        } else {
+            $resVal = e($resultRaw);
+            $isPending = strcasecmp($resultRaw, 'Pending') === 0;
+        }
 
         if ($flagRaw === 'l') {
             $resClass .= ' lab-report__result--low';
@@ -699,7 +778,6 @@ function build_report_result_rows(array $resultLines): string
             $arrow = ' <span class="lab-report__arrow lab-report__arrow--normal">&#10003;</span>';
         }
 
-        $resVal = e($line['result'] ?? 'Pending');
         $unitVal = e($line['unit'] ?? '—');
         $rangeVal = e($line['range'] ?? '—');
         $paramName = e($paramRaw);
@@ -712,27 +790,52 @@ function build_report_result_rows(array $resultLines): string
         </tr>';
 
         if (!empty($line['sub_table'])) {
-            $subLines = explode("\n", trim((string)$line['sub_table']));
-            $subRowsHtml = '';
-            foreach ($subLines as $sl) {
-                $parts = explode(':', $sl, 2);
-                if (count($parts) === 2) {
-                    $subRowsHtml .= '<tr><td>' . e(trim($parts[0])) . '</td><td>' . e(trim($parts[1])) . '</td></tr>';
+            $subText = trim((string)$line['sub_table']);
+            $currentMeth = $getMethodology($testTitle);
+            $isDuplicateOfTestMeth = $currentMeth !== '' && (
+                $subText === $currentMeth
+                || strcasecmp(substr($subText, 0, 50), substr($currentMeth, 0, 50)) === 0
+            );
+
+            if (!$isDuplicateOfTestMeth) {
+                $isMethodology = preg_match('/methodolog|comment|interpretation|principle|note\s*:/i', $subText)
+                    || strlen($subText) > 200
+                    || preg_match('/\.\s+[A-Z]/', $subText);
+
+                if ($isMethodology) {
+                    $rows .= $renderMethodology($subText);
+                } else {
+                    $subLines = explode("\n", $subText);
+                    $subRowsHtml = '';
+                    foreach ($subLines as $sl) {
+                        $parts = explode(':', $sl, 2);
+                        if (count($parts) === 2) {
+                            $subRowsHtml .= '<tr><td>' . e(trim($parts[0])) . '</td><td>' . e(trim($parts[1])) . '</td></tr>';
+                        }
+                    }
+                    if ($subRowsHtml !== '') {
+                        $rows .= '<tr class="lab-report__subtable-row">
+                            <td colspan="4">
+                                <div class="lab-report__subtable-wrap">
+                                    <span class="lab-report__subtable-title">Reference Criteria</span>
+                                    <table class="lab-report__subtable">
+                                        <thead><tr><th>Criteria / Parameter</th><th>Reference Range</th></tr></thead>
+                                        <tbody>' . $subRowsHtml . '</tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>';
+                    }
                 }
             }
-            if ($subRowsHtml !== '') {
-                $rows .= '<tr class="lab-report__subtable-row">
-                    <td colspan="4">
-                        <div class="lab-report__subtable-wrap">
-                            <span class="lab-report__subtable-title">Reference Table</span>
-                            <table class="lab-report__subtable">
-                                <thead><tr><th>AGE</th><th>VALUE</th></tr></thead>
-                                <tbody>' . $subRowsHtml . '</tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>';
-            }
+        }
+    }
+
+    // Render methodology for the last test
+    if ($currentTestTitle !== null) {
+        $lastM = $getMethodology($currentTestTitle);
+        if ($lastM !== '') {
+            $rows .= $renderMethodology($lastM);
         }
     }
 
@@ -778,62 +881,49 @@ function render_report_sheet(
     $isFirstPage = $pageIndex <= 1;
     $isLastPage = $pageIndex >= $totalPages;
 
-    if ($isFirstPage) {
-        $letterhead = render_letterhead_image($settings);
-        $logoImg = brand_logo('brand-logo brand-logo--report');
+    $letterhead = render_letterhead_image($settings);
+    $logoImg = brand_logo('brand-logo brand-logo--report');
 
-        $qrPayload = $labNoRaw !== ''
-            ? (isset($_SERVER['HTTP_HOST'])
-                ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
-                    . '://' . $_SERVER['HTTP_HOST']
-                    . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
-                : $labNoRaw)
-            : ($settings['name'] ?? 'Lab Report');
-        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);
-        $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="56" height="56"></div>';
+    $qrPayload = $labNoRaw !== ''
+        ? (isset($_SERVER['HTTP_HOST'])
+            ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+                . '://' . $_SERVER['HTTP_HOST']
+                . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
+            : $labNoRaw)
+        : ($settings['name'] ?? 'Lab Report');
+    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);
+    $qrHtml = '<div class="lab-report__qr"><img src="' . e($qrUrl) . '" alt="Report QR" width="56" height="56"></div>';
 
-        $imgPos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
-            (string)($settings['header_image_position'] ?? 'left')
-        );
+    $imgPos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
+        (string)($settings['header_image_position'] ?? 'left')
+    );
 
-        if ($letterhead !== '') {
-            // Full-width letterhead banner; QR sits on the right over/beside it
-            $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '">'
-                . '<div class="lab-report__banner">' . $letterhead . '</div>'
-                . $qrHtml
-                . '</div>';
-        } else {
-            $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
-                . '<div class="lab-report__letterhead">'
-                . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
-                . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
-                . '</div>'
-                . '</div>'
-                . $qrHtml
-                . '</div>';
-        }
-        $metaBlock = build_patient_document_meta($patient, $entry, 'report');
-        $headerHtml = <<<HTML
-        <header class="lab-report__header">
-            {$brandBlock}
-            {$metaBlock}
-            <div class="lab-report__title-wrap">
-                <h2 class="lab-report__title">{$title}</h2>
-            </div>
-        </header>
-        HTML;
+    if ($letterhead !== '') {
+        // Full-width letterhead banner; QR sits on the right over/beside it
+        $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '">'
+            . '<div class="lab-report__banner">' . $letterhead . '</div>'
+            . $qrHtml
+            . '</div>';
     } else {
-        $patientName = e(trim((string)($patient['name'] ?? ($entry['patient_name'] ?? '—'))));
-        $labNoE = e($labNoRaw !== '' ? $labNoRaw : '—');
-        $headerHtml = <<<HTML
-        <header class="lab-report__header lab-report__header--continued">
-            <div class="lab-report__continued-bar">
-                <span><strong>{$patientName}</strong> · Lab No: <strong>{$labNoE}</strong></span>
-                <span>{$title} — continued · {$pageLabel}</span>
-            </div>
-        </header>
-        HTML;
+        $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
+            . '<div class="lab-report__letterhead">'
+            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
+            . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
+            . '</div>'
+            . '</div>'
+            . $qrHtml
+            . '</div>';
     }
+    $metaBlock = build_patient_document_meta($patient, $entry, 'report');
+    $headerHtml = <<<HTML
+    <header class="lab-report__header">
+        {$brandBlock}
+        {$metaBlock}
+        <div class="lab-report__title-wrap">
+            <h2 class="lab-report__title">{$title}</h2>
+        </div>
+    </header>
+    HTML;
 
     // No "Note: lab values..." line — only interpret disclaimer + Get well soon footer
     $noteHtml = '';
@@ -842,20 +932,14 @@ function render_report_sheet(
     if ($footerNote === '' || preg_match('/electronically verified/i', $footerNote)) {
         $footerNote = 'Get well soon. Thank you.';
     }
-    $footerBlock = ($isLastPage && $footerNote !== '')
+    $footerBlock = ($footerNote !== '')
         ? '<p class="lab-report__lab-note">' . e($footerNote) . '</p>'
         : '';
-    $credit = $isLastPage ? software_credit_footer(true) : '';
-    $printStamp = e(date('d-M-Y h:i:s A'));
+    $credit = software_credit_footer(true);
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
-    $signatoriesHtml = $isLastPage ? render_report_signatories($signatories) : '';
-    $disclaimer = $isLastPage
-        ? '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician.</p>'
-        : '';
-    $contactBar = ($isLastPage && $addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
-    $sideNote = $isFirstPage
-        ? '<aside class="lab-report__side-note" aria-hidden="true">All Results Should Be Interpreted And Correlated By Physician. Not Valid for Legal Proceeding.</aside>'
-        : '';
+    $signatoriesHtml = render_report_signatories($signatories);
+    $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician.</p>';
+    $contactBar = ($addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
 
     return <<<HTML
     <div class="print-area lab-report{$breakClass}">
@@ -876,18 +960,12 @@ function render_report_sheet(
             {$noteHtml}
         </section>
 
-        {$sideNote}
-
         <footer class="lab-report__footer">
             <div class="lab-report__footer-branding">
                 {$disclaimer}
                 {$footerBlock}
                 {$signatoriesHtml}
                 {$contactBar}
-            </div>
-            <div class="lab-report__bottom-line">
-                <span>{$pageLabel}</span>
-                <span>{$printStamp}</span>
             </div>
             {$credit}
         </footer>

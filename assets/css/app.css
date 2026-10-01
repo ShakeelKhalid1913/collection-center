@@ -1322,7 +1322,8 @@ textarea::placeholder {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 275mm;
+  box-sizing: border-box;
 }
 
 .lab-report__header {
@@ -1873,16 +1874,18 @@ textarea::placeholder {
   margin-top: 0.05rem;
 }
 
-/* Body matches Infinity sample: NO borders at all — alignment only */
+/* Body matches Infinity sample: compact rows */
 .lab-report__table tbody td {
-  padding: 0.35rem 0.5rem;
+  padding: 0.14rem 0.45rem;
+  line-height: 1.25;
   border: none !important;
   vertical-align: middle;
   color: #0f172a;
 }
 
 .lab-report__param-cell {
-  font-weight: 700;
+  font-weight: 400;
+  color: #0f172a;
 }
 
 .lab-report__range-cell,
@@ -1893,8 +1896,8 @@ textarea::placeholder {
 
 .lab-report__test-head td {
   background: #ffffff !important;
-  padding: 0.65rem 0.5rem 0.25rem !important;
-  font-size: 0.9rem;
+  padding: 0.3rem 0.45rem 0.12rem !important;
+  font-size: 0.88rem;
   font-weight: 800;
   color: #0f172a;
   border: none !important;
@@ -1902,11 +1905,11 @@ textarea::placeholder {
 
 .lab-report__panel-banner {
   display: block;
-  border-top: 2.5px solid #0f172a;
+  border-top: 2px solid #0f172a;
   border-bottom: 1px solid #0f172a;
   background: #f1f5f9;
-  padding: 0.28rem 0.45rem;
-  margin: 0.15rem 0 0.1rem;
+  padding: 0.18rem 0.4rem;
+  margin: 0.1rem 0 0.05rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -1918,9 +1921,51 @@ textarea::placeholder {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.4rem 0.5rem 0.15rem !important;
+  padding: 0.22rem 0.45rem 0.1rem !important;
   border: none !important;
   border-bottom: 1px solid #cbd5e1 !important;
+}
+
+.lab-report__methodology-row td {
+  border: none !important;
+  padding: 0.15rem 0.45rem !important;
+}
+
+.lab-report__methodology-box {
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.6rem;
+  background: #f8fafc;
+  border-left: 3px solid #0f172a;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #1e293b;
+}
+
+.lab-report__methodology-heading {
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #0f172a;
+  font-size: 0.72rem;
+  margin-top: 0.3rem;
+  margin-bottom: 0.12rem;
+  letter-spacing: 0.02em;
+}
+
+.lab-report__methodology-heading:first-child {
+  margin-top: 0;
+}
+
+.lab-report__methodology-p {
+  margin: 0 0 0.25rem;
+  color: #334155;
+  text-align: justify;
+}
+
+.lab-report__methodology-p:last-child {
+  margin-bottom: 0;
 }
 
 .lab-report__sir-legend {
@@ -2365,14 +2410,42 @@ textarea::placeholder {
 
 @media print {
   @page {
-    size: A4;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 0;
   }
 
   html, body {
     background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Reset outer shell, sidebar offsets, and main margins so print starts cleanly at 0,0 */
+  #app-shell,
+  #app-shell > div,
+  .lg\:pl-\[var\(--sidebar-width\)\],
+  main,
+  .app-main {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    display: block !important;
+  }
+
+  .no-print,
+  .no-print *,
+  #sidebar,
+  #sidebar-backdrop,
+  .app-sidebar,
+  .app-topbar,
+  .wa-float,
+  .software-credit-bar {
+    display: none !important;
   }
 
   body * {
@@ -2409,10 +2482,12 @@ textarea::placeholder {
   }
 
   .print-stack {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .print-area {
@@ -2429,10 +2504,25 @@ textarea::placeholder {
   }
 
   .lab-report {
-    width: 100%;
-    min-height: auto;
-    display: block;
-    padding: 0 !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    height: 297mm !important;
+    box-sizing: border-box !important;
+    padding: 3mm 6mm 3mm 6mm !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .lab-report:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .lab-report--page-break {
@@ -2440,12 +2530,31 @@ textarea::placeholder {
     break-after: page !important;
   }
 
+  .lab-report__header {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: 0 0 0.15rem 0 !important;
+  }
+
+  .lab-report__top,
+  .lab-report__top--banner,
+  .lab-letterhead-image {
+    margin: 0 0 0.15rem 0 !important;
+    padding: 0 !important;
+  }
+
   .lab-report__body {
-    flex: none;
+    flex: 1 1 auto !important;
   }
 
   .lab-report__footer {
-    margin-top: 0.75rem;
+    flex: 0 0 auto !important;
+    margin-top: auto !important;
+    width: 100% !important;
+  }
+
+  .lab-report__side-note {
+    display: none !important;
   }
 
   .no-print {
@@ -2493,21 +2602,6 @@ textarea::placeholder {
     background: transparent !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  .lab-report__side-note {
-    display: block;
-    position: absolute;
-    right: 0.15in;
-    top: 45%;
-    width: 0.9rem;
-    font-size: 0.55rem;
-    line-height: 1.15;
-    color: #000;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    text-align: center;
-    letter-spacing: 0.02em;
   }
 
   .lab-report__table thead th {
