@@ -22,6 +22,7 @@ use App\Database\Database;
 function import_report_usage(): void
 {
     echo "Usage:\n";
+    echo "  php app/database/import_patient_report.php --all\n";
     echo "  php app/database/import_patient_report.php <report-php-file>\n";
     echo "  php app/database/import_patient_report.php --list\n";
 }
@@ -511,6 +512,35 @@ if ($isCli) {
             echo $f . "\n";
         }
         exit(0);
+    }
+
+    if ($arg === '--all' || $arg === '-a') {
+        if ($availableReports === []) {
+            echo "No reports found in {$reportsDir}\n";
+            exit(0);
+        }
+        echo "Importing all " . count($availableReports) . " report(s)…\n";
+        $allOk = true;
+        foreach ($availableReports as $f) {
+            $p = $reportsDir . '/' . $f;
+            /** @var mixed $rep */
+            $rep = require $p;
+            if (!is_array($rep)) {
+                echo "✗ FAIL: {$f} did not return an array.\n";
+                $allOk = false;
+                continue;
+            }
+            echo "\n=== Importing {$f} ===\n";
+            $res = import_patient_report($rep);
+            echo ($res['ok'] ? '✓ OK: ' : '✗ FAIL: ') . $res['message'] . "\n";
+            if (!empty($res['lab_no'])) {
+                echo "  Preview: /portals/main-lab/reports/preview.php?lab_no=" . rawurlencode((string)$res['lab_no']) . "\n";
+            }
+            if (!$res['ok']) {
+                $allOk = false;
+            }
+        }
+        exit($allOk ? 0 : 1);
     }
 
     // If no argument is provided in CLI, default to master_cc5424087.php if it exists
