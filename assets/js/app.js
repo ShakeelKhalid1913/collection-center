@@ -411,20 +411,37 @@
 
     const headerCb = toolbar.querySelector('[data-print-toggle="hide-header"]');
     const qrCb = toolbar.querySelector('[data-print-toggle="hide-qr"]');
+    const footerCb = toolbar.querySelector('[data-print-toggle="hide-footer"]');
     const allCb = toolbar.querySelector('[data-print-toggle="hide-all"]');
+
+    // Restore saved toggle states
+    try {
+      if (headerCb && localStorage.getItem('print_hide_header') === '1') headerCb.checked = true;
+      if (qrCb && localStorage.getItem('print_hide_qr') === '1') qrCb.checked = true;
+      if (footerCb && localStorage.getItem('print_hide_footer') === '1') footerCb.checked = true;
+      if (allCb && localStorage.getItem('print_hide_all') === '1') allCb.checked = true;
+    } catch (_) {}
 
     function apply() {
       const hideAll = !!allCb?.checked;
       stack.classList.toggle('lab-print--hide-all', hideAll);
       stack.classList.toggle('lab-print--hide-header', hideAll || !!headerCb?.checked);
       stack.classList.toggle('lab-print--hide-qr', hideAll || !!qrCb?.checked);
+      stack.classList.toggle('lab-print--hide-footer', hideAll || !!footerCb?.checked);
       if (hideAll) {
         if (headerCb) headerCb.checked = true;
         if (qrCb) qrCb.checked = true;
+        if (footerCb) footerCb.checked = true;
       }
+      try {
+        localStorage.setItem('print_hide_header', headerCb?.checked ? '1' : '0');
+        localStorage.setItem('print_hide_qr', qrCb?.checked ? '1' : '0');
+        localStorage.setItem('print_hide_footer', footerCb?.checked ? '1' : '0');
+        localStorage.setItem('print_hide_all', allCb?.checked ? '1' : '0');
+      } catch (_) {}
     }
 
-    [headerCb, qrCb, allCb].forEach((cb) => cb?.addEventListener('change', apply));
+    [headerCb, qrCb, footerCb, allCb].forEach((cb) => cb?.addEventListener('change', apply));
     apply();
   }
 

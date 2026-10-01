@@ -21,15 +21,14 @@ function brand_logo(string $class = 'brand-logo', string $alt = 'Health LMS Pro'
 function software_credit_footer(bool $compact = false): string
 {
     $wa = 'https://wa.me/923283070070';
-    $line = 'Software created by <strong>Shakeel Khalid</strong>'
-        . ' · <a href="' . e($wa) . '" target="_blank" rel="noopener">WhatsApp 0328-3070070</a>';
+    $line = 'Software created by <strong style="display:inline!important;">Shakeel Khalid</strong> &middot; <a href="' . e($wa) . '" target="_blank" rel="noopener" style="display:inline!important;">WhatsApp 0328-3070070</a>';
 
     if ($compact) {
-        return '<p class="software-credit software-credit--print">' . $line . '</p>';
+        return '<p class="software-credit software-credit--print" style="white-space:nowrap!important;text-align:center!important;margin:0.2rem auto 0!important;display:block!important;width:100%!important;font-size:0.68rem!important;line-height:1.2!important;">' . $line . '</p>';
     }
 
     return '<footer class="software-credit-bar">'
-        . '<p class="software-credit">' . $line . '</p>'
+        . '<p class="software-credit" style="white-space:nowrap!important;text-align:center!important;display:block!important;width:100%!important;">' . $line . '</p>'
         . '</footer>';
 }
 

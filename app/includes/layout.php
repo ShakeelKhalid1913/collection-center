@@ -118,8 +118,8 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     // Hide page credit on receipt/report preview — credit lives inside the print box only
     $appCredit = $hideAppCredit ? '' : (
         '<footer class="software-credit-bar software-credit-bar--app no-print">' .
-        '<p class="software-credit">Software created by <strong>Shakeel Khalid</strong>' .
-        ' · <a href="https://wa.me/923283070070" target="_blank" rel="noopener">WhatsApp 0328-3070070</a></p>' .
+        '<p class="software-credit" style="white-space:nowrap!important;text-align:center!important;display:block!important;width:100%!important;">Software created by <strong>Shakeel Khalid</strong>' .
+        ' &middot; <a href="https://wa.me/923283070070" target="_blank" rel="noopener">WhatsApp 0328-3070070</a></p>' .
         '</footer>'
     );
 

@@ -23,6 +23,22 @@ class LabEntryRepository
         );
     }
 
+    public function getEntriesWithPatients(string $orgId = 'ORG-001', int $limit = 250): array
+    {
+        return $this->db->fetchAll(
+            "SELECT le.lab_no, le.patient_id, le.patient_name, le.tests, le.doctor, le.status, le.created_at,
+                    COALESCE(p.patient_no, le.patient_id) AS mr_no,
+                    COALESCE(p.full_name, le.patient_name) AS full_name,
+                    p.phone, p.age, p.gender
+             FROM lab_entries le
+             LEFT JOIN patients p ON (p.id = le.patient_id OR p.patient_no = le.patient_id)
+             WHERE le.organization_id = ?
+             ORDER BY le.created_at DESC
+             LIMIT {$limit}",
+            [$orgId]
+        );
+    }
+
     public function findByLabNo(string $labNo): ?array
     {
         return $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no LIMIT 1", ['lab_no' => $labNo]);

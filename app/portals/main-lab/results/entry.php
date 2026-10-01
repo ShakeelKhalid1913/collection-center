@@ -176,15 +176,30 @@ $addTestLink = '/portals/main-lab/lab-entries/edit.php?lab_no=' . urlencode($lab
 $historyMr = (string)($patient['patient_no'] ?? ($entry['patient_id'] ?? ''));
 $historyLink = '/portals/main-lab/patients/history.php?id=' . urlencode($historyMr);
 
-// Patient switcher (other lab numbers)
-$allEntries = lab_repo()->getAll();
+// Patient switcher & live search dataset (searches by Lab No, MR No, or Name in real-time)
+$allEntries = lab_repo()->getEntriesWithPatients($orgId, 300);
 $switcherOpts = '';
+$searchVisits = [];
 foreach ($allEntries as $ae) {
     $sel = $ae['lab_no'] === $labNo ? ' selected' : '';
     $testsLabel = normalize_tests_list((string)($ae['tests'] ?? ''));
     $switcherOpts .= '<option value="' . e($ae['lab_no']) . '"' . $sel . '>'
         . e($ae['lab_no']) . ' — ' . e($ae['patient_name']) . ' (' . e($testsLabel) . ')</option>';
+
+    $searchVisits[] = [
+        'lab_no' => (string)$ae['lab_no'],
+        'mr_no' => (string)($ae['mr_no'] ?? ''),
+        'patient_name' => (string)($ae['patient_name'] ?? $ae['full_name'] ?? ''),
+        'tests' => $testsLabel,
+        'status' => (string)($ae['status'] ?? 'pending'),
+        'age' => (string)($ae['age'] ?? ''),
+        'gender' => (string)($ae['gender'] ?? ''),
+        'doctor' => (string)($ae['doctor'] ?? ''),
+        'date' => format_date($ae['created_at'] ?? null),
+        'is_current' => ($ae['lab_no'] === $labNo),
+    ];
 }
+$searchVisitsJson = json_encode($searchVisits, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 
 $testSelectOpts = '';
 foreach ($testNames as $i => $tn) {
@@ -367,12 +382,52 @@ $content .= <<<HTML
 <input type="hidden" name="lab_no" value="{$labNoSafe}">
 <input type="hidden" name="active_test" value="{$activeTestLabel}">
 
-<div class="mb-4 flex flex-wrap items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg">
-    <label class="text-sm font-semibold text-slate-700">Open patient visit:</label>
-    <select class="field text-sm max-w-xl" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
-        {$switcherOpts}
-    </select>
-    <a href="{$historyLink}" class="text-sm font-semibold text-teal-700 hover:underline ml-auto">Patient history</a>
+<div class="mb-4 bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        <!-- Live Real-Time Google-Style Patient Search -->
+        <div class="relative flex-1" id="patient-search-container">
+            <div class="relative flex items-center">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-sm pointer-events-none"></i>
+                <input 
+                    type="text" 
+                    id="patient-search-input" 
+                    class="w-full pl-10 pr-24 py-2 text-sm rounded-lg border border-slate-300 focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all font-medium placeholder:text-slate-400 outline-none" 
+                    placeholder="Search patient by Lab No (e.g. 1004), MR No (e.g. MR0747), or Name…" 
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+                <div class="absolute right-2.5 flex items-center gap-1.5">
+                    <button type="button" id="patient-search-clear" class="hidden text-slate-400 hover:text-slate-600 p-1 text-xs" title="Clear search">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <span class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded">Press /</span>
+                </div>
+            </div>
+
+            <!-- Instant Autocomplete Dropdown List -->
+            <div 
+                id="patient-search-dropdown" 
+                class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[420px] overflow-y-auto"
+            >
+                <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+                    <span id="patient-search-header">Recent Patient Visits</span>
+                    <span class="text-[10px] text-slate-400 font-normal">Use ↑ ↓ arrows &amp; Enter to jump</span>
+                </div>
+                <div id="patient-search-list" class="divide-y divide-slate-100">
+                    <!-- Dynamic live cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Switcher Dropdown & Patient History Link -->
+        <div class="flex items-center gap-2 text-xs shrink-0">
+            <span class="text-slate-400 hidden xl:inline">or visit:</span>
+            <select class="field text-xs py-1.5 max-w-[200px] text-slate-600" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
+                {$switcherOpts}
+            </select>
+            <a href="{$historyLink}" class="btn btn-secondary text-xs py-1.5 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Patient History</a>
+        </div>
+    </div>
 </div>
 
 <div class="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
@@ -489,5 +544,246 @@ $content .= <<<HTML
 </div>
 </form>
 HTML;
+
+$content .= '<script>window.__LAB_SEARCH_VISITS__ = ' . $searchVisitsJson . ';</script>';
+$content .= <<<'SCRIPT'
+<script>
+(function() {
+    const visits = window.__LAB_SEARCH_VISITS__ || [];
+    const container = document.getElementById('patient-search-container');
+    const input = document.getElementById('patient-search-input');
+    const dropdown = document.getElementById('patient-search-dropdown');
+    const list = document.getElementById('patient-search-list');
+    const header = document.getElementById('patient-search-header');
+    const clearBtn = document.getElementById('patient-search-clear');
+    
+    if (!container || !input || !dropdown || !list) return;
+
+    let selectedIndex = -1;
+    let currentFiltered = [];
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightMatch(text, query) {
+        if (!text) return '';
+        const safe = escapeHtml(text);
+        if (!query) return safe;
+        const qSafe = escapeRegex(query.trim());
+        if (!qSafe) return safe;
+        const reg = new RegExp('(' + qSafe + ')', 'gi');
+        return safe.replace(reg, '<mark class="bg-amber-200 text-amber-950 font-bold px-0.5 rounded">$1</mark>');
+    }
+
+    function statusBadge(status) {
+        const s = (status || '').toLowerCase();
+        if (s === 'verified' || s === 'completed') {
+            return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+        }
+        if (s === 'in-progress' || s === 'partial') {
+            return 'bg-blue-100 text-blue-800 border border-blue-200';
+        }
+        if (s === 'sample-collected') {
+            return 'bg-purple-100 text-purple-800 border border-purple-200';
+        }
+        return 'bg-amber-100 text-amber-800 border border-amber-200';
+    }
+
+    function renderResults(query) {
+        const q = (query || '').trim().toLowerCase();
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', q === '');
+        }
+
+        if (q === '') {
+            currentFiltered = visits.slice(0, 10);
+            if (header) header.textContent = 'Recent Patient Visits (' + currentFiltered.length + ')';
+        } else {
+            currentFiltered = visits.filter(v => {
+                const lab = (v.lab_no || '').toLowerCase();
+                const mr = (v.mr_no || '').toLowerCase();
+                const name = (v.patient_name || '').toLowerCase();
+                return lab.includes(q) || mr.includes(q) || name.includes(q);
+            });
+            if (header) {
+                header.textContent = currentFiltered.length > 0 
+                    ? 'Found ' + currentFiltered.length + ' matching patient' + (currentFiltered.length === 1 ? '' : 's')
+                    : 'No matching patients';
+            }
+        }
+
+        selectedIndex = -1;
+
+        if (currentFiltered.length === 0) {
+            list.innerHTML = `
+                <div class="p-6 text-center text-slate-500">
+                    <i class="fa-solid fa-magnifying-glass text-2xl text-slate-300 mb-2 block"></i>
+                    <div class="text-sm font-semibold text-slate-700">No matching patients found</div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        No match for "<span class="font-mono font-medium text-slate-600">${escapeHtml(query)}</span>" on Lab No, MR No, or Patient Name.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        currentFiltered.forEach((item, idx) => {
+            const isCurrent = item.is_current;
+            html += `
+                <div 
+                    class="patient-search-item px-3.5 py-2.5 cursor-pointer transition-colors flex items-center justify-between gap-3 text-left ${isCurrent ? 'bg-teal-50/40' : 'hover:bg-slate-50'}"
+                    data-index="${idx}"
+                    data-lab-no="${escapeHtml(item.lab_no)}"
+                >
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-slate-900 text-sm item-patient-name">${highlightMatch(item.patient_name, q)}</span>
+                            ${isCurrent ? '<span class="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-teal-100 text-teal-800 rounded">Current</span>' : ''}
+                            <span class="text-xs text-slate-400 font-normal">
+                                ${item.age ? item.age + ' yrs' : ''} ${item.gender ? '· ' + item.gender : ''}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1 flex-wrap text-xs text-slate-600">
+                            <span class="inline-flex items-center font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded text-[11px]">
+                                <i class="fa-solid fa-flask-vial mr-1 text-[10px] text-teal-600"></i>${highlightMatch(item.lab_no, q)}
+                            </span>
+                            ${item.mr_no ? `
+                                <span class="inline-flex items-center font-mono text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[11px]">
+                                    <span class="text-slate-400 mr-1 text-[9px] font-sans font-bold uppercase">MR</span>${highlightMatch(item.mr_no, q)}
+                                </span>
+                            ` : ''}
+                            <span class="text-slate-500 truncate max-w-xs text-[11px]" title="${escapeHtml(item.tests)}">
+                                <i class="fa-solid fa-vial text-slate-400 mr-1"></i>${escapeHtml(item.tests)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider ${statusBadge(item.status)}">
+                            ${escapeHtml(item.status)}
+                        </span>
+                        <div class="text-[10px] text-slate-400 mt-1">${escapeHtml(item.date || '')}</div>
+                    </div>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+
+        list.querySelectorAll('.patient-search-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const lab = el.getAttribute('data-lab-no');
+                if (lab) navigateToPatient(lab);
+            });
+            el.addEventListener('mouseenter', () => {
+                const idx = parseInt(el.getAttribute('data-index'), 10);
+                setSelectedIndex(idx, false);
+            });
+        });
+    }
+
+    function setSelectedIndex(idx, scrollTo) {
+        const items = list.querySelectorAll('.patient-search-item');
+        items.forEach(el => el.classList.remove('bg-teal-100/70', 'ring-1', 'ring-teal-400'));
+        selectedIndex = idx;
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+            const item = items[selectedIndex];
+            item.classList.add('bg-teal-100/70', 'ring-1', 'ring-teal-400');
+            if (scrollTo) {
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }
+
+    function navigateToPatient(labNo) {
+        if (!labNo) return;
+        window.location.href = '/portals/main-lab/results/entry.php?lab_no=' + encodeURIComponent(labNo);
+    }
+
+    function showDropdown() {
+        renderResults(input.value);
+        dropdown.classList.remove('hidden');
+    }
+
+    function hideDropdown() {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+    }
+
+    input.addEventListener('focus', showDropdown);
+    input.addEventListener('input', () => {
+        showDropdown();
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (dropdown.classList.contains('hidden')) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                showDropdown();
+                e.preventDefault();
+                return;
+            }
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const count = currentFiltered.length;
+            if (count > 0) {
+                const next = selectedIndex < count - 1 ? selectedIndex + 1 : 0;
+                setSelectedIndex(next, true);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const count = currentFiltered.length;
+            if (count > 0) {
+                const prev = selectedIndex > 0 ? selectedIndex - 1 : count - 1;
+                setSelectedIndex(prev, true);
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && currentFiltered[selectedIndex]) {
+                navigateToPatient(currentFiltered[selectedIndex].lab_no);
+            } else if (currentFiltered.length > 0) {
+                navigateToPatient(currentFiltered[0].lab_no);
+            }
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+            input.blur();
+        }
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            input.focus();
+            showDropdown();
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            hideDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+            e.preventDefault();
+            input.focus();
+            input.select();
+        }
+    });
+})();
+</script>
+SCRIPT;
 
 render_page('Enter Results', 'main-lab', 'results-entry', $content);

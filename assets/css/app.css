@@ -458,10 +458,14 @@ textarea::placeholder {
 
 .software-credit {
   margin: 0;
-  font-size: 0.75rem;
-  line-height: 1.5;
+  font-size: 0.72rem;
+  line-height: 1.2;
   color: #64748b;
-  text-align: center;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  width: 100% !important;
+  display: block !important;
 }
 
 .software-credit strong {
@@ -473,6 +477,7 @@ textarea::placeholder {
   color: #0f766e;
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap !important;
 }
 
 .software-credit a:hover {
@@ -480,17 +485,22 @@ textarea::placeholder {
 }
 
 .software-credit--print {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed #94a3b8;
+  margin-top: 0.25rem;
+  padding-top: 0;
+  border-top: none;
   font-size: 0.65rem;
   color: #475569;
-  text-align: center;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  width: 100% !important;
+  display: block !important;
 }
 
 .software-credit--print a {
   color: #0f172a;
   text-decoration: underline;
+  white-space: nowrap !important;
 }
 
 .login-software-credit {
@@ -2080,32 +2090,74 @@ textarea::placeholder {
 
 /* Print stationery toggles — hide visually but keep blank space (no upward shift) */
 .print-stack.lab-print--hide-header .lab-report__letterhead,
+.print-stack.lab-print--hide-header .lab-report__letterhead *,
 .print-stack.lab-print--hide-header .lab-letterhead-image,
+.print-stack.lab-print--hide-header .lab-letterhead-image *,
 .print-stack.lab-print--hide-header .lab-report__brand,
+.print-stack.lab-print--hide-header .lab-report__brand *,
 .print-stack.lab-print--hide-header .lab-report__brand-text,
+.print-stack.lab-print--hide-header .lab-report__brand-text *,
 .print-stack.lab-print--hide-header .lab-report__letterhead-stack,
-.print-stack.lab-print--hide-header .lab-report__banner {
+.print-stack.lab-print--hide-header .lab-report__letterhead-stack *,
+.print-stack.lab-print--hide-header .lab-report__banner,
+.print-stack.lab-print--hide-header .lab-report__banner * {
   visibility: hidden !important;
+  opacity: 0 !important;
 }
 
-.print-stack.lab-print--hide-qr .lab-report__qr {
+.print-stack.lab-print--hide-qr .lab-report__qr,
+.print-stack.lab-print--hide-qr .lab-report__qr * {
   visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.print-stack.lab-print--hide-footer .lab-report__footer-branding,
+.print-stack.lab-print--hide-footer .lab-report__footer-branding * {
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 .print-stack.lab-print--hide-all .lab-report__letterhead,
+.print-stack.lab-print--hide-all .lab-report__letterhead *,
 .print-stack.lab-print--hide-all .lab-letterhead-image,
+.print-stack.lab-print--hide-all .lab-letterhead-image *,
 .print-stack.lab-print--hide-all .lab-report__brand,
+.print-stack.lab-print--hide-all .lab-report__brand *,
 .print-stack.lab-print--hide-all .lab-report__brand-text,
+.print-stack.lab-print--hide-all .lab-report__brand-text *,
 .print-stack.lab-print--hide-all .lab-report__letterhead-stack,
+.print-stack.lab-print--hide-all .lab-report__letterhead-stack *,
 .print-stack.lab-print--hide-all .lab-report__banner,
-.print-stack.lab-print--hide-all .lab-report__qr {
+.print-stack.lab-print--hide-all .lab-report__banner *,
+.print-stack.lab-print--hide-all .lab-report__qr,
+.print-stack.lab-print--hide-all .lab-report__qr *,
+.print-stack.lab-print--hide-all .lab-report__footer-branding,
+.print-stack.lab-print--hide-all .lab-report__footer-branding * {
   visibility: hidden !important;
+  opacity: 0 !important;
 }
 
-.print-stack.lab-print--hide-all .lab-report__footer-branding,
-.print-stack.lab-print--hide-all .software-credit,
-.print-stack.lab-print--hide-all .software-credit--print {
-  visibility: hidden !important;
+/* Software credit created by Shakeel Khalid MUST NEVER be hidden and MUST BE ON A SINGLE LINE */
+.software-credit--print,
+.lab-report__footer .software-credit--print {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  width: 100% !important;
+  margin: 0.2rem auto 0 auto !important;
+}
+
+.software-credit--print *,
+.software-credit *,
+.lab-report__footer .software-credit--print * {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: inline !important;
+  white-space: nowrap !important;
+  float: none !important;
+  width: auto !important;
 }
 
 .lab-report__empty {
@@ -2460,25 +2512,72 @@ textarea::placeholder {
     visibility: visible;
   }
 
-  /* Re-apply hide toggles inside print (visibility, not display) */
+  /* Re-apply hide toggles inside print (visibility, not display) - MUST TARGET ALL DESCENDANTS (*) */
   .print-stack.lab-print--hide-header .lab-report__letterhead,
+  .print-stack.lab-print--hide-header .lab-report__letterhead *,
   .print-stack.lab-print--hide-header .lab-letterhead-image,
+  .print-stack.lab-print--hide-header .lab-letterhead-image *,
   .print-stack.lab-print--hide-header .lab-report__brand,
+  .print-stack.lab-print--hide-header .lab-report__brand *,
   .print-stack.lab-print--hide-header .lab-report__brand-text,
+  .print-stack.lab-print--hide-header .lab-report__brand-text *,
   .print-stack.lab-print--hide-header .lab-report__letterhead-stack,
+  .print-stack.lab-print--hide-header .lab-report__letterhead-stack *,
   .print-stack.lab-print--hide-header .lab-report__banner,
+  .print-stack.lab-print--hide-header .lab-report__banner *,
+  .print-stack.lab-print--hide-header img.lab-letterhead-image__img,
+  .print-stack.lab-print--hide-header .lab-report__banner img,
   .print-stack.lab-print--hide-qr .lab-report__qr,
+  .print-stack.lab-print--hide-qr .lab-report__qr *,
+  .print-stack.lab-print--hide-qr .lab-report__qr img,
+  .print-stack.lab-print--hide-footer .lab-report__footer-branding,
+  .print-stack.lab-print--hide-footer .lab-report__footer-branding *,
   .print-stack.lab-print--hide-all .lab-report__letterhead,
+  .print-stack.lab-print--hide-all .lab-report__letterhead *,
   .print-stack.lab-print--hide-all .lab-letterhead-image,
+  .print-stack.lab-print--hide-all .lab-letterhead-image *,
   .print-stack.lab-print--hide-all .lab-report__brand,
+  .print-stack.lab-print--hide-all .lab-report__brand *,
   .print-stack.lab-print--hide-all .lab-report__brand-text,
+  .print-stack.lab-print--hide-all .lab-report__brand-text *,
   .print-stack.lab-print--hide-all .lab-report__letterhead-stack,
+  .print-stack.lab-print--hide-all .lab-report__letterhead-stack *,
   .print-stack.lab-print--hide-all .lab-report__banner,
+  .print-stack.lab-print--hide-all .lab-report__banner *,
+  .print-stack.lab-print--hide-all img.lab-letterhead-image__img,
+  .print-stack.lab-print--hide-all .lab-report__banner img,
   .print-stack.lab-print--hide-all .lab-report__qr,
+  .print-stack.lab-print--hide-all .lab-report__qr *,
+  .print-stack.lab-print--hide-all .lab-report__qr img,
   .print-stack.lab-print--hide-all .lab-report__footer-branding,
-  .print-stack.lab-print--hide-all .software-credit,
-  .print-stack.lab-print--hide-all .software-credit--print {
+  .print-stack.lab-print--hide-all .lab-report__footer-branding * {
     visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  /* Software credit created by Shakeel Khalid MUST NEVER be hidden in print and MUST BE ON A SINGLE LINE */
+  .software-credit--print,
+  .lab-report__footer .software-credit--print {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin: 0.15rem auto 0 auto !important;
+    font-size: 0.62rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .software-credit--print *,
+  .software-credit *,
+  .lab-report__footer .software-credit--print * {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: inline !important;
+    white-space: nowrap !important;
+    float: none !important;
+    width: auto !important;
   }
 
   .print-stack {

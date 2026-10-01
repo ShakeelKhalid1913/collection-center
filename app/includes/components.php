@@ -310,6 +310,10 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
                 <input type="checkbox" data-print-toggle="hide-qr" class="rounded border-slate-300">
                 Hide QR Code
             </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" data-print-toggle="hide-footer" class="rounded border-slate-300">
+                Hide Footer
+            </label>
             <label class="inline-flex items-center gap-1.5 cursor-pointer select-none font-semibold">
                 <input type="checkbox" data-print-toggle="hide-all" class="rounded border-slate-300">
                 Hide All / Full Blanking
