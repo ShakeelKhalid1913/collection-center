@@ -1107,13 +1107,7 @@ function render_report_sheet(
     // No "Note: lab values..." line — only interpret disclaimer + Get well soon footer
     $noteHtml = '';
 
-    // $footerNote = trim((string)($settings['footer'] ?? ''));
-    // if ($footerNote === '' || preg_match('/electronically verified/i', $footerNote)) {
-    //     $footerNote = 'Get well soon. Thank you.';
-    // }
-    // $footerBlock = ($footerNote !== '')
-    //     ? '<p class="lab-report__lab-note">' . e($footerNote) . '</p>'
-    //     : '';
+    $footerBlock = '';
     $credit = software_credit_footer(true);
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $signatoriesHtml = render_report_signatories($signatories);
