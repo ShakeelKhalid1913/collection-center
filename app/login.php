@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <?php render_head('Sign in · Health LMS Pro'); ?>
+    <?php render_head('Sign in · Lab Dash Pro'); ?>
 </head>
 <body class="app-body">
 <div class="login-page">
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="login-brand__logo">
                 <div class="login-brand__mark"><?= brand_logo('brand-logo brand-logo--login') ?></div>
                 <div>
-                    <h1>Health LMS Pro</h1>
+                    <h1>Lab Dash Pro</h1>
                     <p class="login-brand__tagline">Sign in — your account is locked to one portal (Collection, Laboratory, Diagnostic, or Admin).</p>
                 </div>
             </div>
@@ -60,14 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="login-form-side">
         <div class="login-mobile-title">
             <div class="app-brand__icon" style="margin:0 auto 0.75rem;width:3.25rem;height:3.25rem"><?= brand_logo('brand-logo brand-logo--login') ?></div>
-            <strong style="font-size:1.125rem">Health LMS Pro</strong>
+            <strong style="font-size:1.125rem">Lab Dash Pro</strong>
         </div>
 
         <div class="login-card">
             <div class="login-card__head">
                 <h2><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Sign in</h2>
                 <p>Portal access is set by your account — you cannot open other staff types.</p>
-                <p style="margin:0.5rem 0 0;font-size:0.8125rem">Need an account? <a href="/signup.php" style="color:#0f766e;font-weight:600;text-decoration:none">Create Account <i class="fa-solid fa-user-plus"></i></a></p>
+                <p style="margin:0.5rem 0 0;font-size:0.8125rem">Need an account? <a href="/signup.php" style="color:#0f766e;font-weight:700;text-decoration:none">Create Account <i class="fa-solid fa-user-plus"></i></a></p>
             </div>
 
             <?php if ($error): ?>

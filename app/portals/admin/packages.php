@@ -22,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $rows = [];
 foreach (mock('mock_packages') as $pkg) {
     $rows[] = [
-        e($pkg['code']),
-        e($pkg['name']),
-        e($pkg['tests']),
-        e(format_money((float)$pkg['price'])),
-        e(format_money((float)$pkg['regular'])),
+        '<span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($pkg['code']) . '</span>',
+        '<span class="font-bold text-slate-800">' . e($pkg['name']) . '</span>',
+        '<span class="text-xs text-slate-600 font-medium">' . e($pkg['tests']) . '</span>',
+        '<span class="font-bold text-emerald-600">' . e(format_money((float)$pkg['price'])) . '</span>',
+        '<span class="text-xs text-slate-400 line-through">' . e(format_money((float)$pkg['regular'])) . '</span>',
     ];
 }
 

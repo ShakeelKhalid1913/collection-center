@@ -257,24 +257,45 @@ class ResultRepository
                 }
             }
 
+            $keepPage = 1;
+            foreach (array_merge($detailed, $stubs) as $old) {
+                $keepPage = max($keepPage, (int)($old['print_page'] ?? 1));
+            }
+            if (isset($savedPages[$label])) {
+                $keepPage = max(1, (int)$savedPages[$label]);
+            }
+
             if (!empty($params)) {
+                // Multi-parameter test in catalog
                 foreach ($stubs as $old) {
                     $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
                 }
 
-                if ($detailed === [] || count($detailed) < count($params)) {
-                    // Keep any existing page assignment for this test
-                    $keepPage = 1;
-                    foreach ($detailed as $old) {
-                        $keepPage = max($keepPage, (int)($old['print_page'] ?? 1));
+                $catalogParamMap = [];
+                foreach ($params as $p) {
+                    $catalogParamMap[strtolower(trim((string)$p['name']))] = $p;
+                }
+
+                $existingParamMap = [];
+                foreach ($detailed as $old) {
+                    $pName = strtolower(trim((string)($old['parameter'] ?? '')));
+                    if ($pName !== '') {
+                        $existingParamMap[$pName][] = $old;
                     }
-                    if (isset($savedPages[$label])) {
-                        $keepPage = max(1, (int)$savedPages[$label]);
-                    }
-                    foreach ($detailed as $old) {
+                }
+
+                // Delete any rows whose parameter was removed from catalog
+                foreach ($detailed as $old) {
+                    $pName = strtolower(trim((string)($old['parameter'] ?? '')));
+                    if (!isset($catalogParamMap[$pName])) {
                         $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
                     }
-                    foreach ($params as $p) {
+                }
+
+                // Insert missing parameters or update existing ones
+                foreach ($params as $p) {
+                    $pName = strtolower(trim((string)$p['name']));
+                    if (!isset($existingParamMap[$pName]) || empty($existingParamMap[$pName])) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
                             "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
@@ -284,41 +305,134 @@ class ResultRepository
                                 'lab_no' => $labNo,
                                 'patient' => $patientName,
                                 'test' => $label,
-                                'section' => $p['section'] ?? null,
+                                'section' => !empty($p['section']) ? trim((string)$p['section']) : null,
                                 'param' => $p['name'],
                                 'unit' => $p['unit'] ?? '',
-                                'range' => $p['reference_range'] ?? $p['normal_value'] ?? '',
-                                'sub_table' => $p['sub_table'] ?? null,
+                                'range' => $p['reference_range'] ?: ($p['normal_value'] ?? ''),
+                                'sub_table' => !empty($p['sub_table']) ? trim((string)$p['sub_table']) : null,
+                                'sort' => $sortOrder++,
+                                'print_page' => $keepPage,
+                            ]
+                        );
+                    } else {
+                        $existingRow = $existingParamMap[$pName][0];
+                        $this->db->execute(
+                            "UPDATE results SET 
+                                section = :sec,
+                                unit = CASE WHEN unit IS NULL OR unit = '' OR unit = '—' THEN :unit ELSE unit END,
+                                reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN :range ELSE reference_range END,
+                                sub_table = COALESCE(sub_table, :sub_table)
+                             WHERE id = :id",
+                            [
+                                'sec' => !empty($p['section']) ? trim((string)$p['section']) : null,
+                                'unit' => $p['unit'] ?? '',
+                                'range' => $p['reference_range'] ?: ($p['normal_value'] ?? ''),
+                                'sub_table' => !empty($p['sub_table']) ? trim((string)$p['sub_table']) : null,
+                                'id' => $existingRow['id'],
+                            ]
+                        );
+                        for ($di = 1; $di < count($existingParamMap[$pName]); $di++) {
+                            $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $existingParamMap[$pName][$di]['id']]);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Test has 0 parameters in catalog (single test)
+            if ($obj) {
+                $unitVal = $obj['unit'] ?? '—';
+                $rangeVal = $obj['reference_value'] ?: ($obj['normal_value'] ?: ($obj['normal_range'] ?? '—'));
+
+                // If detailed parameter rows exist from before when this test had parameters, remove them
+                if ($detailed !== []) {
+                    $keepVal = '';
+                    $keepFlag = '';
+                    foreach ($detailed as $dRow) {
+                        $v = trim((string)($dRow['value'] ?? ''));
+                        if ($v !== '' && strcasecmp($v, 'Pending') !== 0 && $v !== '-' && $v !== '—') {
+                            $keepVal = $v;
+                            $keepFlag = (string)($dRow['flag'] ?? '');
+                            break;
+                        }
+                    }
+                    foreach ($detailed as $dRow) {
+                        $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $dRow['id']]);
+                    }
+                    if ($stubs === []) {
+                        $resId = 'RES-' . bin2hex(random_bytes(5));
+                        $this->db->execute(
+                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                             VALUES (:id, :lab_no, :patient, :test, NULL, :param, :val, :unit, :range, NULL, :flag, :sort, 1, :print_page)",
+                            [
+                                'id' => $resId,
+                                'lab_no' => $labNo,
+                                'patient' => $patientName,
+                                'test' => $label,
+                                'param' => $label,
+                                'val' => $keepVal,
+                                'unit' => $unitVal,
+                                'range' => $rangeVal,
+                                'flag' => $keepFlag,
                                 'sort' => $sortOrder++,
                                 'print_page' => $keepPage,
                             ]
                         );
                     }
                 }
-                continue;
-            }
 
-            if ($detailed !== []) {
-                foreach ($stubs as $old) {
-                    $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $old['id']]);
+                if ($stubs !== []) {
+                    $firstStub = $stubs[0];
+                    $this->db->execute(
+                        "UPDATE results SET 
+                            parameter = :param,
+                            section = NULL,
+                            unit = CASE WHEN unit IS NULL OR unit = '' OR unit = '—' THEN :unit ELSE unit END,
+                            reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN :range ELSE reference_range END
+                         WHERE id = :id",
+                        [
+                            'param' => $label,
+                            'unit' => $unitVal,
+                            'range' => $rangeVal,
+                            'id' => $firstStub['id'],
+                        ]
+                    );
+                    for ($si = 1; $si < count($stubs); $si++) {
+                        $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $stubs[$si]['id']]);
+                    }
+                } elseif ($detailed === [] && $existingForTest === []) {
+                    $resId = 'RES-' . bin2hex(random_bytes(5));
+                    $this->db->execute(
+                        "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                         VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1, :print_page)",
+                        [
+                            'id' => $resId,
+                            'lab_no' => $labNo,
+                            'patient' => $patientName,
+                            'test' => $label,
+                            'param' => $label,
+                            'unit' => $unitVal,
+                            'range' => $rangeVal,
+                            'sort' => $sortOrder++,
+                            'print_page' => $keepPage,
+                        ]
+                    );
                 }
                 continue;
             }
 
+            // Fallback for non-catalog tests
             if ($existingForTest === []) {
                 $resId = 'RES-' . bin2hex(random_bytes(5));
-                $keepPage = max(1, (int)($savedPages[$label] ?? 1));
                 $this->db->execute(
                     "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
-                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1, :print_page)",
+                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', '—', '—', NULL, '', :sort, 1, :print_page)",
                     [
                         'id' => $resId,
                         'lab_no' => $labNo,
                         'patient' => $patientName,
                         'test' => $label,
                         'param' => $label,
-                        'unit' => $obj['unit'] ?? '—',
-                        'range' => $obj['normal_range'] ?? $obj['reference_value'] ?? $obj['normal_value'] ?? '—',
                         'sort' => $sortOrder++,
                         'print_page' => $keepPage,
                     ]
@@ -604,6 +718,114 @@ class ResultRepository
             "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE scan_date = CURDATE()"
         );
         return (int)($row['cnt'] ?? 0);
+    }
+
+    public function countTotalBiomarkers(): int
+    {
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results");
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    public function countOutOfRange(): int
+    {
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE flag IN ('critical','H','L')");
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    public function countInReview(): int
+    {
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE verified_at IS NULL");
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    public function countInRange(): int
+    {
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE (verified_at IS NOT NULL OR (value IS NOT NULL AND value != '')) AND (flag IS NULL OR flag = '' OR flag = 'normal')");
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    public function getRealAverageTATMinutes(): int
+    {
+        $row = $this->db->fetchOne(
+            "SELECT ROUND(AVG(TIMESTAMPDIFF(MINUTE, le.created_at, r.verified_at))) AS avg_tat
+             FROM results r
+             JOIN lab_entries le ON le.lab_no = r.lab_no
+             WHERE r.verified_at IS NOT NULL"
+        );
+        $tat = (int)($row['avg_tat'] ?? 0);
+        if ($tat > 0) {
+            return $tat;
+        }
+
+        // If no verified results yet, measure average processing duration of current active samples
+        $row2 = $this->db->fetchOne(
+            "SELECT ROUND(AVG(TIMESTAMPDIFF(MINUTE, created_at, NOW()))) AS avg_elapsed
+             FROM lab_entries WHERE status IN ('pending','collected','processing','received')"
+        );
+        return max(15, (int)($row2['avg_elapsed'] ?? 28));
+    }
+
+    public function getRealVerificationRate(): float
+    {
+        $row = $this->db->fetchOne(
+            "SELECT COUNT(*) AS total,
+                    SUM(CASE WHEN verified_at IS NOT NULL THEN 1 ELSE 0 END) AS verified
+             FROM results"
+        );
+        $total = (int)($row['total'] ?? 0);
+        if ($total === 0) {
+            return 100.0;
+        }
+        $verified = (int)($row['verified'] ?? 0);
+        return round(($verified / $total) * 100, 1);
+    }
+
+    public function getRealDepartmentCounts(int $limit = 4): array
+    {
+        $lim = (int)$limit;
+        return $this->db->fetchAll(
+            "SELECT COALESCE(NULLIF(t.category, ''), 'General Pathology') AS dept,
+                    COUNT(DISTINCT r.id) AS biomarker_count,
+                    COUNT(DISTINCT r.lab_no) AS order_count,
+                    SUM(CASE WHEN r.flag IN ('critical','H','L') THEN 1 ELSE 0 END) AS out_of_range
+             FROM results r
+             LEFT JOIN tests t ON (t.name = r.test OR t.code = r.test)
+             GROUP BY COALESCE(NULLIF(t.category, ''), 'General Pathology')
+             ORDER BY biomarker_count DESC
+             LIMIT {$lim}"
+        );
+    }
+
+    public function getRealOrganMetrics(array $keywords): array
+    {
+        if (empty($keywords)) {
+            return ['total' => 0, 'out_of_range' => 0, 'in_review' => 0, 'in_range' => 0];
+        }
+
+        $clauses = [];
+        $params = [];
+        foreach ($keywords as $i => $kw) {
+            $clauses[] = "(test LIKE :kt{$i} OR parameter LIKE :kp{$i} OR section LIKE :ks{$i})";
+            $params["kt{$i}"] = '%' . $kw . '%';
+            $params["kp{$i}"] = '%' . $kw . '%';
+            $params["ks{$i}"] = '%' . $kw . '%';
+        }
+        $where = implode(' OR ', $clauses);
+
+        $sql = "SELECT COUNT(*) AS total,
+                       SUM(CASE WHEN flag IN ('critical','H','L') THEN 1 ELSE 0 END) AS out_of_range,
+                       SUM(CASE WHEN verified_at IS NULL AND (value IS NULL OR value = '') THEN 1 ELSE 0 END) AS in_review,
+                       SUM(CASE WHEN (verified_at IS NOT NULL OR (value IS NOT NULL AND value != '')) AND (flag IS NULL OR flag = '' OR flag = 'normal') THEN 1 ELSE 0 END) AS in_range
+                FROM results
+                WHERE {$where}";
+
+        $row = $this->db->fetchOne($sql, $params);
+        return [
+            'total' => (int)($row['total'] ?? 0),
+            'out_of_range' => (int)($row['out_of_range'] ?? 0),
+            'in_review' => (int)($row['in_review'] ?? 0),
+            'in_range' => (int)($row['in_range'] ?? 0),
+        ];
     }
 
     private function modalityPrefix(string $modality): string

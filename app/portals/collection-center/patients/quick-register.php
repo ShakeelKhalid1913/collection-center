@@ -13,6 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($fullName === '') {
         $message = flash_error('Patient full name is required.');
     } else {
+        $typedDoc = trim($_POST['doctor'] ?? '');
+        $selectedDoc = resolve_doctor_name($_POST['doctor_id'] ?? '');
+        $doctor = $typedDoc !== '' ? $typedDoc : $selectedDoc;
+        if ($doctor === '') {
+            $doctor = 'Walk-in / Self';
+        }
+
         $patientRes = patient_repo()->create([
             'patient_no' => trim($_POST['patient_no'] ?? ''),
             'title' => $_POST['title'] ?? 'Mr',
@@ -24,7 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'cnic' => $_POST['cnic'] ?? '',
             'blood_group' => $_POST['blood_group'] ?? '',
             'email' => $_POST['email'] ?? '',
-            'doctor' => resolve_doctor_name($_POST['doctor_id'] ?? ''),
+            'doctor' => $doctor,
+            'referring_doctor' => $doctor,
             'address' => $_POST['address'] ?? '',
             'notes' => $_POST['notes'] ?? '',
             'branch' => 'CC-01',
@@ -36,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = flash_error('Could not save patient.');
         } else {
             $catalog = resolve_catalog_from_post($_POST);
-            $doctor = resolve_doctor_name($_POST['doctor_id'] ?? '');
 
             $labRes = lab_repo()->create([
                 'patient_id' => $patientRes['id'],
@@ -99,6 +106,7 @@ $patientBlock = card(
     form_field('CNIC / B-Form', 'cnic', 'text', null, 'xxxxx-xxxxxxx-x', true) .
     select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field('Email', 'email', 'email', null, 'patient@email.com', true) .
+    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Self', true) .
     '<div class="sm:col-span-2 lg:col-span-3">' .
     form_field('Address', 'address', 'text', null, 'House / area / city (shown on report header)', true) .
     '</div>' .

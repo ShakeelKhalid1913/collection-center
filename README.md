@@ -1,4 +1,4 @@
-# Health LMS Pro — MVP (PHP + MariaDB + Tailwind)
+# Lab Dash Pro — MVP (PHP + MariaDB + Tailwind)
 
 Lab management MVP with **three main staff user types** (portal-locked):
 

@@ -6,26 +6,37 @@ require_once __DIR__ . '/../../../includes/bootstrap.php';
 require_once __DIR__ . '/../../../includes/layout.php';
 require_once __DIR__ . '/../../../includes/components.php';
 
+$orgId = current_user()['organization_id'] ?? 'ORG-001';
+$dbEntries = lab_repo()->getAll($orgId, 250);
+$sourceEntries = !empty($dbEntries) ? $dbEntries : mock('mock_lab_entries');
+
 $rows = [];
-foreach (mock('mock_lab_entries') as $e) {
-    if (!in_array($e['status'], ['pending', 'collected'], true)) {
+foreach ($sourceEntries as $e) {
+    $status = (string)($e['status'] ?? 'pending');
+    $sampleStatus = (string)($e['sample_status'] ?? $status);
+    if (!in_array($status, ['pending', 'collected'], true) && !in_array($sampleStatus, ['pending', 'collected'], true)) {
         continue;
     }
-    $remaining = max(0, (float) $e['amount'] - (float) $e['paid']);
+    $pName = (string)($e['patient_name'] ?? $e['patient'] ?? '—');
+    $labNo = (string)($e['lab_no'] ?? '');
+    $labQ = urlencode($labNo);
+    $dateVal = $e['created_at'] ?? $e['date'] ?? null;
+    $remaining = max(0, (float)($e['amount'] ?? 0) - (float)($e['paid'] ?? 0));
+
     $rows[] = [
-        e($e['lab_no']),
-        e($e['patient']),
-        e(normalize_tests_list((string)($e['tests'] ?? ''))),
-        e($e['doctor'] ?? '—'),
-        e($e['route'] ?? '—'),
+        '<span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">' . e($labNo) . '</span>',
+        '<span class="font-semibold text-slate-800">' . e($pName) . '</span>',
+        '<span class="text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($e['tests'] ?? ''))) . '</span>',
+        e((string)($e['doctor'] ?? 'Walk-in / Self')),
+        '<span class="text-xs text-slate-500">' . e((string)($e['route'] ?? 'Laboratory')) . '</span>',
         status_badge($e['priority'] ?? 'Normal'),
-        status_badge($e['sample_status'] ?? $e['status']),
-        e(format_money((float) $e['amount'])),
-        e(format_money($remaining)),
-        e(format_date($e['date'])),
-        '<div class="flex flex-wrap gap-2">' .
-        '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . urlencode($e['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
-        btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode($e['lab_no']), 'Receipt') .
+        status_badge($sampleStatus),
+        '<span class="font-semibold text-slate-900">' . e(format_money((float)($e['amount'] ?? 0))) . '</span>',
+        '<span class="font-semibold ' . ($remaining > 0 ? 'text-amber-600' : 'text-emerald-600') . '">' . e(format_money($remaining)) . '</span>',
+        '<span class="text-xs text-slate-500 whitespace-nowrap">' . e(format_date($dateVal)) . '</span>',
+        '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
+        '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1" title="Edit tests"><i class="fa-solid fa-pen-to-square"></i></a>' .
+        '<a href="/portals/collection-center/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700">Receipt</a>' .
         '</div>',
     ];
 }

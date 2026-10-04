@@ -129,25 +129,25 @@ function render_layout(string $title, string $portal, string $activeKey, string 
 
     echo <<<HTML
 <div id="app-shell" class="min-h-full">
-    <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
+    <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-950/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
 
     <aside id="sidebar" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] -translate-x-full flex-col transition-transform duration-200 lg:translate-x-0">
         <div class="app-brand">
             <div class="app-brand__row">
                 <div class="app-brand__icon">{$logo}</div>
                 <div>
-                    <p class="app-brand__title">Health LMS Pro</p>
+                    <p class="app-brand__title">Lab Dash Pro <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full bg-[#c2f13c] text-slate-950">PRO</span></p>
                     <p class="app-brand__portal">{$portalLabel}</p>
                 </div>
             </div>
         </div>
-        <nav class="flex-1 overflow-y-auto py-2">{$nav}</nav>
+        <nav class="sidebar-nav flex-1 overflow-y-auto py-2">{$nav}</nav>
         <div class="app-sidebar__user">
             <div class="app-sidebar__user-row">
                 <div class="app-sidebar__avatar">{$initials}</div>
-                <div>
-                    <p class="app-sidebar__name">{$userName}</p>
-                    <p class="app-sidebar__role">{$userRole}</p>
+                <div class="min-w-0 flex-1">
+                    <p class="app-sidebar__name truncate">{$userName}</p>
+                    <p class="app-sidebar__role truncate">{$userRole}</p>
                 </div>
             </div>
             <a href="/logout.php" class="app-sidebar__logout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Sign out</a>
@@ -155,18 +155,37 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     </aside>
 
     <div class="lg:pl-[var(--sidebar-width)]">
-        <header class="app-topbar no-print">
-            <button type="button" id="sidebar-toggle" class="topbar-menu-btn lg:hidden" aria-label="Open menu">
-                <i class="fa-solid fa-bars" aria-hidden="true"></i>
-            </button>
-            <h1 class="app-topbar__title">{$pageTitle}</h1>
-            <div class="app-topbar__meta">
-                <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> {$today}</span>
-                <span class="chip chip--live"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {$branchHint}</span>
+        <header class="app-topbar no-print flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200/80 bg-white/85 backdrop-blur-md sticky top-0 z-30">
+            <div class="flex items-center gap-3 min-w-0">
+                <button type="button" id="sidebar-toggle" class="topbar-menu-btn lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" aria-label="Open menu">
+                    <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
+                </button>
+                <div class="min-w-0">
+                    <h1 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight truncate">{$pageTitle}</h1>
+                    <p class="text-[11px] text-slate-500 font-medium hidden sm:block">Lab Dash Pro &middot; Diagnostic Intelligence</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Engine Online</span>
+                </div>
+                <div class="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-medium text-slate-600">
+                    <i class="fa-regular fa-calendar text-slate-400"></i>
+                    <span>{$today}</span>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
+                    <i class="fa-solid fa-location-dot text-emerald-600"></i> {$branchHint}
+                </span>
+                <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                    <div class="w-8 h-8 rounded-full bg-slate-900 text-[#c2f13c] font-black text-xs flex items-center justify-center shadow-sm border border-slate-700">
+                        {$initials}
+                    </div>
+                </div>
             </div>
         </header>
 
-        <main class="app-main">
+        <main class="app-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-[#f4f6fb]">
             {$content}
             {$appCredit}
         </main>

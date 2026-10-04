@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <?php render_head('Create Account · Health LMS Pro'); ?>
+    <?php render_head('Create Account · Lab Dash Pro'); ?>
 </head>
 <body class="app-body">
 <div class="login-page">
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="login-brand__logo">
                 <div class="login-brand__mark"><?= brand_logo('brand-logo brand-logo--login') ?></div>
                 <div>
-                    <h1>Health LMS Pro</h1>
+                    <h1>Lab Dash Pro</h1>
                     <p class="login-brand__tagline">Register a staff account locked to one portal type.</p>
                 </div>
             </div>
@@ -74,14 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="login-form-side">
         <div class="login-mobile-title">
             <div class="app-brand__icon" style="margin:0 auto 0.75rem;width:3.25rem;height:3.25rem"><?= brand_logo('brand-logo brand-logo--login') ?></div>
-            <strong style="font-size:1.125rem">Health LMS Pro</strong>
+            <strong style="font-size:1.125rem">Lab Dash Pro</strong>
         </div>
 
         <div class="login-card">
             <div class="login-card__head">
                 <h2><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Create Staff Account</h2>
                 <p>Choose your portal carefully — you will only access that portal after signup.</p>
-                <p style="margin:0.5rem 0 0;font-size:0.8125rem">Already have an account? <a href="/login.php" style="color:#0f766e;font-weight:600;text-decoration:none">Sign in here <i class="fa-solid fa-arrow-right"></i></a></p>
+                <p style="margin:0.5rem 0 0;font-size:0.8125rem">Already have an account? <a href="/login.php" style="color:#0f766e;font-weight:700;text-decoration:none">Sign in here <i class="fa-solid fa-arrow-right"></i></a></p>
             </div>
 
             <?php if ($error): ?>

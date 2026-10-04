@@ -194,6 +194,56 @@ class TestRepository
                 ]
             );
         }
+
+        // Clean up or synchronize results table
+        $test = $this->findById($testId);
+        if ($test) {
+            $tName = trim((string)($test['name'] ?? ''));
+            $tCode = trim((string)($test['code'] ?? ''));
+            if ($params === []) {
+                // Test now has 0 parameters:
+                // Delete orphaned parameter rows where parameter != test name
+                $this->db->execute(
+                    "DELETE FROM results 
+                     WHERE (LOWER(test) = LOWER(:name) OR LOWER(test) = LOWER(:code))
+                       AND LOWER(parameter) != LOWER(:name)
+                       AND LOWER(parameter) != LOWER(:code)
+                       AND (value IS NULL OR value = '' OR value = 'Pending' OR value = '-' OR value = '—')",
+                    ['name' => $tName, 'code' => $tCode]
+                );
+                // For any rows that remain, convert them to single test row
+                $this->db->execute(
+                    "UPDATE results 
+                     SET parameter = :name, section = NULL,
+                         unit = CASE WHEN unit IS NULL OR unit = '' OR unit = '—' THEN :unit ELSE unit END,
+                         reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN :range ELSE reference_range END
+                     WHERE (LOWER(test) = LOWER(:name) OR LOWER(test) = LOWER(:code))",
+                    [
+                        'name' => $tName,
+                        'code' => $tCode,
+                        'unit' => $test['unit'] ?? '—',
+                        'range' => $test['reference_value'] ?: ($test['normal_value'] ?: ($test['normal_range'] ?? '—')),
+                    ]
+                );
+            } else {
+                $paramNames = [];
+                foreach ($params as $p) {
+                    $nm = trim((string)($p['name'] ?? ''));
+                    if ($nm !== '') {
+                        $paramNames[] = $nm;
+                    }
+                }
+                if ($paramNames !== []) {
+                    $inPlaceholders = implode(',', array_fill(0, count($paramNames), '?'));
+                    $delSql = "DELETE FROM results 
+                               WHERE (LOWER(test) = LOWER(?) OR LOWER(test) = LOWER(?))
+                                 AND parameter NOT IN ({$inPlaceholders})
+                                 AND (value IS NULL OR value = '' OR value = 'Pending' OR value = '-' OR value = '—')";
+                    $this->db->execute($delSql, array_merge([$tName, $tCode], $paramNames));
+                }
+            }
+        }
+
         return true;
     }
 

@@ -17,6 +17,7 @@ class SettingRepository
 
     public function getSettings(string $orgId = 'ORG-001'): array
     {
+        $this->ensureHeaderImagePositionColumn();
         // Avoid loading LONGBLOB on every page — only mime + has flag.
         try {
             $row = $this->db->fetchOne(
@@ -26,14 +27,36 @@ class SettingRepository
                         header_image_mime,
                         header_image_ver,
                         header_image_position,
+                        header_layout_json,
                         CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
                 ['org_id' => $orgId]
             );
             if ($row) {
+                if (isset($row['bill_footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['bill_footer_text'])) {
+                    $row['bill_footer_text'] = 'Get well soon.';
+                    try {
+                        $this->db->execute(
+                            "UPDATE lab_settings SET bill_footer_text = 'Get well soon.' WHERE organization_id = :org_id",
+                            ['org_id' => $orgId]
+                        );
+                    } catch (\Throwable $ignored) {}
+                }
+                if (isset($row['footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['footer_text'])) {
+                    $row['footer_text'] = 'Get well soon.';
+                    try {
+                        $this->db->execute(
+                            "UPDATE lab_settings SET footer_text = 'Get well soon.' WHERE organization_id = :org_id",
+                            ['org_id' => $orgId]
+                        );
+                    } catch (\Throwable $ignored) {}
+                }
                 $row['header_image_position'] = self::normalizeHeaderImagePosition(
                     (string)($row['header_image_position'] ?? 'left')
                 );
+                $row['header_layout'] = !empty($row['header_layout_json'])
+                    ? json_decode((string)$row['header_layout_json'], true)
+                    : null;
             }
             return $row ?: [];
         } catch (\Throwable $ignored) {
@@ -55,6 +78,12 @@ class SettingRepository
                 ) ?: [];
             }
             if ($row !== []) {
+                if (isset($row['bill_footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['bill_footer_text'])) {
+                    $row['bill_footer_text'] = 'Get well soon.';
+                }
+                if (isset($row['footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['footer_text'])) {
+                    $row['footer_text'] = 'Get well soon.';
+                }
                 $row['has_header_image'] = !empty($row['header_image']) || !empty($row['header_image_mime']);
                 unset($row['header_image']);
                 if (!isset($row['header_image_position'])) {
@@ -64,6 +93,10 @@ class SettingRepository
                         (string)$row['header_image_position']
                     );
                 }
+                $row['header_layout_json'] = (string)($row['header_layout_json'] ?? '');
+                $row['header_layout'] = !empty($row['header_layout_json'])
+                    ? json_decode((string)$row['header_layout_json'], true)
+                    : null;
             }
             return $row;
         }
@@ -104,14 +137,17 @@ class SettingRepository
             'header_image_position' => self::normalizeHeaderImagePosition(
                 (string)($data['header_image_position'] ?? $existing['header_image_position'] ?? 'left')
             ),
+            'header_layout_json' => array_key_exists('header_layout_json', $data)
+                ? (string)($data['header_layout_json'] ?? '')
+                : ($existing['header_layout_json'] ?? null),
         ];
 
         $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json)",
                 $payload
             );
         } else {
@@ -126,7 +162,8 @@ class SettingRepository
                     logo_text = :logo_text,
                     bill_header_text = :bill_header_text,
                     bill_footer_text = :bill_footer_text,
-                    header_image_position = :header_image_position
+                    header_image_position = :header_image_position,
+                    header_layout_json = :header_layout_json
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -241,6 +278,13 @@ class SettingRepository
         try {
             $this->db->execute(
                 "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'"
+            );
+        } catch (\Throwable $ignored) {
+            // Column already exists
+        }
+        try {
+            $this->db->execute(
+                "ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL"
             );
         } catch (\Throwable $ignored) {
             // Column already exists

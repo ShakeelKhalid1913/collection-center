@@ -16,17 +16,17 @@ foreach ($patients as $p) {
     $phone = $p['phone'] ?? '—';
     $ageGender = trim(($p['age'] ?? '—') . ' yrs / ' . ($p['gender'] ?? '—'), ' /');
 
-    $actions = '<div class="flex flex-wrap gap-2">' .
-        '<a href="/portals/main-lab/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
-        '<a href="/portals/main-lab/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Book / Assign Tests</a>' .
+    $actions = '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
+        '<a href="/portals/main-lab/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
+        '<a href="/portals/main-lab/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-plus mr-1"></i> Book Tests</a>' .
         '</div>';
 
     $rows[] = [
-        '<strong class="text-teal-800 font-mono">' . e($pId) . '</strong>',
-        '<span class="font-semibold text-slate-800">' . e($name) . '</span>',
-        e($phone),
-        e($ageGender),
-        e($p['city'] ?? '—'),
+        '<span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($pId) . '</span>',
+        '<span class="font-bold text-slate-800">' . e($name) . '</span>',
+        '<span class="text-xs font-mono text-slate-600">' . e($phone) . '</span>',
+        '<span class="text-xs text-slate-500 font-medium">' . e($ageGender) . '</span>',
+        '<span class="text-xs text-slate-500">' . e((string)($p['city'] ?? '—')) . '</span>',
         $actions,
     ];
 }

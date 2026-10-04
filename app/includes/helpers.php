@@ -9,7 +9,7 @@ function e(?string $value): string
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-function brand_logo(string $class = 'brand-logo', string $alt = 'Health LMS Pro'): string
+function brand_logo(string $class = 'brand-logo', string $alt = 'Lab Dash Pro'): string
 {
     return '<img src="/assets/logo.png" alt="' . e($alt) . '" class="' . e($class) . '" width="128" height="128" decoding="async">';
 }
@@ -102,16 +102,22 @@ function stat_card(string $label, string $value, string $hint = '', string $tone
     HTML;
 }
 
-function page_header(string $title, string $subtitle = '', ?string $actionHtml = null): string
+function page_header(string $title, string $subtitle = '', ?string $actionHtml = null, string $icon = 'fa-solid fa-layer-group'): string
 {
     $title = e($title);
     $subtitle = e($subtitle);
-    $action = $actionHtml ? '<div class="flex shrink-0 flex-wrap gap-2">' . $actionHtml . '</div>' : '';
+    $action = $actionHtml ? '<div class="flex shrink-0 flex-wrap items-center gap-2.5">' . $actionHtml . '</div>' : '';
+    $subHtml = $subtitle !== '' ? '<p class="text-xs sm:text-sm text-slate-500 font-medium">' . $subtitle . '</p>' : '';
     return <<<HTML
-    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-            <h1 class="page-title">{$title}</h1>
-            <p class="page-subtitle">{$subtitle}</p>
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-card">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 text-[#c2f13c] flex items-center justify-center text-xl font-black shadow-md shrink-0">
+                <i class="{$icon}"></i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{$title}</h1>
+                {$subHtml}
+            </div>
         </div>
         {$action}
     </div>
@@ -120,17 +126,17 @@ function page_header(string $title, string $subtitle = '', ?string $actionHtml =
 
 function btn_primary(string $href, string $label, string $icon = 'fa-solid fa-arrow-right'): string
 {
-    return '<a href="' . e($href) . '" class="btn btn-primary"><i class="' . e($icon) . '" aria-hidden="true"></i> ' . e($label) . '</a>';
+    return '<a href="' . e($href) . '" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all shadow-md border border-slate-700/60"><i class="' . e($icon) . ' text-[#c2f13c]" aria-hidden="true"></i> ' . e($label) . '</a>';
 }
 
 function btn_secondary(string $href, string $label, string $icon = 'fa-solid fa-arrow-up-right-from-square'): string
 {
-    return '<a href="' . e($href) . '" class="btn btn-secondary"><i class="' . e($icon) . '" aria-hidden="true"></i> ' . e($label) . '</a>';
+    return '<a href="' . e($href) . '" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm transition-all border border-slate-300 shadow-sm"><i class="' . e($icon) . ' text-slate-500" aria-hidden="true"></i> ' . e($label) . '</a>';
 }
 
 function btn_submit(string $label, string $extraClass = '', string $icon = 'fa-solid fa-floppy-disk'): string
 {
-    return '<button type="submit" class="btn btn-primary ' . e($extraClass) . '"><i class="' . e($icon) . '" aria-hidden="true"></i> ' . e($label) . '</button>';
+    return '<button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all shadow-md border border-slate-700/60 ' . e($extraClass) . '"><i class="' . e($icon) . ' text-[#c2f13c]" aria-hidden="true"></i> ' . e($label) . '</button>';
 }
 
 function link_action(string $label, string $icon = 'fa-solid fa-pen-to-square'): string

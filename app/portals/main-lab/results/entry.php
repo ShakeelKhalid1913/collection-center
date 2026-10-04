@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         $batchData[] = [
             'id' => $rId,
             'value' => $val,
-            'unit' => $item['unit'] ?? null,
-            'reference_range' => $item['range'] ?? null,
+            'unit' => isset($item['unit']) ? trim((string)$item['unit']) : null,
+            'reference_range' => isset($item['range']) ? trim((string)$item['range']) : null,
             'flag' => $flag,
             'is_visible' => $isVisible,
             'sub_table' => $subTable,
@@ -319,12 +319,14 @@ foreach ($activeRows as $r) {
                     {$subHtml}
                 </span>
             </label>
-            <input type="hidden" name="results[{$rId}][unit]" value="{$unit}">
-            <input type="hidden" name="results[{$rId}][range]" value="{$range}">
             <input type="hidden" name="results[{$rId}][flag]" value="{$flag}" data-auto-flag>
         </td>
-        <td class="px-3 py-2 text-sm text-slate-600 align-top">{$unit}</td>
-        <td class="px-3 py-2 text-sm text-slate-600 font-mono align-top">{$range}</td>
+        <td class="px-3 py-2 text-sm align-top">
+            <input type="text" name="results[{$rId}][unit]" value="{$unit}" class="field text-xs w-24 py-1 px-2" placeholder="—" title="Unit of measurement (e.g. g/dL, mg/dL)">
+        </td>
+        <td class="px-3 py-2 text-sm align-top">
+            <input type="text" name="results[{$rId}][range]" value="{$range}" class="field text-xs w-32 py-1 px-2 font-mono" placeholder="—" title="Reference range / number (e.g. 12-16)" data-ref-range-input>
+        </td>
         <td class="px-3 py-2 align-top">{$valueControl}</td>
         <td class="px-3 py-2 align-top text-sm" data-flag-display>{$flagDisplay}</td>
     </tr>
@@ -382,34 +384,34 @@ $content .= <<<HTML
 <input type="hidden" name="lab_no" value="{$labNoSafe}">
 <input type="hidden" name="active_test" value="{$activeTestLabel}">
 
-<div class="mb-4 bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+<div class="mb-5 bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-card">
     <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         <!-- Live Real-Time Google-Style Patient Search -->
         <div class="relative flex-1" id="patient-search-container">
             <div class="relative flex items-center">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-sm pointer-events-none"></i>
+                <i class="fa-solid fa-magnifying-glass absolute left-4 text-slate-400 text-sm pointer-events-none"></i>
                 <input 
                     type="text" 
                     id="patient-search-input" 
-                    class="w-full pl-10 pr-24 py-2 text-sm rounded-lg border border-slate-300 focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-all font-medium placeholder:text-slate-400 outline-none" 
+                    class="w-full pl-11 pr-24 py-2.5 text-sm rounded-2xl border border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all font-semibold placeholder:text-slate-400 outline-none bg-slate-50/50 focus:bg-white" 
                     placeholder="Search patient by Lab No (e.g. 1004), MR No (e.g. MR0747), or Name…" 
                     autocomplete="off"
                     spellcheck="false"
                 >
-                <div class="absolute right-2.5 flex items-center gap-1.5">
+                <div class="absolute right-3 flex items-center gap-1.5">
                     <button type="button" id="patient-search-clear" class="hidden text-slate-400 hover:text-slate-600 p-1 text-xs" title="Clear search">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
-                    <span class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded">Press /</span>
+                    <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200 rounded-lg">Press /</span>
                 </div>
             </div>
 
             <!-- Instant Autocomplete Dropdown List -->
             <div 
                 id="patient-search-dropdown" 
-                class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[420px] overflow-y-auto"
+                class="hidden absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[420px] overflow-y-auto"
             >
-                <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+                <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center">
                     <span id="patient-search-header">Recent Patient Visits</span>
                     <span class="text-[10px] text-slate-400 font-normal">Use ↑ ↓ arrows &amp; Enter to jump</span>
                 </div>
@@ -421,75 +423,75 @@ $content .= <<<HTML
 
         <!-- Quick Switcher Dropdown & Patient History Link -->
         <div class="flex items-center gap-2 text-xs shrink-0">
-            <span class="text-slate-400 hidden xl:inline">or visit:</span>
-            <select class="field text-xs py-1.5 max-w-[200px] text-slate-600" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
+            <span class="text-slate-400 hidden xl:inline font-bold">or visit:</span>
+            <select class="field text-xs py-2 max-w-[200px] text-slate-700 font-semibold" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
                 {$switcherOpts}
             </select>
-            <a href="{$historyLink}" class="btn btn-secondary text-xs py-1.5 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Patient History</a>
+            <a href="{$historyLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Patient History</a>
         </div>
     </div>
 </div>
 
-<div class="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
-    <aside class="space-y-3 lg:sticky lg:top-4">
-        <div class="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
-            <button type="submit" class="btn btn-primary w-full justify-center"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Results</button>
-            <button type="submit" name="send_verify" value="1" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Save &amp; Verify</button>
-            <button type="submit" name="goto_preview" value="1" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-file-pdf mr-1"></i> Save &amp; View / Print</button>
-            <a href="{$addTestLink}" class="btn btn-secondary w-full justify-center"><i class="fa-solid fa-plus mr-1"></i> Add / Change Tests</a>
-            <a href="/portals/main-lab/results/pending.php" class="btn btn-secondary w-full justify-center">Back to list</a>
+<div class="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] items-start">
+    <aside class="space-y-4 lg:sticky lg:top-4">
+        <div class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-card space-y-2.5">
+            <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md border border-slate-700/60 transition-all"><i class="fa-solid fa-floppy-disk text-[#c2f13c]"></i> Save Results</button>
+            <button type="submit" name="send_verify" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all"><i class="fa-solid fa-circle-check"></i> Save &amp; Verify</button>
+            <button type="submit" name="goto_preview" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 transition-all"><i class="fa-solid fa-file-pdf"></i> Save &amp; View / Print</button>
+            <a href="{$addTestLink}" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 transition-all"><i class="fa-solid fa-plus"></i> Add / Change Tests</a>
+            <a href="/portals/main-lab/archive.php" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-slate-500 hover:text-slate-800 font-bold text-xs transition-all">Back to History</a>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-lg p-3 space-y-3">
+        <div class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-card space-y-3">
             <div>
-                <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Current test</div>
-                <div class="font-bold text-slate-900 text-sm leading-snug mt-0.5">{$activeTestLabel}</div>
-                <div class="text-xs text-slate-500 mt-1">{$posLabel} on this visit</div>
+                <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Current test</div>
+                <div class="font-extrabold text-slate-900 text-base leading-snug mt-1">{$activeTestLabel}</div>
+                <div class="text-xs text-slate-500 font-medium mt-1">{$posLabel} on this visit</div>
             </div>
             <div>
-                <label class="text-xs font-semibold text-slate-600 block mb-1">Jump to test</label>
-                <select class="field text-sm w-full" onchange="if(this.value) location.href='{$baseUrlJs}&amp;test='+encodeURIComponent(this.value)">
+                <label class="text-xs font-bold text-slate-700 block mb-1">Jump to test</label>
+                <select class="field text-xs w-full font-semibold" onchange="if(this.value) location.href='{$baseUrlJs}&amp;test='+encodeURIComponent(this.value)">
                     {$testSelectOpts}
                 </select>
             </div>
-            <div class="flex gap-2">{$prevBtn}{$nextBtn}</div>
-            <p class="text-xs text-slate-500 leading-relaxed">Each booked test has its own parameter sheet. Flags auto-calculate from reference ranges. Press Enter to move down.</p>
+            <div class="flex gap-2 pt-1">{$prevBtn}{$nextBtn}</div>
+            <p class="text-[11px] text-slate-500 leading-relaxed font-medium">Each booked test has its own parameter sheet. Flags auto-calculate from reference ranges. Press Enter to move down.</p>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-lg p-3 space-y-2" data-page-grouping>
+        <div class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-card space-y-3" data-page-grouping>
             <div class="flex items-center justify-between gap-2">
                 <div>
-                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Page grouping</div>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Drag tests onto pages, then click <strong>Save</strong> or <strong>Save &amp; View / Print</strong></p>
+                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Page grouping</div>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Drag tests onto pages</p>
                 </div>
-                <button type="button" class="btn btn-secondary text-xs" data-add-page>+ Add Page</button>
+                <button type="button" class="btn btn-secondary text-xs px-2.5 py-1 rounded-xl" data-add-page>+ Page</button>
             </div>
             <div class="space-y-2" data-page-board>{$pageBoard}</div>
         </div>
 
-        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
-            <div><span class="font-semibold text-slate-800">Status:</span> {$status}</div>
-            <div><span class="font-semibold text-slate-800">Doctor:</span> {$doctor}</div>
-            <div><span class="font-semibold text-slate-800">All tests:</span> {$testsOrdered}</div>
+        <div class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-card text-xs text-slate-600 space-y-1.5">
+            <div><span class="font-bold text-slate-800">Status:</span> {$status}</div>
+            <div><span class="font-bold text-slate-800">Doctor:</span> {$doctor}</div>
+            <div><span class="font-bold text-slate-800">All tests:</span> {$testsOrdered}</div>
         </div>
     </aside>
 
-    <div class="bg-white border border-slate-300 rounded-lg shadow-sm overflow-hidden">
-        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">Lab No</span><strong class="font-mono text-teal-800">{$labNoSafe}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">MR No</span><strong class="font-mono">{$mrNo}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">Patient</span><strong>{$patientName}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">Age / Sex</span><strong>{$age} yrs / {$gender}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">Phone</span>{$phone}</div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-bold">Registered</span>{$regAt}</div>
-                <div class="sm:col-span-2"><span class="block text-[10px] uppercase text-slate-400 font-bold">Referring doctor</span>{$doctor}</div>
+    <div class="bg-white border border-slate-200/90 rounded-3xl shadow-card overflow-hidden">
+        <div class="border-b border-slate-100 bg-slate-50/70 p-5">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs font-medium">
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Lab No</span><strong class="font-mono text-base font-black text-slate-900">{$labNoSafe}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">MR No</span><strong class="font-mono text-sm font-bold text-slate-800">{$mrNo}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Patient</span><strong class="text-sm font-bold text-slate-900">{$patientName}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Age / Sex</span><strong class="text-slate-800">{$age} yrs / {$gender}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Phone</span><span class="text-slate-700">{$phone}</span></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Registered</span><span class="text-slate-700">{$regAt}</span></div>
+                <div class="sm:col-span-2"><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Referring doctor</span><span class="text-slate-800 font-semibold">{$doctor}</span></div>
             </div>
         </div>
 
-        <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2">
-            <strong class="text-indigo-950 text-sm tracking-wide">{$activeTestLabel}</strong>
-            <span class="text-xs text-indigo-800">Untick <em>Show</em> to hide a line · Flag is auto ↑/↓</span>
+        <div class="px-5 py-3 bg-blue-50/60 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2">
+            <strong class="text-blue-950 text-sm tracking-wide font-extrabold">{$activeTestLabel}</strong>
+            <span class="text-xs text-blue-800 font-semibold">Untick <em>Show</em> to hide a line · Flag is auto-calculated</span>
         </div>
 
         <div class="overflow-x-auto">

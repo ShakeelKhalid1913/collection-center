@@ -64,32 +64,70 @@ class PatientRepository
         return (int)($row['cnt'] ?? 0);
     }
 
+    private function ensureReferringDoctorColumn(): void
+    {
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+        try {
+            $cols = $this->db->fetchAll("SHOW COLUMNS FROM patients LIKE 'referring_doctor'");
+            if (empty($cols)) {
+                $this->db->execute("ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL AFTER emergency_phone");
+            }
+        } catch (\Throwable $e) {}
+    }
+
     public function create(array $data): array
     {
+        $this->ensureReferringDoctorColumn();
         $manualNo = trim((string)($data['patient_no'] ?? ''));
         $patientNo = $manualNo !== '' ? $manualNo : ('MR-' . rand(10000, 99999));
         $id = $data['id'] ?? ('P-' . bin2hex(random_bytes(4)));
 
-        $sql = "INSERT INTO patients (
-                    id, organization_id, patient_no, title, full_name, relation, relation_of,
-                    phone, phone_alt, email, cnic, blood_group, dob, age, gender,
-                    address, city, emergency_name, emergency_phone, internal_notes,
-                    patient_type, panel_code, branch, created_by
-                ) VALUES (
-                    :id, :org_id, :patient_no, :title, :full_name, :relation, :relation_of,
-                    :phone, :phone_alt, :email, :cnic, :blood_group, :dob, :age, :gender,
-                    :address, :city, :emergency_name, :emergency_phone, :notes,
-                    :patient_type, :panel_code, :branch, :created_by
-                )";
+        $doctor = trim((string)($data['referring_doctor'] ?? $data['doctor'] ?? ''));
+
+        $hasDocCol = true;
+        try {
+            $cols = $this->db->fetchAll("SHOW COLUMNS FROM patients LIKE 'referring_doctor'");
+            $hasDocCol = !empty($cols);
+        } catch (\Throwable $e) {
+            $hasDocCol = false;
+        }
+
+        if ($hasDocCol) {
+            $sql = "INSERT INTO patients (
+                        id, organization_id, patient_no, title, full_name, relation, relation_of,
+                        phone, phone_alt, email, cnic, blood_group, dob, age, gender,
+                        address, city, emergency_name, emergency_phone, referring_doctor, internal_notes,
+                        patient_type, panel_code, branch, created_by
+                    ) VALUES (
+                        :id, :org_id, :patient_no, :title, :full_name, :relation, :relation_of,
+                        :phone, :phone_alt, :email, :cnic, :blood_group, :dob, :age, :gender,
+                        :address, :city, :emergency_name, :emergency_phone, :referring_doctor, :notes,
+                        :patient_type, :panel_code, :branch, :created_by
+                    )";
+        } else {
+            $sql = "INSERT INTO patients (
+                        id, organization_id, patient_no, title, full_name, relation, relation_of,
+                        phone, phone_alt, email, cnic, blood_group, dob, age, gender,
+                        address, city, emergency_name, emergency_phone, internal_notes,
+                        patient_type, panel_code, branch, created_by
+                    ) VALUES (
+                        :id, :org_id, :patient_no, :title, :full_name, :relation, :relation_of,
+                        :phone, :phone_alt, :email, :cnic, :blood_group, :dob, :age, :gender,
+                        :address, :city, :emergency_name, :emergency_phone, :notes,
+                        :patient_type, :panel_code, :branch, :created_by
+                    )";
+        }
 
         $dob = $data['dob'] ?? null;
         if ($dob === '') {
             $dob = null;
         }
 
-        $doctor = $data['referring_doctor'] ?? $data['doctor'] ?? '';
-
-        $ok = $this->db->execute($sql, [
+        $params = [
             'id' => $id,
             'org_id' => $data['organization_id'] ?? 'ORG-001',
             'patient_no' => $patientNo,
@@ -114,12 +152,26 @@ class PatientRepository
             'panel_code' => $data['panel_code'] ?? $data['panel'] ?? '',
             'branch' => $data['branch'] ?? 'CC-01',
             'created_by' => $data['created_by'] ?? null,
-        ]);
+        ];
+
+        if ($hasDocCol) {
+            $params['referring_doctor'] = $doctor;
+        }
+
+        $ok = $this->db->execute($sql, $params);
 
         if ($ok && $doctor !== '') {
             try {
                 $this->db->execute("UPDATE patients SET referring_doctor = :doc WHERE id = :id", ['doc' => $doctor, 'id' => $id]);
-            } catch (\PDOException $ignored) {}
+            } catch (\Throwable $ignored) {}
+
+            try {
+                $pName = trim((string)($data['full_name'] ?? $data['name'] ?? ''));
+                $this->db->execute(
+                    "UPDATE lab_entries SET doctor = :doc WHERE (patient_id = :pid OR patient_name = :pname) AND (doctor IS NULL OR doctor = '' OR doctor LIKE 'Walk%')",
+                    ['doc' => $doctor, 'pid' => $id, 'pname' => $pName]
+                );
+            } catch (\Throwable $ignored) {}
         }
 
         return ['success' => $ok, 'id' => $id, 'patient_no' => $patientNo];

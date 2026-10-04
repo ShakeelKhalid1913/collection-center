@@ -4,36 +4,36 @@ declare(strict_types=1);
 
 function card(string $content, string $class = ''): string
 {
-    return '<div class="app-panel ' . e($class) . '">' . $content . '</div>';
+    return '<div class="app-panel bg-white rounded-3xl border border-slate-200/90 shadow-card overflow-hidden ' . e($class) . '">' . $content . '</div>';
 }
 
 function panel_head(string $title, ?string $subtitle = null): string
 {
-    $sub = $subtitle ? '<span class="muted"> — ' . e($subtitle) . '</span>' : '';
-    return '<div class="app-panel-head">' . e($title) . $sub . '</div>';
+    $sub = $subtitle ? '<span class="text-xs font-semibold text-slate-400"> — ' . e($subtitle) . '</span>' : '';
+    return '<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between"><h3 class="text-base font-extrabold text-slate-900 tracking-tight">' . e($title) . $sub . '</h3></div>';
 }
 
 function data_table(array $headers, array $rows): string
 {
     $thead = '';
     foreach ($headers as $h) {
-        $thead .= '<th>' . e($h) . '</th>';
+        $thead .= '<th class="py-3.5 px-4 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50/70 border-b border-slate-100">' . e($h) . '</th>';
     }
 
     $tbody = '';
     foreach ($rows as $row) {
-        $tbody .= '<tr>';
+        $tbody .= '<tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-none">';
         foreach ($row as $cell) {
-            $tbody .= '<td>' . $cell . '</td>';
+            $tbody .= '<td class="py-3.5 px-4 text-xs font-medium text-slate-700">' . $cell . '</td>';
         }
         $tbody .= '</tr>';
     }
 
     return <<<HTML
-    <div class="table-scroll">
-        <table class="data-table">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
             <thead><tr>{$thead}</tr></thead>
-            <tbody>{$tbody}</tbody>
+            <tbody class="divide-y divide-slate-100">{$tbody}</tbody>
         </table>
     </div>
     HTML;

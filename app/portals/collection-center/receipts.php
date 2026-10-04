@@ -64,11 +64,11 @@ if ($q !== '' && $labNo === '') {
                 continue;
             }
             $seen[$ln] = true;
-            $visitRows .= '<tr class="border-b border-slate-100">'
-                . '<td class="px-3 py-2 font-mono text-teal-800 font-semibold">' . e($ln) . '</td>'
-                . '<td class="px-3 py-2 font-semibold">' . e((string)($ae['patient_name'] ?? ($p['full_name'] ?? ''))) . '</td>'
-                . '<td class="px-3 py-2 text-sm">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
-                . '<td class="px-3 py-2"><a class="btn btn-primary text-xs" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            $visitRows .= '<tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">'
+                . '<td class="px-4 py-3"><span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($ln) . '</span></td>'
+                . '<td class="px-4 py-3 font-bold text-slate-800">' . e((string)($ae['patient_name'] ?? ($p['full_name'] ?? ''))) . '</td>'
+                . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
+                . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
                 . '</tr>';
         }
     }
@@ -82,11 +82,11 @@ if ($q !== '' && $labNo === '') {
             continue;
         }
         $seen[$ln] = true;
-        $visitRows .= '<tr class="border-b border-slate-100">'
-            . '<td class="px-3 py-2 font-mono text-teal-800 font-semibold">' . e($ln) . '</td>'
-            . '<td class="px-3 py-2 font-semibold">' . e((string)($ae['patient_name'] ?? '')) . '</td>'
-            . '<td class="px-3 py-2 text-sm">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
-            . '<td class="px-3 py-2"><a class="btn btn-primary text-xs" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+        $visitRows .= '<tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">'
+            . '<td class="px-4 py-3"><span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($ln) . '</span></td>'
+            . '<td class="px-4 py-3 font-bold text-slate-800">' . e((string)($ae['patient_name'] ?? '')) . '</td>'
+            . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
+            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
             . '</tr>';
     }
 }
@@ -101,7 +101,7 @@ $content = page_header(
 
 $qVal = e($q);
 $content .= <<<HTML
-<div class="mb-4 no-print space-y-3 p-4 bg-white border border-slate-200 rounded-lg">
+<div class="mb-5 no-print space-y-4 p-5 bg-white border border-slate-200/90 rounded-3xl shadow-card">
     <form method="get" class="flex flex-wrap gap-3 items-end">
         <div class="flex-1 min-w-[16rem]">
             <label class="field-label" for="bill-q">Search patient</label>
@@ -128,10 +128,10 @@ if ($q !== '' && $labNo === '') {
     } else {
         $content .= card(
             panel_head('Matching visits') .
-            '<div class="overflow-x-auto"><table class="min-w-full text-sm">'
-            . '<thead class="bg-slate-800 text-white text-xs uppercase"><tr>'
-            . '<th class="px-3 py-2 text-left">Lab No</th><th class="px-3 py-2 text-left">Patient</th><th class="px-3 py-2 text-left">Tests</th><th class="px-3 py-2 text-left">Action</th>'
-            . '</tr></thead><tbody>' . $visitRows . '</tbody></table></div>',
+            '<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">'
+            . '<thead class="bg-slate-50 border-b border-slate-100 text-[11px] font-extrabold uppercase tracking-wider text-slate-400"><tr>'
+            . '<th class="px-4 py-3.5">Lab No</th><th class="px-4 py-3.5">Patient</th><th class="px-4 py-3.5">Tests</th><th class="px-4 py-3.5">Action</th>'
+            . '</tr></thead><tbody class="divide-y divide-slate-100">' . $visitRows . '</tbody></table></div>',
             'overflow-hidden'
         );
     }

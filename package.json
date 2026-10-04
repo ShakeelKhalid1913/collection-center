@@ -1,5 +1,5 @@
 {
-  "name": "health-lms-pro",
+  "name": "lab-dash-pro",
   "private": true,
-  "description": "Health LMS Pro — Diagnostic, Laboratory, Collection Center (PHP on Vercel)"
+  "description": "Lab Dash Pro — Diagnostic, Laboratory, Collection Center (PHP on Vercel)"
 }

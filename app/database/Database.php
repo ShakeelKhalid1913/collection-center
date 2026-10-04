@@ -76,9 +76,14 @@ class Database
         if (!$this->isConnected()) {
             return [];
         }
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll() ?: [];
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll() ?: [];
+        } catch (PDOException $e) {
+            error_log('Database fetchAll error: ' . $e->getMessage() . ' in SQL: ' . $sql);
+            return [];
+        }
     }
 
     /**
@@ -89,10 +94,15 @@ class Database
         if (!$this->isConnected()) {
             return null;
         }
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetch();
-        return $result !== false ? $result : null;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch();
+            return $result !== false ? $result : null;
+        } catch (PDOException $e) {
+            error_log('Database fetchOne error: ' . $e->getMessage() . ' in SQL: ' . $sql);
+            return null;
+        }
     }
 
     /**
@@ -103,8 +113,13 @@ class Database
         if (!$this->isConnected()) {
             return false;
         }
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute($params);
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute($params);
+        } catch (PDOException $e) {
+            error_log('Database execute error: ' . $e->getMessage() . ' in SQL: ' . $sql);
+            return false;
+        }
     }
 
     /**

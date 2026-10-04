@@ -248,7 +248,7 @@
           const html2pdf = await loadHtml2Pdf();
           await html2pdf()
             .set({
-              margin: [2, 0, 2, 0],
+              margin: [2, 6, 2, 6],
               filename,
               image: { type: 'jpeg', quality: 0.98 },
               html2canvas: { scale: 2, useCORS: true, logging: false },
@@ -328,6 +328,11 @@
 
       input.addEventListener('input', refreshFlag);
       input.addEventListener('change', refreshFlag);
+
+      const rangeInput = input.closest('[data-result-row]')?.querySelector('input[name*="[range]"]');
+      if (rangeInput) {
+        rangeInput.addEventListener('input', refreshFlag);
+      }
 
       input.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
@@ -557,6 +562,258 @@
     });
   }
 
+  function initHeaderLayoutBuilder() {
+    const canvas = document.getElementById('header-builder-canvas');
+    if (!canvas) return;
+
+    const logoItem = document.getElementById('drag-item-logo');
+    const qrItem = document.getElementById('drag-item-qr');
+    const jsonInput = document.getElementById('header_layout_json');
+    const posInput = document.getElementById('header_image_position');
+    const hSlider = document.getElementById('builder-h-slider');
+    const hVal = document.getElementById('builder-h-val');
+    const coordsStatus = document.getElementById('builder-coords-status');
+    const presetBtns = document.querySelectorAll('[data-builder-preset]');
+    const fileInput = document.getElementById('header_image');
+
+    if (!logoItem || !qrItem) return;
+
+    function syncState() {
+      const cW = canvas.clientWidth || 760;
+      const cH = parseInt(canvas.style.height, 10) || 90;
+
+      const logoX = Math.round(parseFloat(logoItem.style.left) || 0);
+      const logoY = Math.round(parseFloat(logoItem.style.top) || 0);
+      const logoW = Math.round(parseFloat(logoItem.style.width) || 240);
+      const logoH = Math.round(parseFloat(logoItem.style.height) || 70);
+
+      const qrX = Math.round(parseFloat(qrItem.style.left) || 0);
+      const qrY = Math.round(parseFloat(qrItem.style.top) || 0);
+      const qrSize = Math.round(parseFloat(qrItem.style.width) || 60);
+
+      const logoXPct = Number(((logoX / cW) * 100).toFixed(2));
+      const logoWPct = Number(((logoW / cW) * 100).toFixed(2));
+      const qrXPct = Number(((qrX / cW) * 100).toFixed(2));
+
+      const data = {
+        canvas_h: cH,
+        logo: {
+          x: logoX,
+          y: logoY,
+          w: logoW,
+          h: logoH,
+          x_pct: logoXPct,
+          w_pct: logoWPct
+        },
+        qr: {
+          x: qrX,
+          y: qrY,
+          size: qrSize,
+          x_pct: qrXPct
+        }
+      };
+
+      if (jsonInput) {
+        jsonInput.value = JSON.stringify(data);
+      }
+
+      if (posInput) {
+        if (logoX < cW * 0.3) {
+          posInput.value = 'left';
+        } else if (logoX > cW * 0.55) {
+          posInput.value = 'right';
+        } else {
+          posInput.value = 'center';
+        }
+      }
+
+      if (coordsStatus) {
+        coordsStatus.textContent = `Logo: (${logoX}, ${logoY}) ${logoW}×${logoH} | QR: (${qrX}, ${qrY}) ${qrSize}×${qrSize}`;
+      }
+    }
+
+    function setupDragAndResize(item, isSquare) {
+      const handle = item.querySelector('.builder-resize-handle');
+      let mode = null; // 'drag' | 'resize' | null
+      let startX = 0;
+      let startY = 0;
+      let startL = 0;
+      let startT = 0;
+      let startW = 0;
+      let startH = 0;
+
+      item.addEventListener('pointerdown', (e) => {
+        if (e.target === handle || handle?.contains(e.target)) {
+          mode = 'resize';
+          startX = e.clientX;
+          startY = e.clientY;
+          startW = item.offsetWidth;
+          startH = item.offsetHeight;
+          startL = item.offsetLeft;
+          startT = item.offsetTop;
+          handle?.setPointerCapture?.(e.pointerId);
+        } else {
+          mode = 'drag';
+          startX = e.clientX;
+          startY = e.clientY;
+          startL = item.offsetLeft;
+          startT = item.offsetTop;
+          item?.setPointerCapture?.(e.pointerId);
+        }
+        item.classList.add('is-active');
+        e.preventDefault();
+      });
+
+      const onPointerMove = (e) => {
+        if (!mode) return;
+        const cW = canvas.clientWidth || 760;
+        const cH = canvas.clientHeight || 90;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (mode === 'drag') {
+          const maxL = Math.max(0, cW - item.offsetWidth);
+          const maxT = Math.max(0, cH - item.offsetHeight);
+          const nextL = Math.max(0, Math.min(maxL, startL + dx));
+          const nextT = Math.max(0, Math.min(maxT, startT + dy));
+          item.style.left = nextL + 'px';
+          item.style.top = nextT + 'px';
+          syncState();
+        } else if (mode === 'resize') {
+          if (isSquare) {
+            const maxDimension = Math.min(cW - startL, cH - startT);
+            const rawSize = Math.max(startW + dx, startH + dy);
+            const newSize = Math.max(35, Math.min(maxDimension, rawSize));
+            item.style.width = newSize + 'px';
+            item.style.height = newSize + 'px';
+          } else {
+            const maxW = Math.max(60, cW - startL);
+            const maxH = Math.max(25, cH - startT);
+            const newW = Math.max(60, Math.min(maxW, startW + dx));
+            const newH = Math.max(25, Math.min(maxH, startH + dy));
+            item.style.width = newW + 'px';
+            item.style.height = newH + 'px';
+          }
+          syncState();
+        }
+      };
+
+      const endAction = (e) => {
+        if (!mode) return;
+        try {
+          if (mode === 'resize' && handle?.hasPointerCapture?.(e.pointerId)) {
+            handle.releasePointerCapture(e.pointerId);
+          } else if (mode === 'drag' && item?.hasPointerCapture?.(e.pointerId)) {
+            item.releasePointerCapture(e.pointerId);
+          }
+        } catch (_) {}
+        mode = null;
+        item.classList.remove('is-active');
+        syncState();
+      };
+
+      item.addEventListener('pointermove', onPointerMove);
+      item.addEventListener('pointerup', endAction);
+      item.addEventListener('pointercancel', endAction);
+    }
+
+    setupDragAndResize(logoItem, false);
+    setupDragAndResize(qrItem, true);
+
+    if (hSlider) {
+      const onHeightChange = () => {
+        const h = parseInt(hSlider.value, 10) || 90;
+        canvas.style.height = h + 'px';
+        if (hVal) hVal.textContent = h + 'px';
+
+        const logoH = logoItem.offsetHeight;
+        if (logoItem.offsetTop + logoH > h) {
+          logoItem.style.top = Math.max(0, h - logoH) + 'px';
+        }
+        const qrH = qrItem.offsetHeight;
+        if (qrItem.offsetTop + qrH > h) {
+          qrItem.style.top = Math.max(0, h - qrH) + 'px';
+        }
+        syncState();
+      };
+      hSlider.addEventListener('input', onHeightChange);
+      hSlider.addEventListener('change', onHeightChange);
+    }
+
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-builder-preset');
+        const cW = canvas.clientWidth || 760;
+
+        if (preset === 'left') {
+          logoItem.style.left = '15px';
+          logoItem.style.top = '10px';
+          logoItem.style.width = '240px';
+          logoItem.style.height = '70px';
+
+          const qrSize = qrItem.offsetWidth || 60;
+          qrItem.style.left = Math.max(0, cW - qrSize - 15) + 'px';
+          qrItem.style.top = '10px';
+        } else if (preset === 'center') {
+          const logoW = 240;
+          logoItem.style.left = Math.max(0, Math.round((cW - logoW) / 2)) + 'px';
+          logoItem.style.top = '10px';
+          logoItem.style.width = logoW + 'px';
+          logoItem.style.height = '70px';
+
+          const qrSize = qrItem.offsetWidth || 60;
+          qrItem.style.left = Math.max(0, cW - qrSize - 15) + 'px';
+          qrItem.style.top = '10px';
+        } else if (preset === 'right') {
+          const logoW = 240;
+          logoItem.style.left = Math.max(0, cW - logoW - 15) + 'px';
+          logoItem.style.top = '10px';
+          logoItem.style.width = logoW + 'px';
+          logoItem.style.height = '70px';
+
+          qrItem.style.left = '15px';
+          qrItem.style.top = '10px';
+        } else if (preset === 'default') {
+          if (hSlider) {
+            hSlider.value = '90';
+            canvas.style.height = '90px';
+            if (hVal) hVal.textContent = '90px';
+          }
+          logoItem.style.left = '15px';
+          logoItem.style.top = '10px';
+          logoItem.style.width = '240px';
+          logoItem.style.height = '70px';
+
+          qrItem.style.left = Math.max(0, cW - 75) + 'px';
+          qrItem.style.top = '10px';
+          qrItem.style.width = '60px';
+          qrItem.style.height = '60px';
+        }
+
+        syncState();
+      });
+    });
+
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+          const url = URL.createObjectURL(file);
+          const previewImg = document.getElementById('builder-logo-preview-img');
+          const previewText = document.getElementById('builder-logo-preview-text');
+          if (previewImg) {
+            previewImg.src = url;
+          } else if (previewText) {
+            previewText.outerHTML = `<img id="builder-logo-preview-img" src="${url}" alt="Header Logo" draggable="false" style="max-height:100%;max-width:100%;object-fit:contain;pointer-events:none;">`;
+          }
+        }
+      });
+    }
+
+    // Initial sync
+    syncState();
+  }
+
   initBilling();
   initCatalogSearch();
   initPdfDownload();
@@ -564,4 +821,6 @@
   initResultEntry();
   initPrintToggles();
   initHeaderAlign();
+  initHeaderLayoutBuilder();
 })();
+

@@ -30,7 +30,7 @@ use App\Repositories\SettingRepository;
 use App\Repositories\WasteRecordRepository;
 use App\Repositories\DoctorShareRepository;
 
-const APP_NAME = 'Health LMS Pro';
+const APP_NAME = 'Lab Dash Pro';
 
 /**
  * Primary lab departments (test categories) — client-defined.
@@ -146,7 +146,7 @@ function render_offline_page(): void
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Offline · Health LMS Pro</title>
+    <title>Database Offline · Lab Dash Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
@@ -167,7 +167,7 @@ function render_offline_page(): void
     <div class="offline-card">
         <div class="offline-icon"><i class="fa-solid fa-database"></i></div>
         <h1>Database Offline / Connection Error</h1>
-        <p>Health LMS Pro is running in <strong>online-only database mode</strong>. Could not connect to MariaDB at <code>' . $host . '</code> / <code>' . $dbname . '</code>.</p>
+        <p>Lab Dash Pro is running in <strong>online-only database mode</strong>. Could not connect to MariaDB at <code>' . $host . '</code> / <code>' . $dbname . '</code>.</p>
         <div class="steps">
             <strong>Troubleshooting Checklist:</strong>
             <ol>

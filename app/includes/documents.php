@@ -63,12 +63,21 @@ function build_patient_document_meta(array $patient, ?array $entry, string $cont
         $entry['reported_at'] ?? $entry['updated_at'] ?? $entry['created_at'] ?? null
     );
 
-    $doctorRaw = trim((string)($entry['doctor'] ?? ''));
-    if ($doctorRaw === '') {
-        $doctorRaw = trim((string)($patient['referring_doctor'] ?? ''));
+    $patientDoctor = trim((string)($patient['referring_doctor'] ?? ''));
+    if ($patientDoctor === '' || preg_match('/^walk[- ]*in|^self$/i', $patientDoctor)) {
+        if (!empty($patient['emergency_name']) && !preg_match('/^walk[- ]*in|^self$/i', (string)$patient['emergency_name'])) {
+            $patientDoctor = trim((string)$patient['emergency_name']);
+        }
     }
-    if ($doctorRaw === '') {
-        $doctorRaw = 'Walk-in / Self';
+
+    $entryDoctor = trim((string)($entry['doctor'] ?? ''));
+
+    if ($entryDoctor !== '' && !preg_match('/^walk[- ]*in|^self$/i', $entryDoctor)) {
+        $doctorRaw = $entryDoctor;
+    } elseif ($patientDoctor !== '' && !preg_match('/^walk[- ]*in|^self$/i', $patientDoctor)) {
+        $doctorRaw = $patientDoctor;
+    } else {
+        $doctorRaw = $entryDoctor !== '' ? $entryDoctor : ($patientDoctor !== '' ? $patientDoctor : 'Walk-in / Self');
     }
 
     // Client order: Age up (was under MR), MR where Phone was, Phone under Age.
@@ -104,17 +113,28 @@ function branding_settings(?string $orgId = null): array
     $orgId = $orgId ?? (current_user()['organization_id'] ?? 'ORG-001');
     $set = setting_repo()->getSettings($orgId);
     $hasImage = !empty($set['has_header_image']) || !empty($set['header_image_mime']);
+
+    $footer = trim((string)($set['footer_text'] ?? ''));
+    if (preg_match('/electronically verified|queries call reception/i', $footer)) {
+        $footer = 'Get well soon.';
+    }
+
+    $billFooter = trim((string)($set['bill_footer_text'] ?? ''));
+    if ($billFooter === '' || preg_match('/electronically verified|queries call reception/i', $billFooter)) {
+        $billFooter = 'Get well soon.';
+    }
+
     return [
         'organization_id' => $orgId,
-        'name' => $set['lab_name'] ?? 'Health LMS Pro Diagnostics',
+        'name' => $set['lab_name'] ?? 'Lab Dash Pro Diagnostics',
         'address' => $set['address'] ?? '',
         'phone' => $set['phone'] ?? '',
         'email' => $set['email'] ?? '',
         'header' => $set['header_text'] ?? '',
-        'footer' => $set['footer_text'] ?? '',
-        'logo_text' => $set['logo_text'] ?? 'HLP',
+        'footer' => $footer,
+        'logo_text' => $set['logo_text'] ?? 'LDP',
         'bill_header' => $set['bill_header_text'] ?? $set['header_text'] ?? '',
-        'bill_footer' => $set['bill_footer_text'] ?? $set['footer_text'] ?? '',
+        'bill_footer' => $billFooter,
         'has_header_image' => $hasImage,
         'header_image_url' => $hasImage
             ? '/branding-header.php?org=' . rawurlencode($orgId) . '&v=' . (int)($set['header_image_ver'] ?? 1)
@@ -122,6 +142,8 @@ function branding_settings(?string $orgId = null): array
         'header_image_position' => \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
             (string)($set['header_image_position'] ?? 'left')
         ),
+        'header_layout_json' => (string)($set['header_layout_json'] ?? ''),
+        'header_layout' => $set['header_layout'] ?? (!empty($set['header_layout_json']) ? json_decode((string)$set['header_layout_json'], true) : null),
     ];
 }
 
@@ -204,6 +226,7 @@ function save_branding_request(string $orgId): array
         'bill_header' => $_POST['bill_header'] ?? '',
         'bill_footer' => $_POST['bill_footer'] ?? '',
         'header_image_position' => $_POST['header_image_position'] ?? 'left',
+        'header_layout_json' => isset($_POST['header_layout_json']) ? (string)$_POST['header_layout_json'] : null,
     ], $orgId);
 
     if (!$ok) {
@@ -229,11 +252,68 @@ function branding_header_image_field(array $settings): string
     $pos = \App\Repositories\SettingRepository::normalizeHeaderImagePosition(
         (string)($settings['header_image_position'] ?? 'left')
     );
+
+    $layout = $settings['header_layout'] ?? null;
+    if (is_string($layout) && $layout !== '') {
+        $layout = json_decode($layout, true);
+    }
+
+    $canvasH = 150;
+    if (isset($layout['canvas_h'])) {
+        $canvasH = max(150, min(350, (int)$layout['canvas_h']));
+    }
+
+    $logoX = 15;
+    $logoY = 10;
+    $logoW = 240;
+    $logoH = 70;
+    if (!empty($layout['logo']) && is_array($layout['logo'])) {
+        $logoX = max(0, min(700, (int)($layout['logo']['x'] ?? 15)));
+        $logoY = max(0, min($canvasH - 20, (int)($layout['logo']['y'] ?? 10)));
+        $logoW = max(60, min(760, (int)($layout['logo']['w'] ?? 240)));
+        $logoH = max(30, min($canvasH, (int)($layout['logo']['h'] ?? 70)));
+    } elseif ($pos === 'center') {
+        $logoX = 260;
+    } elseif ($pos === 'right') {
+        $logoX = 500;
+    }
+
+    $qrX = 680;
+    $qrY = 10;
+    $qrSize = 60;
+    if (!empty($layout['qr']) && is_array($layout['qr'])) {
+        $qrX = max(0, min(700, (int)($layout['qr']['x'] ?? 680)));
+        $qrY = max(0, min($canvasH - 20, (int)($layout['qr']['y'] ?? 10)));
+        $qrSize = max(35, min(140, (int)($layout['qr']['size'] ?? 60)));
+    } elseif ($pos === 'right') {
+        $qrX = 20;
+    }
+
+    $initialData = [
+        'canvas_h' => $canvasH,
+        'logo' => [
+            'x' => $logoX,
+            'y' => $logoY,
+            'w' => $logoW,
+            'h' => $logoH,
+            'x_pct' => round(($logoX / 760) * 100, 2),
+            'w_pct' => round(($logoW / 760) * 100, 2),
+        ],
+        'qr' => [
+            'x' => $qrX,
+            'y' => $qrY,
+            'size' => $qrSize,
+            'x_pct' => round(($qrX / 760) * 100, 2),
+        ],
+    ];
+    $layoutJson = htmlspecialchars((string)json_encode($initialData), ENT_QUOTES, 'UTF-8');
+
     $preview = '';
+    $logoInnerHtml = '';
     if (!empty($settings['has_header_image']) && !empty($settings['header_image_url'])) {
         $url = e($settings['header_image_url']);
         $preview = <<<HTML
-        <div class="branding-header-preview">
+        <div class="branding-header-preview mt-3 pt-3 border-t border-slate-200">
             <p class="text-xs font-medium text-slate-600 mb-2">Current header image</p>
             <img src="{$url}" alt="Lab header" class="branding-header-preview__img">
             <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
@@ -242,37 +322,84 @@ function branding_header_image_field(array $settings): string
             </label>
         </div>
         HTML;
+
+        $logoInnerHtml = '<img id="builder-logo-preview-img" src="' . $url . '" alt="Header Logo" draggable="false" style="max-height:100%;max-width:100%;object-fit:contain;pointer-events:none;">';
+    } else {
+        $logoText = e($settings['name'] ?? 'LAB LOGO / LETTERHEAD');
+        $logoInnerHtml = '<div id="builder-logo-preview-text" class="flex flex-col items-center justify-center w-full h-full pointer-events-none text-teal-700 text-center select-none p-1">'
+            . '<span class="font-bold text-xs uppercase tracking-wider">' . $logoText . '</span>'
+            . '<span class="text-[10px] text-slate-400 mt-0.5">(Upload letterhead image below)</span>'
+            . '</div>';
     }
 
-    $leftOn = $pos === 'left' ? ' is-active' : '';
-    $centerOn = $pos === 'center' ? ' is-active' : '';
-    $rightOn = $pos === 'right' ? ' is-active' : '';
-    $thumbLabel = $pos === 'center' ? 'Center' : ($pos === 'right' ? 'Right' : 'Left');
+    $qrInnerHtml = '<div class="flex items-center justify-center w-full h-full pointer-events-none select-none p-1">'
+        . '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        . '<rect x="3" y="3" width="7" height="7"></rect>'
+        . '<rect x="14" y="3" width="7" height="7"></rect>'
+        . '<rect x="3" y="14" width="7" height="7"></rect>'
+        . '<rect x="7" y="7" width="1" height="1"></rect>'
+        . '<rect x="17" y="7" width="1" height="1"></rect>'
+        . '<rect x="7" y="17" width="1" height="1"></rect>'
+        . '<line x1="14" y1="14" x2="14" y2="14.01"></line>'
+        . '<line x1="17" y1="14" x2="17" y2="17"></line>'
+        . '<line x1="14" y1="17" x2="17" y2="17"></line>'
+        . '<line x1="20" y1="14" x2="20" y2="20"></line>'
+        . '</svg>'
+        . '</div>';
 
     return <<<HTML
-    <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 space-y-3">
-        <div>
-            <p class="text-sm font-semibold text-slate-800">Header image (PNG / JPG)</p>
-            <p class="text-xs text-slate-500 mt-1">Upload the lab letterhead/logo. Drag the handle below to place it Left, Center, or Right on the report. Recommended: under 2&nbsp;MB.</p>
+    <div class="rounded-lg border border-slate-300 bg-slate-50 p-4 space-y-3 header-builder-wrap">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <p class="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-up-down-left-right text-teal-600"></i> Header Logo &amp; QR Code Builder (Drag &amp; Drop)
+                </p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Drag the <strong>Logo</strong> or <strong>QR Code</strong> box anywhere on the canvas. Drag the bottom-right circle handle (<span class="font-bold text-slate-700">⤡</span>) to resize.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="builder-h-slider" class="text-xs font-medium text-slate-600 select-none">Height: <span id="builder-h-val" class="font-bold text-teal-700">{$canvasH}px</span></label>
+                <input type="range" id="builder-h-slider" min="60" max="220" step="5" value="{$canvasH}" class="w-24 accent-teal-600 cursor-pointer" title="Adjust canvas height">
+            </div>
         </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+            <span class="text-slate-400 font-medium mr-1 uppercase text-[10px] tracking-wider">Presets:</span>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="left">Logo Left · QR Right</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="center">Logo Center · QR Right</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="right">Logo Right · QR Left</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="default">Default</button>
+        </div>
+
+        <input type="hidden" name="header_layout_json" id="header_layout_json" value='{$layoutJson}'>
+        <input type="hidden" name="header_image_position" id="header_image_position" value="{$pos}">
+
+        <!-- Real Drag & Drop Interactive Canvas -->
+        <div id="header-builder-canvas" class="header-builder-canvas" style="height: {$canvasH}px;">
+            <div id="drag-item-logo" class="builder-item builder-item--logo" style="left: {$logoX}px; top: {$logoY}px; width: {$logoW}px; height: {$logoH}px;" title="Drag to move header logo">
+                <span class="builder-badge">Header Logo / Letterhead</span>
+                {$logoInnerHtml}
+                <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
+            </div>
+
+            <div id="drag-item-qr" class="builder-item builder-item--qr" style="left: {$qrX}px; top: {$qrY}px; width: {$qrSize}px; height: {$qrSize}px;" title="Drag to move QR code">
+                <span class="builder-badge builder-badge--qr">QR Code</span>
+                {$qrInnerHtml}
+                <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
+            </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+            <span>💡 Position and size will be rendered proportionally on preview, A4 prints, and downloaded PDFs.</span>
+            <span id="builder-coords-status" class="text-slate-400 font-mono text-[10px]"></span>
+        </div>
+
         {$preview}
-        <div>
-            <label class="field-label" for="header_image">Upload header image <span class="text-slate-400 font-normal">(optional)</span></label>
+
+        <div class="mt-3 pt-3 border-t border-slate-200">
+            <label class="field-label" for="header_image">Upload header image <span class="text-slate-400 font-normal">(optional, PNG / JPG / WebP under 2 MB)</span></label>
             <input type="file" id="header_image" name="header_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-teal-800">
-        </div>
-        <div class="header-align" data-header-align>
-            <div class="flex items-center justify-between gap-2 mb-2">
-                <label class="field-label mb-0">Header image position</label>
-                <span class="text-xs font-semibold text-teal-800" data-header-align-label>{$thumbLabel}</span>
-            </div>
-            <input type="hidden" name="header_image_position" value="{$pos}" data-header-align-input>
-            <div class="header-align__track" data-header-align-track>
-                <button type="button" class="header-align__zone{$leftOn}" data-align="left" title="Left">Left</button>
-                <button type="button" class="header-align__zone{$centerOn}" data-align="center" title="Center">Center</button>
-                <button type="button" class="header-align__zone{$rightOn}" data-align="right" title="Right">Right</button>
-                <div class="header-align__thumb" data-header-align-thumb data-align="{$pos}" draggable="true" title="Drag to move">⠿</div>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-1.5">Drag the handle, or click Left / Center / Right. Saves with branding.</p>
         </div>
     </div>
     HTML;
@@ -310,6 +437,12 @@ function load_document_context(?string $labNo): array
         $patient['name'] = $entry['patient_name'] ?? '—';
         $patient['id'] = $entry['patient_id'] ?? '';
         $p = patient_repo()->findById((string)($entry['patient_id'] ?? ''));
+        if (!$p && !empty($entry['patient_name'])) {
+            $matches = patient_repo()->search((string)$entry['patient_name'], $settings['organization_id'] ?? 'ORG-001');
+            if (!empty($matches)) {
+                $p = $matches[0];
+            }
+        }
         if ($p) {
             $patient = [
                 'id' => $p['patient_no'] ?? $p['id'] ?? '',
@@ -333,20 +466,19 @@ function load_document_context(?string $labNo): array
     $deptHint = '';
     if ($entry) {
         $labNo = (string)$entry['lab_no'];
-        $results = result_repo()->getResultsByLabNo($labNo);
-        if (empty($results)) {
-            $results = result_repo()->ensureResultsInitialized(
-                $labNo,
-                (string)($entry['tests'] ?? ''),
-                (string)($patient['name'] ?? ''),
-                $settings['organization_id'] ?? 'ORG-001'
-            );
-        }
+        $results = result_repo()->ensureResultsInitialized(
+            $labNo,
+            (string)($entry['tests'] ?? ''),
+            (string)($patient['name'] ?? ''),
+            $settings['organization_id'] ?? 'ORG-001'
+        );
 
         $testTitles = array_unique(array_filter(array_column($results, 'test')));
         $testMethodologies = [];
+        $testCatalogMeta = [];
         foreach ($testTitles as $tt) {
             $tObj = test_repo()->findByCode($tt, $settings['organization_id'] ?? 'ORG-001');
+            $testCatalogMeta[$tt] = $tObj;
             if ($tObj && !empty($tObj['methodology'])) {
                 $testMethodologies[$tt] = trim((string)$tObj['methodology']);
             }
@@ -361,14 +493,21 @@ function load_document_context(?string $labNo): array
                 continue;
             }
             $tTitle = $r['test'] ?? '';
+            $tObj = $testCatalogMeta[$tTitle] ?? null;
+            $pCount = $tObj ? count(test_repo()->getParameters((string)$tObj['id'])) : -1;
+            $paramName = $r['parameter'] ?: ($tTitle !== '' ? $tTitle : 'Result');
+            if ($pCount === 0 && $tObj) {
+                $paramName = $tObj['name'] ?: $tTitle;
+            }
+
             $lines[] = [
                 'test_title' => $tTitle,
-                'section' => $r['section'] ?? '',
-                'test' => $r['parameter'] ?: ($tTitle !== '' ? $tTitle : 'Result'),
+                'section' => ($pCount === 0) ? '' : ($r['section'] ?? ''),
+                'test' => $paramName,
                 'result' => ($r['value'] !== null && $r['value'] !== '') ? $r['value'] : 'Pending',
-                'unit' => $r['unit'] ?? '—',
-                'range' => $r['reference_range'] ?: ($r['normal_value'] ?? '—'),
-                'sub_table' => $r['sub_table'] ?? '',
+                'unit' => ($r['unit'] !== '' && $r['unit'] !== '—') ? $r['unit'] : ($tObj['unit'] ?? '—'),
+                'range' => ($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—'),
+                'sub_table' => ($pCount === 0) ? '' : ($r['sub_table'] ?? ''),
                 'methodology' => $testMethodologies[$tTitle] ?? '',
                 'flag' => $r['flag'] ?? '',
                 'print_page' => max(1, (int)($r['print_page'] ?? 1)),
@@ -542,7 +681,15 @@ function render_branded_header(array $settings, bool $forBill = false): string
 
 function render_branded_footer(array $settings, bool $forBill = false): string
 {
-    $footer = e($forBill ? ($settings['bill_footer'] ?: ($settings['footer'] ?? '')) : ($settings['footer'] ?? ''));
+    $rawFooter = trim((string)($forBill ? (!empty($settings['bill_footer']) ? $settings['bill_footer'] : ($settings['footer'] ?? '')) : ($settings['footer'] ?? '')));
+    if ($forBill) {
+        if ($rawFooter === '' || preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
+            $rawFooter = 'Get well soon.';
+        }
+    } elseif ($rawFooter !== '' && preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
+        $rawFooter = 'Get well soon.';
+    }
+    $footer = e($rawFooter);
     $labLine = $footer !== ''
         ? '<p class="lab-report__lab-note">' . $footer . '</p>'
         : '';
@@ -898,21 +1045,53 @@ function render_report_sheet(
         (string)($settings['header_image_position'] ?? 'left')
     );
 
-    if ($letterhead !== '') {
-        // Full-width letterhead banner; QR sits on the right over/beside it
-        $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '">'
-            . '<div class="lab-report__banner">' . $letterhead . '</div>'
-            . $qrHtml
+    $layout = $settings['header_layout'] ?? null;
+    if (is_string($layout) && $layout !== '') {
+        $layout = json_decode($layout, true);
+    }
+
+    if (is_array($layout) && (!empty($layout['logo']) || isset($layout['canvas_h']))) {
+        $canvasH = max(150, min(350, (int)($layout['canvas_h'] ?? 150)));
+        $logoConf = $layout['logo'] ?? [];
+        $logoXPct = isset($logoConf['x_pct']) ? (float)$logoConf['x_pct'] : round(((float)($logoConf['x'] ?? 15) / 760) * 100, 2);
+        $logoY = max(0, (int)($logoConf['y'] ?? 10));
+        $logoW = max(50, min(760, (int)($logoConf['w'] ?? 240)));
+        $logoH = max(20, min(300, (int)($logoConf['h'] ?? 70)));
+
+        $qrConf = $layout['qr'] ?? [];
+        $qrXPct = isset($qrConf['x_pct']) ? (float)$qrConf['x_pct'] : round(((float)($qrConf['x'] ?? 680) / 760) * 100, 2);
+        $qrY = max(0, (int)($qrConf['y'] ?? 10));
+        $qrSize = max(35, min(200, (int)($qrConf['size'] ?? 56)));
+
+        $logoInner = $letterhead !== ''
+            ? $letterhead
+            : '<div class="lab-report__mark lab-report__mark--logo" style="width:100%;height:100%;display:flex;align-items:center;">' . $logoImg . '</div>';
+
+        $brandBlock = '<div class="lab-report__top lab-report__top--custom" style="height:' . $canvasH . 'px;min-height:' . $canvasH . 'px;">'
+            . '<div class="lab-report__banner lab-report__banner--custom" style="left:' . $logoXPct . '%;top:' . $logoY . 'px;width:' . $logoW . 'px;height:' . $logoH . 'px;">'
+            . $logoInner
+            . '</div>'
+            . '<div class="lab-report__qr lab-report__qr--custom" style="left:' . $qrXPct . '%;top:' . $qrY . 'px;width:' . $qrSize . 'px;height:' . $qrSize . 'px;">'
+            . '<img src="' . e($qrUrl) . '" alt="Report QR" width="' . $qrSize . '" height="' . $qrSize . '">'
+            . '</div>'
             . '</div>';
     } else {
-        $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '">'
-            . '<div class="lab-report__letterhead">'
-            . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
-            . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
-            . '</div>'
-            . '</div>'
-            . $qrHtml
-            . '</div>';
+        if ($letterhead !== '') {
+            // Full-width letterhead banner; QR sits on the right over/beside it
+            $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '" style="min-height:150px;">'
+                . '<div class="lab-report__banner">' . $letterhead . '</div>'
+                . $qrHtml
+                . '</div>';
+        } else {
+            $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '" style="min-height:150px;">'
+                . '<div class="lab-report__letterhead">'
+                . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
+                . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
+                . '</div>'
+                . '</div>'
+                . $qrHtml
+                . '</div>';
+        }
     }
     $metaBlock = build_patient_document_meta($patient, $entry, 'report');
     $headerHtml = <<<HTML
@@ -928,17 +1107,17 @@ function render_report_sheet(
     // No "Note: lab values..." line — only interpret disclaimer + Get well soon footer
     $noteHtml = '';
 
-    $footerNote = trim((string)($settings['footer'] ?? ''));
-    if ($footerNote === '' || preg_match('/electronically verified/i', $footerNote)) {
-        $footerNote = 'Get well soon. Thank you.';
-    }
-    $footerBlock = ($footerNote !== '')
-        ? '<p class="lab-report__lab-note">' . e($footerNote) . '</p>'
-        : '';
+    // $footerNote = trim((string)($settings['footer'] ?? ''));
+    // if ($footerNote === '' || preg_match('/electronically verified/i', $footerNote)) {
+    //     $footerNote = 'Get well soon. Thank you.';
+    // }
+    // $footerBlock = ($footerNote !== '')
+    //     ? '<p class="lab-report__lab-note">' . e($footerNote) . '</p>'
+    //     : '';
     $credit = software_credit_footer(true);
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $signatoriesHtml = render_report_signatories($signatories);
-    $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician.</p>';
+    $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically varified report - not valid for legal proceedings unless stamped®</p>';
     $contactBar = ($addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
 
     return <<<HTML

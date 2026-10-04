@@ -38,7 +38,7 @@ function runSetup(): array
         $logs[] = "Seeding default data...";
 
         // Seed Organization & Branch
-        $pdo->exec("INSERT IGNORE INTO organizations (id, name) VALUES ('ORG-001', 'Health LMS Pro Diagnostics')");
+        $pdo->exec("INSERT IGNORE INTO organizations (id, name) VALUES ('ORG-001', 'Lab Dash Pro Diagnostics')");
         $pdo->exec("INSERT IGNORE INTO branches (id, organization_id, code, name, branch_type, address, phone) VALUES 
             ('BR-GULBERG', 'ORG-001', 'CC-01', 'Gulberg Collection Point', 'collection_center', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333'),
             ('BR-MAIN-LAB', 'ORG-001', 'LAB-01', 'Main Pathology Laboratory', 'main_lab', 'Central Lab Tower, Faisalabad', '+92 42 111 222 444'),
@@ -148,7 +148,7 @@ function runSetup(): array
 
         // Seed Settings
         $pdo->exec("INSERT IGNORE INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text) VALUES 
-            ('ORG-001', 'Health LMS Pro Diagnostics', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333', 'reports@healthlmspro.pk', 'Health LMS Pro — Diagnostic & Laboratory Services', 'Get well soon. Thank you.', 'HLP')
+            ('ORG-001', 'Lab Dash Pro Diagnostics', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333', 'reports@labdashpro.pk', 'Lab Dash Pro — Diagnostic & Laboratory Services', 'Get well soon. Thank you.', 'LDP')
         ");
 
         // Seed Collection Centers
@@ -170,6 +170,7 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
             "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
             "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'",
+            "ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL",
             "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
@@ -192,6 +193,11 @@ function runSetup(): array
                 // Column already exists
             }
         }
+
+        try {
+            $pdo->exec("UPDATE lab_settings SET bill_footer_text = 'Get well soon.' WHERE bill_footer_text IS NULL OR bill_footer_text = '' OR bill_footer_text LIKE '%electronically verified%' OR bill_footer_text LIKE '%queries call reception%'");
+            $pdo->exec("UPDATE lab_settings SET footer_text = 'Get well soon.' WHERE footer_text LIKE '%electronically verified%' OR footer_text LIKE '%queries call reception%'");
+        } catch (\Throwable $ignored) {}
 
         // Ensure new tables exist on older DBs
         $pdo->exec("CREATE TABLE IF NOT EXISTS test_parameters (
