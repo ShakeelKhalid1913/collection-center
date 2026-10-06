@@ -176,4 +176,60 @@ class PatientRepository
 
         return ['success' => $ok, 'id' => $id, 'patient_no' => $patientNo];
     }
+
+    public function update(string $id, array $data): bool
+    {
+        $this->ensureReferringDoctorColumn();
+        $fields = [];
+        $params = ['id' => $id];
+
+        $allowed = [
+            'title', 'full_name', 'relation', 'relation_of', 'phone', 'phone_alt',
+            'email', 'cnic', 'blood_group', 'dob', 'age', 'gender', 'address',
+            'city', 'emergency_name', 'emergency_phone', 'internal_notes',
+            'patient_type', 'panel_code', 'branch', 'referring_doctor'
+        ];
+
+        // Map aliases
+        if (isset($data['name']) && !isset($data['full_name'])) {
+            $data['full_name'] = $data['name'];
+        }
+        if (isset($data['notes']) && !isset($data['internal_notes'])) {
+            $data['internal_notes'] = $data['notes'];
+        }
+        if (isset($data['doctor']) && !isset($data['referring_doctor'])) {
+            $data['referring_doctor'] = $data['doctor'];
+        }
+
+        $doctor = trim((string)($data['referring_doctor'] ?? $data['doctor'] ?? ''));
+        if ($doctor !== '' && empty($data['emergency_name'])) {
+            $data['emergency_name'] = $doctor;
+        }
+
+        foreach ($allowed as $col) {
+            if (array_key_exists($col, $data)) {
+                $fields[] = "{$col} = :{$col}";
+                $params[$col] = $data[$col];
+            }
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $sql = "UPDATE patients SET " . implode(', ', $fields) . " WHERE id = :id OR patient_no = :id";
+        $ok = $this->db->execute($sql, $params);
+
+        if ($ok && $doctor !== '') {
+            try {
+                // Update doctor on all lab orders belonging to this patient
+                $this->db->execute(
+                    "UPDATE lab_entries SET doctor = :doc WHERE patient_id = :id OR patient_id IN (SELECT patient_no FROM patients WHERE id = :id)",
+                    ['doc' => $doctor, 'id' => $id]
+                );
+            } catch (\Throwable $ignored) {}
+        }
+
+        return $ok;
+    }
 }

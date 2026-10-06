@@ -75,7 +75,10 @@ $content .= <<<HTML
             {$patientOpts}
         </select>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="/portals/main-lab/patients/edit.php?id={$mrNo}" class="btn btn-secondary text-xs">
+            <i class="fa-solid fa-user-pen mr-1"></i> Edit Patient / Doctor
+        </a>
         <a href="/portals/main-lab/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
             <i class="fa-solid fa-plus mr-1"></i> Book New Test for this Patient
         </a>

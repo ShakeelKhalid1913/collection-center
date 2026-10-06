@@ -1534,8 +1534,8 @@ textarea.field {
   margin: 0 auto;
   background: #fff;
   color: #000000 !important;
-  font-family: "Source Sans 3", "Segoe UI", Calibri, Arial, sans-serif;
-  font-size: 12.5px;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-size: 13px;
   line-height: 1.45;
   font-weight: 700 !important;
   border: 1px solid #cbd5e1;
@@ -1545,6 +1545,11 @@ textarea.field {
   flex-direction: column;
   min-height: 275mm;
   box-sizing: border-box;
+}
+
+.lab-report,
+.lab-report *:not(.fa):not(.fas):not(.far):not(.fal):not(.fad):not(.fab):not([class*="fa-"]) {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
 }
 
 .lab-report__header {
@@ -2920,7 +2925,8 @@ textarea.field {
   }
 
   .lab-report,
-  .lab-report * {
+  .lab-report *:not(.fa):not(.fas):not(.far):not(.fal):not(.fad):not(.fab):not([class*="fa-"]) {
+    font-family: "Times New Roman", Times, Georgia, serif !important;
     color: #000000 !important;
   }
 

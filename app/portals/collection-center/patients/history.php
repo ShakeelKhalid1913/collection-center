@@ -63,6 +63,11 @@ if ($selectedPatient) {
     }
 }
 
+$doctorName = e($selectedPatient['referring_doctor'] ?? $selectedPatient['emergency_name'] ?? 'Walk-in / Self');
+if ($doctorName === '') {
+    $doctorName = 'Walk-in / Self';
+}
+
 $content = page_header('Patient Test History', "{$patientName} · MR No: {$mrNo} · {$ageGender}");
 
 // Patient Switcher
@@ -74,7 +79,10 @@ $content .= <<<HTML
             {$patientOpts}
         </select>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="/portals/collection-center/patients/edit.php?id={$mrNo}" class="btn btn-secondary text-xs">
+            <i class="fa-solid fa-user-pen mr-1"></i> Edit Patient / Doctor
+        </a>
         <a href="/portals/collection-center/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
             <i class="fa-solid fa-plus mr-1"></i> Book New Test for this Patient
         </a>
@@ -84,9 +92,10 @@ HTML;
 
 // Patient Summary Card
 $content .= <<<HTML
-<div class="mb-4 grid gap-3 sm:grid-cols-4 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+<div class="mb-4 grid gap-3 sm:grid-cols-5 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm">
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Patient Name</span><strong class="text-slate-900 text-base">{$patientName}</strong></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">MR Number</span><strong class="text-teal-800 font-mono text-base">{$mrNo}</strong></div>
+    <div><span class="text-slate-500 block text-xs font-semibold uppercase">Doctor</span><strong class="text-slate-900 text-base">{$doctorName}</strong></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Phone</span><span class="text-slate-800 font-mono">{$phone}</span></div>
     <div><span class="text-slate-500 block text-xs font-semibold uppercase">Age / Gender</span><span class="text-slate-800">{$ageGender}</span></div>
 </div>

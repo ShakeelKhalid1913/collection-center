@@ -18,6 +18,7 @@ foreach ($patients as $p) {
 
     $actions = '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
         '<a href="/portals/main-lab/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
+        '<a href="/portals/main-lab/patients/edit.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
         '<a href="/portals/main-lab/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-plus mr-1"></i> Book Tests</a>' .
         '</div>';
 
