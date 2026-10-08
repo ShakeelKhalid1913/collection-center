@@ -28,7 +28,11 @@ class SettingRepository
                         header_image_ver,
                         header_image_position,
                         header_layout_json,
-                        CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image
+                        footer_image_mime,
+                        footer_image_ver,
+                        footer_layout_json,
+                        CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image,
+                        CASE WHEN footer_image IS NOT NULL AND LENGTH(footer_image) > 0 THEN 1 ELSE 0 END AS has_footer_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
                 ['org_id' => $orgId]
             );
@@ -56,6 +60,9 @@ class SettingRepository
                 );
                 $row['header_layout'] = !empty($row['header_layout_json'])
                     ? json_decode((string)$row['header_layout_json'], true)
+                    : null;
+                $row['footer_layout'] = !empty($row['footer_layout_json'])
+                    ? json_decode((string)$row['footer_layout_json'], true)
                     : null;
             }
             return $row ?: [];
@@ -140,14 +147,17 @@ class SettingRepository
             'header_layout_json' => array_key_exists('header_layout_json', $data)
                 ? (string)($data['header_layout_json'] ?? '')
                 : ($existing['header_layout_json'] ?? null),
+            'footer_layout_json' => array_key_exists('footer_layout_json', $data)
+                ? (string)($data['footer_layout_json'] ?? '')
+                : ($existing['footer_layout_json'] ?? null),
         ];
 
         $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json)",
                 $payload
             );
         } else {
@@ -163,7 +173,8 @@ class SettingRepository
                     bill_header_text = :bill_header_text,
                     bill_footer_text = :bill_footer_text,
                     header_image_position = :header_image_position,
-                    header_layout_json = :header_layout_json
+                    header_layout_json = :header_layout_json,
+                    footer_layout_json = :footer_layout_json
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -174,14 +185,37 @@ class SettingRepository
         }
 
         if (!empty($data['clear_header_image'])) {
-            return $this->clearHeaderImage($orgId);
+            $this->clearHeaderImage($orgId);
         }
 
         if (array_key_exists('header_image', $data) && $data['header_image'] !== null) {
-            return $this->saveHeaderImage($orgId, (string)$data['header_image'], (string)($data['header_image_mime'] ?? 'image/png'));
+            $this->saveHeaderImage($orgId, (string)$data['header_image'], (string)($data['header_image_mime'] ?? 'image/png'));
+        }
+
+        if (!empty($data['clear_footer_image'])) {
+            $this->clearFooterImage($orgId);
+        }
+
+        if (array_key_exists('footer_image', $data) && $data['footer_image'] !== null) {
+            $this->saveFooterImage($orgId, (string)$data['footer_image'], (string)($data['footer_image_mime'] ?? 'image/png'));
         }
 
         return true;
+    }
+
+    public function getFooterImage(string $orgId = 'ORG-001'): ?array
+    {
+        $row = $this->db->fetchOne(
+            "SELECT footer_image, footer_image_mime FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
+            ['org_id' => $orgId]
+        );
+        if ($row === null || empty($row['footer_image'])) {
+            return null;
+        }
+        return [
+            'data' => $row['footer_image'],
+            'mime' => $row['footer_image_mime'] ?: 'image/png',
+        ];
     }
 
     public function saveHeaderImage(string $orgId, string $binary, string $mime): bool
@@ -215,6 +249,41 @@ class SettingRepository
     {
         return $this->db->execute(
             "UPDATE lab_settings SET header_image = NULL, header_image_mime = NULL WHERE organization_id = :org_id",
+            ['org_id' => $orgId]
+        );
+    }
+
+    public function saveFooterImage(string $orgId, string $binary, string $mime): bool
+    {
+        try {
+            return $this->db->execute(
+                "UPDATE lab_settings SET
+                    footer_image = :img,
+                    footer_image_mime = :mime,
+                    footer_image_ver = COALESCE(footer_image_ver, 0) + 1
+                 WHERE organization_id = :org_id",
+                [
+                    'img' => $binary,
+                    'mime' => $mime,
+                    'org_id' => $orgId,
+                ]
+            );
+        } catch (\Throwable $ignored) {
+            return $this->db->execute(
+                "UPDATE lab_settings SET footer_image = :img, footer_image_mime = :mime WHERE organization_id = :org_id",
+                [
+                    'img' => $binary,
+                    'mime' => $mime,
+                    'org_id' => $orgId,
+                ]
+            );
+        }
+    }
+
+    public function clearFooterImage(string $orgId): bool
+    {
+        return $this->db->execute(
+            "UPDATE lab_settings SET footer_image = NULL, footer_image_mime = NULL WHERE organization_id = :org_id",
             ['org_id' => $orgId]
         );
     }

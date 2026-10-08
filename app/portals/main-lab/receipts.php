@@ -269,7 +269,7 @@ if ($currentLab !== '' && $entry) {
         . report_actions($patient['phone'] ?? '', $reportUrl, 'bill-' . $currentLab)
         . '<a class="btn btn-secondary text-sm" href="' . e($entryUrl) . '">Enter Results</a>'
         . '</div>';
-    $content .= '<div class="mt-2">' . render_receipt_document($settings, $entry, $patient) . '</div>';
+    $content .= '<div class="lab-bill-container">' . render_receipt_document($settings, $entry, $patient) . '</div>';
 } elseif ($q === '' && $patientId === '') {
     $content .= card('<p class="p-6 text-slate-600">Use <strong>Search</strong> or the <strong>visit dropdown</strong> above to open a patient bill.</p>');
 }

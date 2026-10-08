@@ -457,43 +457,81 @@
 
     addBtn.addEventListener('click', () => {
       const row = document.createElement('div');
-      row.className = 'grid gap-2 items-end p-2 bg-slate-50 border border-slate-200 rounded';
-      row.style.gridTemplateColumns = '0.9fr 1.1fr 0.5fr 0.7fr 0.7fr auto';
+      row.className = 'p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2';
+      row.setAttribute('data-param-row', '');
       row.innerHTML = `
-        <div>
-          <label class="field-label text-xs">Section / Group</label>
-          <input type="text" name="param_section[]" class="field text-sm" placeholder="e.g. ERYTHROCYTES">
+        <div class="grid gap-2 items-end" style="grid-template-columns: 0.9fr 1.1fr 0.5fr 0.7fr 0.7fr auto;">
+          <div>
+            <label class="field-label text-xs">Section / Group</label>
+            <input type="text" name="param_section[]" class="field text-sm" placeholder="e.g. ERYTHROCYTES">
+          </div>
+          <div>
+            <label class="field-label text-xs">Parameter Name <span class="text-red-500">*</span></label>
+            <input type="text" name="param_name[]" class="field text-sm font-semibold" placeholder="e.g. Hemoglobin (HB)" required>
+          </div>
+          <div>
+            <label class="field-label text-xs">Unit</label>
+            <input type="text" name="param_unit[]" class="field text-sm" placeholder="g/dl">
+          </div>
+          <div>
+            <label class="field-label text-xs">Normal Value</label>
+            <input type="text" name="param_normal[]" class="field text-sm" placeholder="12.0 - 16.5">
+          </div>
+          <div>
+            <label class="field-label text-xs">Reference Range</label>
+            <input type="text" name="param_range[]" class="field text-sm" placeholder="12.0 - 16.5">
+          </div>
+          <div class="flex items-end pb-1">
+            <button type="button" class="btn btn-secondary text-sm font-bold text-red-600 hover:bg-red-50 hover:border-red-300" style="padding:0.4rem 0.65rem;" data-remove-param title="Remove Parameter">&times;</button>
+          </div>
         </div>
-        <div>
-          <label class="field-label text-xs">Parameter Name</label>
-          <input type="text" name="param_name[]" class="field text-sm" placeholder="e.g. Hemoglobin (HB)" required>
-        </div>
-        <div>
-          <label class="field-label text-xs">Unit</label>
-          <input type="text" name="param_unit[]" class="field text-sm" placeholder="g/dl">
-        </div>
-        <div>
-          <label class="field-label text-xs">Normal Value</label>
-          <input type="text" name="param_normal[]" class="field text-sm" placeholder="12.0 - 16.5">
-        </div>
-        <div>
-          <label class="field-label text-xs">Reference Range</label>
-          <input type="text" name="param_range[]" class="field text-sm" placeholder="12.0 - 16.5">
-        </div>
-        <div class="flex items-end pb-1">
-          <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem;color:#dc2626" data-remove-param title="Remove">&times;</button>
+        <div class="grid gap-3 pt-2 border-t border-slate-200/80 sm:grid-cols-2 items-start">
+          <div>
+            <details class="mt-1.5 text-xs text-slate-600 criteria-table-wrap" data-criteria-builder>
+              <summary class="cursor-pointer font-semibold text-slate-600 hover:text-teal-700 inline-flex items-center gap-1.5 py-0.5 select-none">
+                <i class="fa-solid fa-table-list text-teal-600 text-[11px]"></i>
+                <span>Reference Criteria Table (<span data-criteria-count>0</span>)</span>
+              </summary>
+              <div class="mt-1.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Criteria &amp; Specific Ranges</span>
+                  <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 text-teal-700 bg-teal-50 border-teal-300 hover:bg-teal-100 font-semibold" data-add-criteria-row>
+                    <i class="fa-solid fa-plus mr-1"></i> Add Row
+                  </button>
+                </div>
+                <table class="w-full text-xs criteria-table-editor border border-slate-200 rounded overflow-hidden bg-white">
+                  <thead class="bg-slate-100/90 text-[10px] font-bold text-slate-600 uppercase">
+                    <tr>
+                      <th class="px-2 py-1 text-left w-7/12">Criteria / Age / Condition</th>
+                      <th class="px-2 py-1 text-left w-4/12">Reference Range</th>
+                      <th class="px-1 py-1 text-center w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody data-criteria-tbody></tbody>
+                </table>
+                <textarea name="param_sub_table[]" class="hidden criteria-serialized-textarea"></textarea>
+              </div>
+            </details>
+          </div>
+          <div>
+            <label class="field-label text-xs text-slate-600">Default Result Note / Remark <span class="text-slate-400 font-normal">(shown below result)</span></label>
+            <textarea name="param_result_note[]" rows="2" class="field text-xs w-full py-1 px-2" placeholder="e.g. Serum index: Normal (optional)"></textarea>
+          </div>
         </div>
       `;
       list.appendChild(row);
-      
-      row.querySelector('[data-remove-param]').addEventListener('click', () => {
+
+      row.querySelector('[data-remove-param]')?.addEventListener('click', () => {
         row.remove();
       });
+
+      initCriteriaTableBuilders();
     });
-    
-    list.querySelectorAll('[data-remove-param]').forEach(btn => {
+
+    list.querySelectorAll('[data-remove-param]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        e.target.closest('div.grid').remove();
+        const item = e.target.closest('[data-param-row]') || e.target.closest('div.grid');
+        if (item) item.remove();
       });
     });
   }
@@ -814,13 +852,278 @@
     syncState();
   }
 
+  function initFooterLayoutBuilder() {
+    const canvas = document.getElementById('footer-builder-canvas');
+    if (!canvas) return;
+
+    const imgItem = document.getElementById('drag-item-footer-img');
+    const jsonInput = document.getElementById('footer_layout_json');
+    const hSlider = document.getElementById('footer-builder-h-slider');
+    const hVal = document.getElementById('footer-builder-h-val');
+    const coordsStatus = document.getElementById('footer-builder-coords-status');
+    const presetBtns = document.querySelectorAll('[data-footer-preset]');
+    const fileInput = document.getElementById('footer_image');
+
+    if (!imgItem) return;
+
+    function syncState() {
+      const cW = canvas.clientWidth || 760;
+      const cH = parseInt(canvas.style.height, 10) || 80;
+
+      const imgX = Math.round(parseFloat(imgItem.style.left) || 0);
+      const imgY = Math.round(parseFloat(imgItem.style.top) || 0);
+      const imgW = Math.round(parseFloat(imgItem.style.width) || 740);
+      const imgH = Math.round(parseFloat(imgItem.style.height) || 60);
+
+      const imgXPct = Number(((imgX / cW) * 100).toFixed(2));
+      const imgWPct = Number(((imgW / cW) * 100).toFixed(2));
+
+      const data = {
+        canvas_h: cH,
+        image: {
+          x: imgX,
+          y: imgY,
+          w: imgW,
+          h: imgH,
+          x_pct: imgXPct,
+          w_pct: imgWPct
+        }
+      };
+
+      if (jsonInput) {
+        jsonInput.value = JSON.stringify(data);
+      }
+
+      if (coordsStatus) {
+        coordsStatus.textContent = `Footer Banner: (${imgX}, ${imgY}) ${imgW}×${imgH}`;
+      }
+    }
+
+    function setupDragAndResize(item) {
+      const handle = item.querySelector('.builder-resize-handle');
+      let mode = null;
+      let startX = 0, startY = 0, startL = 0, startT = 0, startW = 0, startH = 0;
+
+      item.addEventListener('pointerdown', (e) => {
+        if (e.target === handle || handle?.contains(e.target)) {
+          mode = 'resize';
+          startX = e.clientX;
+          startY = e.clientY;
+          startW = item.offsetWidth;
+          startH = item.offsetHeight;
+          startL = item.offsetLeft;
+          startT = item.offsetTop;
+          handle?.setPointerCapture?.(e.pointerId);
+        } else {
+          mode = 'drag';
+          startX = e.clientX;
+          startY = e.clientY;
+          startL = item.offsetLeft;
+          startT = item.offsetTop;
+          item?.setPointerCapture?.(e.pointerId);
+        }
+        item.classList.add('is-active');
+        e.preventDefault();
+      });
+
+      const onPointerMove = (e) => {
+        if (!mode) return;
+        const cW = canvas.clientWidth || 760;
+        const cH = canvas.clientHeight || 80;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (mode === 'drag') {
+          const maxL = Math.max(0, cW - item.offsetWidth);
+          const maxT = Math.max(0, cH - item.offsetHeight);
+          const nextL = Math.max(0, Math.min(maxL, startL + dx));
+          const nextT = Math.max(0, Math.min(maxT, startT + dy));
+          item.style.left = nextL + 'px';
+          item.style.top = nextT + 'px';
+          syncState();
+        } else if (mode === 'resize') {
+          const maxW = Math.max(60, cW - startL);
+          const maxH = Math.max(20, cH - startT);
+          const newW = Math.max(60, Math.min(maxW, startW + dx));
+          const newH = Math.max(20, Math.min(maxH, startH + dy));
+          item.style.width = newW + 'px';
+          item.style.height = newH + 'px';
+          syncState();
+        }
+      };
+
+      const endAction = (e) => {
+        if (!mode) return;
+        try {
+          if (mode === 'resize' && handle?.hasPointerCapture?.(e.pointerId)) {
+            handle.releasePointerCapture(e.pointerId);
+          } else if (mode === 'drag' && item?.hasPointerCapture?.(e.pointerId)) {
+            item.releasePointerCapture(e.pointerId);
+          }
+        } catch (_) {}
+        mode = null;
+        item.classList.remove('is-active');
+        syncState();
+      };
+
+      item.addEventListener('pointermove', onPointerMove);
+      item.addEventListener('pointerup', endAction);
+      item.addEventListener('pointercancel', endAction);
+    }
+
+    setupDragAndResize(imgItem);
+
+    if (hSlider) {
+      const onHeightChange = () => {
+        const h = parseInt(hSlider.value, 10) || 80;
+        canvas.style.height = h + 'px';
+        if (hVal) hVal.textContent = h + 'px';
+
+        const imgH = imgItem.offsetHeight;
+        if (imgItem.offsetTop + imgH > h) {
+          imgItem.style.top = Math.max(0, h - imgH) + 'px';
+        }
+        syncState();
+      };
+      hSlider.addEventListener('input', onHeightChange);
+      hSlider.addEventListener('change', onHeightChange);
+    }
+
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-footer-preset');
+        const cW = canvas.clientWidth || 760;
+
+        if (preset === 'full') {
+          imgItem.style.left = '5px';
+          imgItem.style.top = '5px';
+          imgItem.style.width = Math.max(60, cW - 10) + 'px';
+          imgItem.style.height = (parseInt(canvas.style.height, 10) - 10) + 'px';
+        } else if (preset === 'center') {
+          const w = Math.round(cW * 0.7);
+          imgItem.style.left = Math.round((cW - w) / 2) + 'px';
+          imgItem.style.top = '5px';
+          imgItem.style.width = w + 'px';
+          imgItem.style.height = (parseInt(canvas.style.height, 10) - 10) + 'px';
+        } else if (preset === 'left') {
+          const w = Math.round(cW * 0.5);
+          imgItem.style.left = '10px';
+          imgItem.style.top = '5px';
+          imgItem.style.width = w + 'px';
+          imgItem.style.height = (parseInt(canvas.style.height, 10) - 10) + 'px';
+        } else if (preset === 'default') {
+          if (hSlider) {
+            hSlider.value = '80';
+            canvas.style.height = '80px';
+            if (hVal) hVal.textContent = '80px';
+          }
+          imgItem.style.left = '10px';
+          imgItem.style.top = '10px';
+          imgItem.style.width = Math.max(60, cW - 20) + 'px';
+          imgItem.style.height = '60px';
+        }
+
+        syncState();
+      });
+    });
+
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+          const url = URL.createObjectURL(file);
+          const previewImg = document.getElementById('builder-footer-preview-img');
+          const previewText = document.getElementById('builder-footer-preview-text');
+          if (previewImg) {
+            previewImg.src = url;
+          } else if (previewText) {
+            previewText.outerHTML = `<img id="builder-footer-preview-img" src="${url}" alt="Footer Banner" draggable="false" style="max-height:100%;max-width:100%;object-fit:contain;pointer-events:none;">`;
+          }
+        }
+      });
+    }
+
+    syncState();
+  }
+
+  function initCriteriaTableBuilders() {
+    function bindBuilder(wrap) {
+      if (wrap.dataset.criteriaBound) return;
+      wrap.dataset.criteriaBound = '1';
+
+      const tbody = wrap.querySelector('[data-criteria-tbody]');
+      const textarea = wrap.querySelector('.criteria-serialized-textarea');
+      const addBtn = wrap.querySelector('[data-add-criteria-row]');
+      const countBadge = wrap.querySelector('[data-criteria-count]');
+
+      function sync() {
+        if (!tbody || !textarea) return;
+        const rows = tbody.querySelectorAll('tr');
+        const lines = [];
+        rows.forEach(tr => {
+          const nameInput = tr.querySelector('.criteria-name-input');
+          const rangeInput = tr.querySelector('.criteria-range-input');
+          const name = nameInput ? nameInput.value.trim() : '';
+          const range = rangeInput ? rangeInput.value.trim() : '';
+          if (name !== '' || range !== '') {
+            lines.push(name + ': ' + range);
+          }
+        });
+        textarea.value = lines.join('\n');
+        if (countBadge) {
+          countBadge.textContent = lines.length;
+        }
+      }
+
+      function attachRowEvents(tr) {
+        tr.querySelectorAll('.criteria-name-input, .criteria-range-input').forEach(inp => {
+          inp.addEventListener('input', sync);
+          inp.addEventListener('change', sync);
+        });
+        tr.querySelectorAll('[data-remove-criteria-row]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            tr.remove();
+            sync();
+          });
+        });
+      }
+
+      if (tbody) {
+        tbody.querySelectorAll('tr').forEach(attachRowEvents);
+      }
+
+      if (addBtn && tbody) {
+        addBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-100 hover:bg-slate-50/80 transition-colors';
+          tr.innerHTML = `
+            <td class="p-1"><input type="text" class="field text-xs py-1 px-2 w-full criteria-name-input" placeholder="e.g. Adult Male / 0-2 yrs"></td>
+            <td class="p-1"><input type="text" class="field text-xs py-1 px-2 w-full criteria-range-input font-mono" placeholder="e.g. 15.2 - 23.5"></td>
+            <td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 font-bold p-1 leading-none text-base border-0 bg-transparent cursor-pointer" data-remove-criteria-row title="Delete row">&times;</button></td>
+          `;
+          tbody.appendChild(tr);
+          attachRowEvents(tr);
+          const firstInp = tr.querySelector('.criteria-name-input');
+          if (firstInp) firstInp.focus();
+          sync();
+        });
+      }
+    }
+
+    document.querySelectorAll('[data-criteria-builder]').forEach(bindBuilder);
+  }
+
   initBilling();
   initCatalogSearch();
   initPdfDownload();
   initTestParameters();
+  initCriteriaTableBuilders();
   initResultEntry();
   initPrintToggles();
   initHeaderAlign();
   initHeaderLayoutBuilder();
+  initFooterLayoutBuilder();
 })();
+
 

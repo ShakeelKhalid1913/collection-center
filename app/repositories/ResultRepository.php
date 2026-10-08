@@ -298,8 +298,8 @@ class ResultRepository
                     if (!isset($existingParamMap[$pName]) || empty($existingParamMap[$pName])) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
-                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
-                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, '', :sort, 1, :print_page)",
+                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, result_note, flag, sort_order, is_visible, print_page)
+                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, :result_note, '', :sort, 1, :print_page)",
                             [
                                 'id' => $resId,
                                 'lab_no' => $labNo,
@@ -310,6 +310,7 @@ class ResultRepository
                                 'unit' => $p['unit'] ?? '',
                                 'range' => $p['reference_range'] ?: ($p['normal_value'] ?? ''),
                                 'sub_table' => !empty($p['sub_table']) ? trim((string)$p['sub_table']) : null,
+                                'result_note' => !empty($p['result_note']) ? trim((string)$p['result_note']) : null,
                                 'sort' => $sortOrder++,
                                 'print_page' => $keepPage,
                             ]
@@ -321,13 +322,15 @@ class ResultRepository
                                 section = :sec,
                                 unit = CASE WHEN unit IS NULL OR unit = '' OR unit = '—' THEN :unit ELSE unit END,
                                 reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN :range ELSE reference_range END,
-                                sub_table = COALESCE(sub_table, :sub_table)
+                                sub_table = COALESCE(sub_table, :sub_table),
+                                result_note = COALESCE(result_note, :result_note)
                              WHERE id = :id",
                             [
                                 'sec' => !empty($p['section']) ? trim((string)$p['section']) : null,
                                 'unit' => $p['unit'] ?? '',
                                 'range' => $p['reference_range'] ?: ($p['normal_value'] ?? ''),
                                 'sub_table' => !empty($p['sub_table']) ? trim((string)$p['sub_table']) : null,
+                                'result_note' => !empty($p['result_note']) ? trim((string)$p['result_note']) : null,
                                 'id' => $existingRow['id'],
                             ]
                         );
@@ -459,6 +462,8 @@ class ResultRepository
                 : null;
             $hasSub = array_key_exists('sub_table', $item);
             $subVal = $hasSub ? ($item['sub_table'] !== null && trim((string)$item['sub_table']) !== '' ? (string)$item['sub_table'] : null) : null;
+            $hasNote = array_key_exists('result_note', $item);
+            $noteVal = $hasNote ? ($item['result_note'] !== null && trim((string)$item['result_note']) !== '' ? (string)$item['result_note'] : null) : null;
 
             $this->db->execute(
                 "UPDATE results SET 
@@ -467,7 +472,8 @@ class ResultRepository
                     reference_range = COALESCE(:range, reference_range), 
                     flag = :flag,
                     is_visible = COALESCE(:is_visible, is_visible),
-                    sub_table = CASE WHEN :has_sub = 1 THEN :sub_table ELSE sub_table END
+                    sub_table = CASE WHEN :has_sub = 1 THEN :sub_table ELSE sub_table END,
+                    result_note = CASE WHEN :has_note = 1 THEN :result_note ELSE result_note END
                  WHERE id = :id AND lab_no = :lab_no",
                 [
                     'id' => $id,
@@ -479,6 +485,8 @@ class ResultRepository
                     'is_visible' => $visible,
                     'has_sub' => $hasSub ? 1 : 0,
                     'sub_table' => $subVal,
+                    'has_note' => $hasNote ? 1 : 0,
+                    'result_note' => $noteVal,
                 ]
             );
         }

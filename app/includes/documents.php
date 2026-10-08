@@ -144,6 +144,12 @@ function branding_settings(?string $orgId = null): array
         ),
         'header_layout_json' => (string)($set['header_layout_json'] ?? ''),
         'header_layout' => $set['header_layout'] ?? (!empty($set['header_layout_json']) ? json_decode((string)$set['header_layout_json'], true) : null),
+        'has_footer_image' => !empty($set['has_footer_image']) || !empty($set['footer_image_mime']),
+        'footer_image_url' => (!empty($set['has_footer_image']) || !empty($set['footer_image_mime']))
+            ? '/branding-footer.php?org=' . rawurlencode($orgId) . '&v=' . (int)($set['footer_image_ver'] ?? 1)
+            : '',
+        'footer_layout_json' => (string)($set['footer_layout_json'] ?? ''),
+        'footer_layout' => $set['footer_layout'] ?? (!empty($set['footer_layout_json']) ? json_decode((string)$set['footer_layout_json'], true) : null),
     ];
 }
 
@@ -210,7 +216,68 @@ function process_header_image_upload(string $orgId): array
 }
 
 /**
- * Shared save for Admin / CC / Lab branding forms (text + optional PNG header).
+ * Process uploaded letterhead footer PNG/JPEG/WebP from $_FILES['footer_image'].
+ * @return array{ok: bool, error?: string, saved?: bool, cleared?: bool}
+ */
+function process_footer_image_upload(string $orgId): array
+{
+    if (!empty($_POST['remove_footer_image'])) {
+        setting_repo()->clearFooterImage($orgId);
+        return ['ok' => true, 'cleared' => true];
+    }
+
+    if (empty($_FILES['footer_image']) || !is_array($_FILES['footer_image'])) {
+        return ['ok' => true, 'saved' => false];
+    }
+
+    $file = $_FILES['footer_image'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'saved' => false];
+    }
+    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'Footer image upload failed. Try again.'];
+    }
+
+    $maxBytes = 2 * 1024 * 1024; // 2 MB
+    if (($file['size'] ?? 0) > $maxBytes) {
+        return ['ok' => false, 'error' => 'Footer image must be 2 MB or smaller.'];
+    }
+
+    $tmp = (string)($file['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        return ['ok' => false, 'error' => 'Invalid upload.'];
+    }
+
+    $info = @getimagesize($tmp);
+    if ($info === false) {
+        return ['ok' => false, 'error' => 'File is not a valid image.'];
+    }
+
+    $mime = $info['mime'] ?? '';
+    $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+    if (!isset($allowed[$mime])) {
+        return ['ok' => false, 'error' => 'Use PNG, JPG, or WebP for the footer image.'];
+    }
+
+    $binary = file_get_contents($tmp);
+    if ($binary === false || $binary === '') {
+        return ['ok' => false, 'error' => 'Could not read uploaded footer image.'];
+    }
+
+    $existing = setting_repo()->getSettings($orgId);
+    if ($existing === []) {
+        setting_repo()->save(['name' => 'Lab'], $orgId);
+    }
+
+    if (!setting_repo()->saveFooterImage($orgId, $binary, $mime)) {
+        return ['ok' => false, 'error' => 'Could not save footer image.'];
+    }
+
+    return ['ok' => true, 'saved' => true];
+}
+
+/**
+ * Shared save for Admin / CC / Lab branding forms (text + optional PNG header & footer).
  * @return array{ok: bool, message: string}
  */
 function save_branding_request(string $orgId): array
@@ -227,6 +294,7 @@ function save_branding_request(string $orgId): array
         'bill_footer' => $_POST['bill_footer'] ?? '',
         'header_image_position' => $_POST['header_image_position'] ?? 'left',
         'header_layout_json' => isset($_POST['header_layout_json']) ? (string)$_POST['header_layout_json'] : null,
+        'footer_layout_json' => isset($_POST['footer_layout_json']) ? (string)$_POST['footer_layout_json'] : null,
     ], $orgId);
 
     if (!$ok) {
@@ -238,13 +306,22 @@ function save_branding_request(string $orgId): array
         return ['ok' => false, 'message' => $img['error'] ?? 'Header image could not be saved.'];
     }
 
-    if (!empty($img['cleared'])) {
-        return ['ok' => true, 'message' => 'Branding saved — header image removed.'];
+    $fImg = process_footer_image_upload($orgId);
+    if (!$fImg['ok']) {
+        return ['ok' => false, 'message' => $fImg['error'] ?? 'Footer image could not be saved.'];
     }
-    if (!empty($img['saved'])) {
-        return ['ok' => true, 'message' => 'Branding saved — header image updated.'];
+
+    $notes = [];
+    if (!empty($img['cleared'])) $notes[] = 'header image removed';
+    if (!empty($img['saved'])) $notes[] = 'header image updated';
+    if (!empty($fImg['cleared'])) $notes[] = 'footer image removed';
+    if (!empty($fImg['saved'])) $notes[] = 'footer image updated';
+
+    $msg = 'Branding saved — used on bills and lab reports.';
+    if (!empty($notes)) {
+        $msg = 'Branding saved (' . implode(', ', $notes) . ').';
     }
-    return ['ok' => true, 'message' => 'Branding saved — used on bills and lab reports.'];
+    return ['ok' => true, 'message' => $msg];
 }
 
 function branding_header_image_field(array $settings): string
@@ -405,6 +482,117 @@ function branding_header_image_field(array $settings): string
     HTML;
 }
 
+function branding_footer_image_field(array $settings): string
+{
+    $layout = $settings['footer_layout'] ?? null;
+    if (is_string($layout) && $layout !== '') {
+        $layout = json_decode($layout, true);
+    }
+
+    $canvasH = 80;
+    if (isset($layout['canvas_h'])) {
+        $canvasH = max(40, min(220, (int)$layout['canvas_h']));
+    }
+
+    $imgX = 10;
+    $imgY = 10;
+    $imgW = 740;
+    $imgH = 60;
+    if (!empty($layout['image']) && is_array($layout['image'])) {
+        $imgX = max(0, min(700, (int)($layout['image']['x'] ?? 10)));
+        $imgY = max(0, min($canvasH - 20, (int)($layout['image']['y'] ?? 10)));
+        $imgW = max(60, min(760, (int)($layout['image']['w'] ?? 740)));
+        $imgH = max(20, min($canvasH, (int)($layout['image']['h'] ?? 60)));
+    }
+
+    $initialData = [
+        'canvas_h' => $canvasH,
+        'image' => [
+            'x' => $imgX,
+            'y' => $imgY,
+            'w' => $imgW,
+            'h' => $imgH,
+            'x_pct' => round(($imgX / 760) * 100, 2),
+            'w_pct' => round(($imgW / 760) * 100, 2),
+        ],
+    ];
+    $layoutJson = htmlspecialchars((string)json_encode($initialData), ENT_QUOTES, 'UTF-8');
+
+    $preview = '';
+    $imgInnerHtml = '';
+    if (!empty($settings['has_footer_image']) && !empty($settings['footer_image_url'])) {
+        $url = e($settings['footer_image_url']);
+        $preview = <<<HTML
+        <div class="branding-footer-preview mt-3 pt-3 border-t border-slate-200">
+            <p class="text-xs font-semibold text-slate-600 mb-2">Current footer image</p>
+            <img src="{$url}" alt="Lab footer" class="max-h-24 max-w-full rounded border border-slate-200 object-contain p-1 bg-white">
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="remove_footer_image" value="1" class="rounded border-slate-300">
+                Remove footer image
+            </label>
+        </div>
+        HTML;
+
+        $imgInnerHtml = '<img id="builder-footer-preview-img" src="' . $url . '" alt="Footer Banner" draggable="false" style="max-height:100%;max-width:100%;object-fit:contain;pointer-events:none;">';
+    } else {
+        $footerText = e($settings['footer'] ?: 'LAB FOOTER / LETTERHEAD BANNER');
+        $imgInnerHtml = '<div id="builder-footer-preview-text" class="flex flex-col items-center justify-center w-full h-full pointer-events-none text-sky-700 text-center select-none p-1">'
+            . '<span class="font-bold text-xs uppercase tracking-wider">' . $footerText . '</span>'
+            . '<span class="text-[10px] text-slate-400 mt-0.5">(Upload letterhead footer image below)</span>'
+            . '</div>';
+    }
+
+    return <<<HTML
+    <div class="rounded-xl border border-slate-300 bg-slate-50 p-4 space-y-3 footer-builder-wrap">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <p class="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-shoe-prints text-sky-600"></i> Footer Letterhead Builder (Drag &amp; Drop)
+                </p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Position and resize your <strong>Footer Image</strong> on the canvas. Drag the bottom-right circle handle (<span class="font-bold text-slate-700">⤡</span>) to resize.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="footer-builder-h-slider" class="text-xs font-medium text-slate-600 select-none">Height: <span id="footer-builder-h-val" class="font-bold text-sky-700">{$canvasH}px</span></label>
+                <input type="range" id="footer-builder-h-slider" min="40" max="200" step="5" value="{$canvasH}" class="w-24 accent-sky-600 cursor-pointer" title="Adjust footer canvas height">
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+            <span class="text-slate-400 font-medium mr-1 uppercase text-[10px] tracking-wider">Presets:</span>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="full">Full Width</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="center">Center Banner</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="left">Left Banner</button>
+            <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="default">Default</button>
+        </div>
+
+        <input type="hidden" name="footer_layout_json" id="footer_layout_json" value='{$layoutJson}'>
+
+        <!-- Footer Drag & Drop Canvas -->
+        <div id="footer-builder-canvas" class="footer-builder-canvas" style="height: {$canvasH}px;">
+            <div id="drag-item-footer-img" class="builder-item builder-item--footer-img" style="left: {$imgX}px; top: {$imgY}px; width: {$imgW}px; height: {$imgH}px;" title="Drag to move footer image">
+                <span class="builder-badge builder-badge--footer">Footer Banner / Image</span>
+                {$imgInnerHtml}
+                <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
+            </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+            <span>💡 Position and size will be rendered proportionally on preview, A4 prints, and downloaded PDFs.</span>
+            <span id="footer-builder-coords-status" class="text-slate-400 font-mono text-[10px]"></span>
+        </div>
+
+        {$preview}
+
+        <div class="mt-3 pt-3 border-t border-slate-200">
+            <label class="field-label" for="footer_image">Upload footer image <span class="text-slate-400 font-normal">(optional, PNG / JPG / WebP under 2 MB)</span></label>
+            <input type="file" id="footer_image" name="footer_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sky-800">
+        </div>
+    </div>
+    HTML;
+}
+
 /**
  * @return array{settings: array, patient: array, entry: ?array, lines: array, report_title: string}
  */
@@ -508,6 +696,7 @@ function load_document_context(?string $labNo): array
                 'unit' => ($r['unit'] !== '' && $r['unit'] !== '—') ? $r['unit'] : ($tObj['unit'] ?? '—'),
                 'range' => ($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—'),
                 'sub_table' => ($pCount === 0) ? '' : ($r['sub_table'] ?? ''),
+                'result_note' => ($pCount === 0) ? '' : ($r['result_note'] ?? ''),
                 'methodology' => $testMethodologies[$tTitle] ?? '',
                 'flag' => $r['flag'] ?? '',
                 'print_page' => max(1, (int)($r['print_page'] ?? 1)),
@@ -681,6 +870,11 @@ function render_branded_header(array $settings, bool $forBill = false): string
 
 function render_branded_footer(array $settings, bool $forBill = false): string
 {
+    $imgHtml = '';
+    if (!empty($settings['has_footer_image']) && !empty($settings['footer_image_url'])) {
+        $imgHtml = '<div class="lab-report__footer-custom mb-2 text-center"><img src="' . e($settings['footer_image_url']) . '" alt="Footer Letterhead" style="max-height:60px;max-width:100%;object-fit:contain;"></div>';
+    }
+
     $rawFooter = trim((string)($forBill ? (!empty($settings['bill_footer']) ? $settings['bill_footer'] : ($settings['footer'] ?? '')) : ($settings['footer'] ?? '')));
     if ($forBill) {
         if ($rawFooter === '' || preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
@@ -693,7 +887,7 @@ function render_branded_footer(array $settings, bool $forBill = false): string
     $labLine = $footer !== ''
         ? '<p class="lab-report__lab-note">' . $footer . '</p>'
         : '';
-    return $labLine . software_credit_footer(true);
+    return $imgHtml . $labLine . software_credit_footer(true);
 }
 
 function render_report_signatories(array $signatories): string
@@ -929,11 +1123,17 @@ function build_report_result_rows(array $resultLines): string
         $rangeVal = e($line['range'] ?? '—');
         $paramName = e($paramRaw);
 
+        $resNoteHtml = '';
+        $resNote = trim((string)($line['result_note'] ?? ''));
+        if ($resNote !== '') {
+            $resNoteHtml = '<div class="lab-report__result-note">' . nl2br(e($resNote)) . '</div>';
+        }
+
         $rows .= '<tr>
             <td class="lab-report__param-cell">' . $paramName . '</td>
             <td class="lab-report__range-cell">' . $rangeVal . '</td>
             <td class="lab-report__unit-cell">' . $unitVal . '</td>
-            <td class="' . $resClass . '">' . $resVal . $arrow . '</td>
+            <td class="' . $resClass . '">' . $resVal . $arrow . $resNoteHtml . '</td>
         </tr>';
 
         if (!empty($line['sub_table'])) {
@@ -1112,7 +1312,24 @@ function render_report_sheet(
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $signatoriesHtml = render_report_signatories($signatories);
     $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically varified report - not valid for legal proceedings unless stamped®</p>';
-    $contactBar = ($addrLine !== '') ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
+    $customFooterHtml = '';
+    if (!empty($settings['has_footer_image']) && !empty($settings['footer_image_url'])) {
+        $fLayout = $settings['footer_layout'] ?? null;
+        if (is_string($fLayout) && $fLayout !== '') {
+            $fLayout = json_decode($fLayout, true);
+        }
+        $fCanvasH = max(35, min(220, (int)($fLayout['canvas_h'] ?? 70)));
+        $fImgConf = $fLayout['image'] ?? [];
+        $fXPct = isset($fImgConf['x_pct']) ? (float)$fImgConf['x_pct'] : 0.0;
+        $fY = max(0, (int)($fImgConf['y'] ?? 0));
+        $fWPct = isset($fImgConf['w_pct']) ? (float)$fImgConf['w_pct'] : 100.0;
+        $fH = max(20, (int)($fImgConf['h'] ?? 60));
+
+        $customFooterHtml = '<div class="lab-report__footer-custom" style="position:relative;height:' . $fCanvasH . 'px;min-height:' . $fCanvasH . 'px;">'
+            . '<div style="position:absolute;left:' . $fXPct . '%;top:' . $fY . 'px;width:' . $fWPct . '%;height:' . $fH . 'px;display:flex;align-items:center;">'
+            . '<img src="' . e($settings['footer_image_url']) . '" alt="Footer Letterhead" style="max-height:100%;max-width:100%;object-fit:contain;">'
+            . '</div></div>';
+    }
 
     return <<<HTML
     <div class="print-area lab-report{$breakClass}">
@@ -1135,6 +1352,7 @@ function render_report_sheet(
 
         <footer class="lab-report__footer">
             <div class="lab-report__footer-branding">
+                {$customFooterHtml}
                 {$disclaimer}
                 {$footerBlock}
                 {$signatoriesHtml}

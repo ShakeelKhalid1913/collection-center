@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         }
 
         $subTable = array_key_exists('sub_table', $item) ? trim((string)$item['sub_table']) : null;
+        $resultNote = array_key_exists('result_note', $item) ? trim((string)$item['result_note']) : null;
 
         $batchData[] = [
             'id' => $rId,
@@ -72,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
             'flag' => $flag,
             'is_visible' => $isVisible,
             'sub_table' => $subTable,
+            'result_note' => $resultNote,
         ];
     }
 
@@ -279,17 +281,8 @@ foreach ($activeRows as $r) {
     }
 
     $subValRaw = (string)($r['sub_table'] ?? '');
-    $hasSub = trim($subValRaw) !== '';
-    $subSummaryText = $hasSub ? 'Reference Criteria Table (' . strlen($subValRaw) . ' chars)' : '+ Add Reference Criteria Table';
-    $subHtml = '<details class="mt-1 text-xs text-slate-500"' . ($hasSub ? ' open' : '') . '>'
-        . '<summary class="cursor-pointer font-medium text-slate-500 hover:text-slate-700 inline-flex items-center gap-1 py-0.5">'
-        . '<i class="fa-solid fa-table-list text-[10px]"></i> ' . e($subSummaryText)
-        . '</summary>'
-        . '<div class="mt-1 p-2 bg-slate-50 rounded border border-slate-200 space-y-1">'
-        . '<label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Criteria / Sub-table (Criteria: Range):</label>'
-        . '<textarea name="results[' . $rId . '][sub_table]" class="field text-xs font-mono w-full rounded border border-slate-300 p-1.5 leading-normal" rows="2" placeholder="e.g. 0-2 yrs: 10-20&#10;>2 yrs: 20-40">' . e($subValRaw) . '</textarea>'
-        . '</div>'
-        . '</details>';
+    $subHtml = criteria_table_builder_field('results[' . $rId . '][sub_table]', $subValRaw);
+    $resultNote = e($r['result_note'] ?? '');
 
     $rowOptions = parse_result_options($rangeRaw);
     if ($rowOptions === null && count($activeRows) === 1 && $testResultOptions !== null) {
@@ -302,10 +295,10 @@ foreach ($activeRows as $r) {
             $sel = strcasecmp((string)($r['value'] ?? ''), $opt) === 0 ? ' selected' : '';
             $optHtml .= '<option value="' . e($opt) . '"' . $sel . '>' . e($opt) . '</option>';
         }
-        $valueControl = '<select name="results[' . $rId . '][value]" class="field text-sm w-36 result-value-input" data-result-input' . $autofocus . '>'
+        $valueControl = '<select name="results[' . $rId . '][value]" class="field text-sm w-full result-value-input" data-result-input' . $autofocus . '>'
             . $optHtml . '</select>';
     } else {
-        $valueControl = '<input type="text" name="results[' . $rId . '][value]" value="' . $val . '" class="' . $valClass . '" placeholder="—" data-result-input data-ref-range="' . $range . '"' . $autofocus . '>';
+        $valueControl = '<input type="text" name="results[' . $rId . '][value]" value="' . $val . '" class="' . $valClass . ' w-full" placeholder="—" data-result-input data-ref-range="' . $range . '"' . $autofocus . '>';
     }
 
     $tableBody .= <<<HTML
@@ -313,7 +306,7 @@ foreach ($activeRows as $r) {
         <td class="px-3 py-2 align-top">
             <label class="inline-flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" name="results[{$rId}][show]" value="1" class="mt-1"{$showChecked}>
-                <span>
+                <span class="w-full">
                     <span class="block text-[10px] uppercase text-slate-400 font-semibold">Show</span>
                     <span class="font-semibold text-slate-900 text-sm">{$paramName}</span>
                     {$subHtml}
@@ -327,7 +320,12 @@ foreach ($activeRows as $r) {
         <td class="px-3 py-2 text-sm align-top">
             <input type="text" name="results[{$rId}][range]" value="{$range}" class="field text-xs w-32 py-1 px-2 font-mono" placeholder="—" title="Reference range / number (e.g. 12-16)" data-ref-range-input>
         </td>
-        <td class="px-3 py-2 align-top">{$valueControl}</td>
+        <td class="px-3 py-2 align-top min-w-[9rem]">
+            {$valueControl}
+            <div class="mt-1">
+                <textarea name="results[{$rId}][result_note]" rows="2" class="field text-xs w-full py-1 px-2 text-slate-700 placeholder:text-slate-400" placeholder="Note / sub-result" title="Extra finding or note shown directly below result on report">{$resultNote}</textarea>
+            </div>
+        </td>
         <td class="px-3 py-2 align-top text-sm" data-flag-display>{$flagDisplay}</td>
     </tr>
     HTML;

@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS test_parameters (
     normal_value    VARCHAR(128),
     reference_range VARCHAR(128),
     sub_table       TEXT NULL,
+    result_note     TEXT NULL,
     sort_order      INT DEFAULT 0,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
@@ -178,6 +179,7 @@ CREATE TABLE IF NOT EXISTS samples (
     unit            VARCHAR(32) NULL,
     reference_range VARCHAR(128) NULL,
     sub_table       TEXT NULL,
+    result_note     TEXT NULL,
     flag            VARCHAR(16) NULL,
     sort_order      INT DEFAULT 0,
     print_page      INT NOT NULL DEFAULT 1,
@@ -215,9 +217,15 @@ CREATE TABLE IF NOT EXISTS lab_settings (
     logo_text       VARCHAR(32),
     bill_header_text TEXT,
     bill_footer_text TEXT,
+    header_image_position VARCHAR(32) NOT NULL DEFAULT 'left',
     header_image     LONGBLOB NULL,
     header_image_mime VARCHAR(64) NULL,
-    header_image_ver INT NOT NULL DEFAULT 0
+    header_image_ver INT NOT NULL DEFAULT 0,
+    header_layout_json TEXT NULL,
+    footer_image     LONGBLOB NULL,
+    footer_image_mime VARCHAR(64) NULL,
+    footer_image_ver INT NOT NULL DEFAULT 0,
+    footer_layout_json TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS collection_centers (

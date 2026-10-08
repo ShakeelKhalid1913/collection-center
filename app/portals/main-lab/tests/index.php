@@ -66,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pUnits = $_POST['param_unit'] ?? [];
                     $pNormals = $_POST['param_normal'] ?? [];
                     $pRanges = $_POST['param_range'] ?? [];
+                    $pSubTables = $_POST['param_sub_table'] ?? [];
+                    $pResultNotes = $_POST['param_result_note'] ?? [];
 
                     $paramsToSave = [];
                     foreach ($pNames as $i => $pName) {
@@ -77,6 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'unit' => trim((string)($pUnits[$i] ?? '')),
                             'normal_value' => trim((string)($pNormals[$i] ?? '')),
                             'reference_range' => trim((string)($pRanges[$i] ?? '')),
+                            'sub_table' => trim((string)($pSubTables[$i] ?? '')),
+                            'result_note' => trim((string)($pResultNotes[$i] ?? '')),
                         ];
                     }
 
@@ -113,30 +117,45 @@ if (!empty($editingParams)) {
         $pUn = e($ep['unit'] ?? '');
         $pNorm = e($ep['normal_value'] ?? '');
         $pRef = e($ep['reference_range'] ?? '');
+        $pSub = (string)($ep['sub_table'] ?? '');
+        $pResNote = e($ep['result_note'] ?? '');
+        $subBuilderHtml = criteria_table_builder_field('param_sub_table[]', $pSub);
+
         $existingParamsHtml .= <<<HTML
-        <div class="grid gap-2 items-end p-2 bg-slate-50 border border-slate-200 rounded" style="grid-template-columns: 0.9fr 1.1fr 0.5fr 0.7fr 0.7fr auto;">
-            <div>
-                <label class="field-label text-xs">Section / Group</label>
-                <input type="text" name="param_section[]" class="field text-sm" value="{$pSec}" placeholder="e.g. ERYTHROCYTES">
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2" data-param-row>
+            <div class="grid gap-2 items-end" style="grid-template-columns: 0.9fr 1.1fr 0.5fr 0.7fr 0.7fr auto;">
+                <div>
+                    <label class="field-label text-xs">Section / Group</label>
+                    <input type="text" name="param_section[]" class="field text-sm" value="{$pSec}" placeholder="e.g. ERYTHROCYTES">
+                </div>
+                <div>
+                    <label class="field-label text-xs">Parameter Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="param_name[]" class="field text-sm font-semibold" value="{$pNm}" placeholder="e.g. Hemoglobin (HB)" required>
+                </div>
+                <div>
+                    <label class="field-label text-xs">Unit</label>
+                    <input type="text" name="param_unit[]" class="field text-sm" value="{$pUn}" placeholder="g/dl">
+                </div>
+                <div>
+                    <label class="field-label text-xs">Normal Value</label>
+                    <input type="text" name="param_normal[]" class="field text-sm" value="{$pNorm}" placeholder="12.0 - 16.5">
+                </div>
+                <div>
+                    <label class="field-label text-xs">Reference Range</label>
+                    <input type="text" name="param_range[]" class="field text-sm" value="{$pRef}" placeholder="12.0 - 16.5">
+                </div>
+                <div class="flex items-end pb-1">
+                    <button type="button" class="btn btn-secondary text-sm font-bold text-red-600 hover:bg-red-50 hover:border-red-300" style="padding:0.4rem 0.65rem;" data-remove-param title="Remove Parameter">&times;</button>
+                </div>
             </div>
-            <div>
-                <label class="field-label text-xs">Parameter Name</label>
-                <input type="text" name="param_name[]" class="field text-sm" value="{$pNm}" placeholder="e.g. Hemoglobin (HB)" required>
-            </div>
-            <div>
-                <label class="field-label text-xs">Unit</label>
-                <input type="text" name="param_unit[]" class="field text-sm" value="{$pUn}" placeholder="g/dl">
-            </div>
-            <div>
-                <label class="field-label text-xs">Normal Value</label>
-                <input type="text" name="param_normal[]" class="field text-sm" value="{$pNorm}" placeholder="12.0 - 16.5">
-            </div>
-            <div>
-                <label class="field-label text-xs">Reference Range</label>
-                <input type="text" name="param_range[]" class="field text-sm" value="{$pRef}" placeholder="12.0 - 16.5">
-            </div>
-            <div class="flex items-end pb-1">
-                <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem;color:#dc2626" data-remove-param title="Remove">&times;</button>
+            <div class="grid gap-3 pt-2 border-t border-slate-200/80 sm:grid-cols-2 items-start">
+                <div>
+                    {$subBuilderHtml}
+                </div>
+                <div>
+                    <label class="field-label text-xs text-slate-600">Default Result Note / Remark <span class="text-slate-400 font-normal">(shown below result)</span></label>
+                    <textarea name="param_result_note[]" rows="2" class="field text-xs w-full py-1 px-2" placeholder="e.g. Serum index: Normal (optional)">{$pResNote}</textarea>
+                </div>
             </div>
         </div>
         HTML;

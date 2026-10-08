@@ -323,3 +323,72 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     HTML;
 }
 
+/**
+ * Render an interactive, table-based Reference Criteria editor.
+ * Converts existing lines of "Criteria: Range" into table rows with inputs.
+ * Syncs automatically with a hidden textarea with name $fieldName.
+ */
+function criteria_table_builder_field(string $fieldName, ?string $rawText = '', string $label = 'Reference Criteria Table'): string
+{
+    $rawText = trim((string)$rawText);
+    $rows = [];
+    if ($rawText !== '') {
+        $lines = explode("\n", $rawText);
+        foreach ($lines as $l) {
+            $l = trim($l);
+            if ($l === '') continue;
+            $parts = explode(':', $l, 2);
+            $cName = trim($parts[0] ?? '');
+            $cRange = trim($parts[1] ?? '');
+            if ($cName !== '' || $cRange !== '') {
+                $rows[] = ['name' => $cName, 'range' => $cRange];
+            }
+        }
+    }
+
+    $rowCount = count($rows);
+    $isOpen = $rowCount > 0 ? ' open' : '';
+
+    $tableRowsHtml = '';
+    foreach ($rows as $r) {
+        $tableRowsHtml .= '<tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">'
+            . '<td class="p-1"><input type="text" class="field text-xs py-1 px-2 w-full criteria-name-input" placeholder="e.g. Adult Male / New born" value="' . e($r['name']) . '"></td>'
+            . '<td class="p-1"><input type="text" class="field text-xs py-1 px-2 w-full criteria-range-input font-mono" placeholder="e.g. 15.2 - 23.5" value="' . e($r['range']) . '"></td>'
+            . '<td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 font-bold p-1 leading-none text-base border-0 bg-transparent cursor-pointer" data-remove-criteria-row title="Delete row">&times;</button></td>'
+            . '</tr>';
+    }
+
+    $rawTextEsc = e($rawText);
+
+    return <<<HTML
+    <details class="mt-1.5 text-xs text-slate-600 criteria-table-wrap" data-criteria-builder{$isOpen}>
+        <summary class="cursor-pointer font-semibold text-slate-600 hover:text-teal-700 inline-flex items-center gap-1.5 py-0.5 select-none">
+            <i class="fa-solid fa-table-list text-teal-600 text-[11px]"></i>
+            <span>{$label} (<span data-criteria-count>{$rowCount}</span>)</span>
+        </summary>
+        <div class="mt-1.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Criteria &amp; Specific Ranges</span>
+                <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 text-teal-700 bg-teal-50 border-teal-300 hover:bg-teal-100 font-semibold" data-add-criteria-row>
+                    <i class="fa-solid fa-plus mr-1"></i> Add Row
+                </button>
+            </div>
+            <table class="w-full text-xs criteria-table-editor border border-slate-200 rounded overflow-hidden bg-white">
+                <thead class="bg-slate-100/90 text-[10px] font-bold text-slate-600 uppercase">
+                    <tr>
+                        <th class="px-2 py-1 text-left w-7/12">Criteria / Age / Condition</th>
+                        <th class="px-2 py-1 text-left w-4/12">Reference Range</th>
+                        <th class="px-1 py-1 text-center w-8"></th>
+                    </tr>
+                </thead>
+                <tbody data-criteria-tbody>
+                    {$tableRowsHtml}
+                </tbody>
+            </table>
+            <textarea name="{$fieldName}" class="hidden criteria-serialized-textarea">{$rawTextEsc}</textarea>
+        </div>
+    </details>
+    HTML;
+}
+
+

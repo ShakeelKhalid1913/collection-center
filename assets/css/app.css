@@ -2075,22 +2075,25 @@ textarea.field {
 }
 
 .lab-report__th-test {
-  width: 36%;
+  width: 44%;
 }
 
 .lab-report__th-range {
-  width: 26%;
-  text-align: center !important;
+  width: 22%;
+  text-align: left !important;
+  padding-left: 0.5rem !important;
 }
 
 .lab-report__th-unit {
-  width: 18%;
-  text-align: center !important;
+  width: 15%;
+  text-align: left !important;
+  padding-left: 0.5rem !important;
 }
 
 .lab-report__th-result {
-  width: 20%;
-  text-align: center !important;
+  width: 19%;
+  text-align: left !important;
+  padding-left: 0.5rem !important;
   line-height: 1.15;
 }
 
@@ -2120,7 +2123,8 @@ textarea.field {
 
 .lab-report__range-cell,
 .lab-report__unit-cell {
-  text-align: center;
+  text-align: left !important;
+  padding-left: 0.5rem !important;
   font-variant-numeric: tabular-nums;
   font-weight: 700 !important;
   color: #000000 !important;
@@ -2136,11 +2140,13 @@ textarea.field {
 }
 
 .lab-report__panel-banner {
-  display: block;
+  display: inline-block;
+  width: auto;
+  max-width: fit-content;
   border-top: 2px solid #000000;
   border-bottom: 1.5px solid #000000;
   background: #f1f5f9;
-  padding: 0.18rem 0.4rem;
+  padding: 0.18rem 0.6rem;
   margin: 0.1rem 0 0.05rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -2233,8 +2239,19 @@ textarea.field {
 .lab-report__result {
   font-weight: 900 !important;
   font-size: 0.92rem;
-  text-align: center;
+  text-align: left !important;
+  padding-left: 0.5rem !important;
   color: #000000 !important;
+}
+
+.lab-report__result-note {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 0.15rem;
+  line-height: 1.25;
+  letter-spacing: normal;
 }
 
 .lab-report__result--low {
@@ -2459,7 +2476,7 @@ textarea.field {
   font-size: 12.5px;
   line-height: 1.45;
   border: 1px solid #cbd5e1;
-  padding: 1rem 1.35rem 0.85rem;
+  padding: 0.5rem 1.25rem 0.85rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
@@ -2467,6 +2484,23 @@ textarea.field {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1rem;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: bold !important;
+  font-style: italic !important;
+}
+
+.lab-bill__table,
+.lab-bill__table th,
+.lab-bill__table td,
+.lab-bill__footer-row,
+.lab-bill__totals-wrap,
+.lab-bill__totals,
+.lab-bill__totals td,
+.lab-bill__brand-footer,
+.lab-bill__brand-footer * {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: bold !important;
+  font-style: italic !important;
 }
 
 .lab-bill__table th {
@@ -2553,7 +2587,35 @@ textarea.field {
 }
 
 @media print {
-  .lab-bill { border: 0; max-width: none; box-shadow: none; }
+  body {
+    position: relative !important;
+  }
+  .lab-bill-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+  }
+  .lab-bill {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  .lab-bill .lab-doc-brand {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  .lab-bill .lab-letterhead-image {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
 }
 
 /* Legacy compact receipt (kept for older styles) */
@@ -2830,6 +2892,16 @@ textarea.field {
     padding: 0 !important;
     margin: 0 !important;
     background: #fff !important;
+  }
+
+  .print-area.lab-bill {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .lab-report {
@@ -3231,3 +3303,78 @@ textarea.field {
     object-fit: contain !important;
   }
 }
+
+/* ——— Footer Layout Drag & Drop Builder ——— */
+.footer-builder-wrap {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.footer-builder-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  margin: 0.5rem auto 0;
+  background: #ffffff;
+  border: 2px dashed #94a3b8;
+  border-radius: 0.375rem;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 16px 16px;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+}
+
+.builder-item--footer-img {
+  border: 1.5px dashed #0284c7;
+  background: rgba(2, 132, 199, 0.06);
+  border-radius: 4px;
+}
+
+.builder-item--footer-img:hover,
+.builder-item--footer-img.is-active {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+  z-index: 10;
+}
+
+.builder-badge--footer {
+  background: #0284c7;
+}
+
+/* Custom Report Footer Styles */
+.lab-report__footer-custom {
+  position: relative !important;
+  display: block !important;
+  overflow: hidden;
+  width: 100% !important;
+}
+
+.lab-report__footer-custom img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* ——— Criteria Table Editor Styles ——— */
+.criteria-table-editor {
+  border-collapse: collapse;
+}
+
+.criteria-table-editor th {
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.criteria-table-editor td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.criteria-table-editor tr:hover td {
+  background: #f8fafc;
+}
+
