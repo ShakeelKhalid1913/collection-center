@@ -7,6 +7,10 @@ require_once __DIR__ . '/../../../includes/layout.php';
 require_once __DIR__ . '/../../../includes/components.php';
 
 $labNo = trim($_GET['lab_no'] ?? '');
+if ($labNo !== '') {
+    lab_repo()->updateTransitStatus($labNo, 'verified');
+    audit_log('GENERATE_REPORT', 'lab_entries', $labNo, 'Generated/Viewed verified diagnostic report');
+}
 $ctx = load_document_context($labNo !== '' ? $labNo : null);
 $previewUrl = '/portals/main-lab/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 

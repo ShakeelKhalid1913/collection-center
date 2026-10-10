@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
     name            VARCHAR(255) NOT NULL,
     role            VARCHAR(64) NOT NULL,
     portal          ENUM('main_lab','collection_center','imaging','admin') NOT NULL,
+    permissions     TEXT NULL,
     is_active       TINYINT(1) DEFAULT 1,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
@@ -263,3 +264,102 @@ CREATE TABLE IF NOT EXISTS doctor_shares (
     INDEX idx_doctor_shares_org (organization_id),
     UNIQUE KEY uq_doctor_share_org_name (organization_id, doctor_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL,
+    user_id         VARCHAR(64) NULL,
+    user_name       VARCHAR(255) NULL,
+    portal          VARCHAR(64) NULL,
+    action          VARCHAR(64) NOT NULL,
+    entity_type     VARCHAR(64) NOT NULL,
+    entity_id       VARCHAR(64) NULL,
+    details         TEXT NULL,
+    ip_address      VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_org (organization_id),
+    INDEX idx_audit_action (action)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    branch          VARCHAR(64) NOT NULL DEFAULT 'CC-01',
+    title           VARCHAR(255) NOT NULL,
+    category        VARCHAR(100) NOT NULL DEFAULT 'Other',
+    amount          DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    payment_mode    VARCHAR(50) NOT NULL DEFAULT 'Cash',
+    receipt_no      VARCHAR(100) NULL,
+    notes           TEXT NULL,
+    expense_date    DATE NOT NULL,
+    created_by      VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_expenses_org_date (organization_id, expense_date),
+    INDEX idx_expenses_branch (branch)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    name            VARCHAR(255) NOT NULL,
+    category        VARCHAR(100) NOT NULL DEFAULT 'Reagent',
+    unit            VARCHAR(50) NOT NULL DEFAULT 'Tests',
+    quantity        INT NOT NULL DEFAULT 0,
+    min_level       INT NOT NULL DEFAULT 10,
+    unit_price      DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    supplier        VARCHAR(255) NULL,
+    expiry_date     DATE NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_inventory_org (organization_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS purchase_returns (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    item_id         VARCHAR(64) NOT NULL,
+    item_name       VARCHAR(255) NOT NULL,
+    quantity        INT NOT NULL DEFAULT 1,
+    reason          VARCHAR(255) NOT NULL,
+    return_date     DATE NOT NULL,
+    refund_amount   DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    supplier        VARCHAR(255) NULL,
+    status          VARCHAR(50) NOT NULL DEFAULT 'Completed',
+    created_by      VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_returns_org (organization_id),
+    INDEX idx_returns_item (item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS report_templates (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    title           VARCHAR(255) NOT NULL,
+    department      VARCHAR(100) NOT NULL DEFAULT 'General',
+    content         MEDIUMTEXT NOT NULL,
+    is_private      TINYINT(1) NOT NULL DEFAULT 0,
+    created_by      VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_templates_org (organization_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS due_payments (
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    lab_no          VARCHAR(64) NOT NULL,
+    patient_id      VARCHAR(64) NOT NULL,
+    patient_name    VARCHAR(255) NOT NULL,
+    amount_paid     DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    previous_due    DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    remaining_due   DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    payment_mode    VARCHAR(50) NOT NULL DEFAULT 'Cash',
+    receipt_no      VARCHAR(100) NULL,
+    notes           TEXT NULL,
+    collected_by    VARCHAR(64) NULL,
+    payment_date    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_due_payments_org (organization_id),
+    INDEX idx_due_payments_lab (lab_no),
+    INDEX idx_due_payments_patient (patient_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

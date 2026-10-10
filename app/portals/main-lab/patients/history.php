@@ -76,6 +76,9 @@ $content .= <<<HTML
         </select>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
+        <a href="/portals/main-lab/patients/card.php?id={$mrNo}" class="btn btn-secondary text-xs">
+            <i class="fa-solid fa-id-card mr-1"></i> Patient Card
+        </a>
         <a href="/portals/main-lab/patients/edit.php?id={$mrNo}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-user-pen mr-1"></i> Edit Patient / Doctor
         </a>

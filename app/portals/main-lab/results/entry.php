@@ -40,10 +40,15 @@ if (!$entry) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
+    require_permission('report_edit');
     $postLabNo = trim($_POST['lab_no']);
     $activeTest = trim((string)($_POST['active_test'] ?? $activeTest));
     $resItems = $_POST['results'] ?? [];
     $notes = trim((string)($_POST['clinical_notes'] ?? ''));
+
+    // Automatically advance transit lifecycle to result_entered
+    lab_repo()->updateTransitStatus($postLabNo, 'result_entered');
+    audit_log('UPDATE_RESULTS', 'results', $postLabNo, "Updated test results for active test '{$activeTest}'");
 
     $batchData = [];
     foreach ($resItems as $rId => $item) {

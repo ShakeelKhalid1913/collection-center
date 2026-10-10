@@ -150,6 +150,24 @@ class LabEntryRepository
         );
     }
 
+    /**
+     * Track Sample Lifecycle across the 5 chain milestones:
+     * 1. collected (Collection Center)
+     * 2. in_transit (Main Lab Transit)
+     * 3. testing (Testing / Processing)
+     * 4. result_entered (Result Entry)
+     * 5. verified (Verified Report Generated)
+     */
+    public function updateTransitStatus(string $labNo, string $transitStatus, ?string $notes = null): bool
+    {
+        return $this->db->execute(
+            "UPDATE lab_entries 
+             SET transit_status = :ts, transit_updated_at = NOW() 
+             WHERE lab_no = :lab_no",
+            ['ts' => $transitStatus, 'lab_no' => $labNo]
+        );
+    }
+
     public function countToday(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(

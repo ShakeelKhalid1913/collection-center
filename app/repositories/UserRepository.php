@@ -83,9 +83,10 @@ class UserRepository
         }
 
         $passwordHash = password_hash($rawPassword, PASSWORD_BCRYPT);
+        $perms = isset($data['permissions']) ? (is_string($data['permissions']) ? $data['permissions'] : json_encode($data['permissions'])) : null;
 
-        $sql = "INSERT INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, is_active)
-                VALUES (:id, :org_id, :branch_id, :email, :password_hash, :name, :role, :portal, 1)";
+        $sql = "INSERT INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, permissions, is_active)
+                VALUES (:id, :org_id, :branch_id, :email, :password_hash, :name, :role, :portal, :permissions, 1)";
 
         $inserted = $this->db->execute($sql, [
             'id' => $userId,
@@ -96,6 +97,7 @@ class UserRepository
             'name' => $name,
             'role' => $role,
             'portal' => $portal,
+            'permissions' => $perms,
         ]);
 
         if ($inserted) {
@@ -104,6 +106,25 @@ class UserRepository
         }
 
         return ['success' => false, 'error' => 'Failed to register account. Please try again.'];
+    }
+
+    public function updateUserPermissions(string $userId, array $permissions): bool
+    {
+        return $this->db->execute(
+            "UPDATE users SET permissions = :perms WHERE id = :id",
+            [
+                'id' => $userId,
+                'perms' => json_encode($permissions),
+            ]
+        );
+    }
+
+    public function toggleUserStatus(string $userId, int $isActive): bool
+    {
+        return $this->db->execute(
+            "UPDATE users SET is_active = :status WHERE id = :id",
+            ['id' => $userId, 'status' => $isActive]
+        );
     }
 
     public function authenticate(string $email, string $password): array

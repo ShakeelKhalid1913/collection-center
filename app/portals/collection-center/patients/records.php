@@ -23,6 +23,7 @@ foreach (mock('mock_patients') as $p) {
         '<a href="/portals/collection-center/lab-entries/new.php?patient_id=' . urlencode($p['id']) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Assign Tests</a>' .
         '<a href="/portals/collection-center/patients/history.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
         '<a href="/portals/collection-center/patients/edit.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
+        '<a href="/portals/collection-center/patients/card.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs" title="Print Patient ID Card"><i class="fa-solid fa-id-card mr-1"></i> Card</a>' .
         '</div>',
     ];
 }

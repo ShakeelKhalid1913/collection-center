@@ -18,14 +18,20 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/patients/quick-register.php", 'Quick Registration', $activeKey, 'quick-register', null, 'fa-solid fa-bolt'),
                 nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
                 nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
+                nav_item("{$base}/patients/card.php", 'Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
             ]),
             nav_group('Lab Entries', [
                 nav_item("{$base}/lab-entries/new.php", 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
                 nav_item("{$base}/lab-entries/pending.php", 'Pending', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock'),
+                nav_item("{$base}/sample-tracking.php", 'Sample Tracking & Barcode', $activeKey, 'sample-tracking', null, 'fa-solid fa-barcode'),
                 nav_item("{$base}/lab-entries/history.php", 'History', $activeKey, 'history', null, 'fa-solid fa-clock-rotate-left'),
             ]),
+            nav_group('Billing & Finance', [
+                nav_item("{$base}/patient-dues.php", 'Patient Dues', $activeKey, 'patient-dues', null, 'fa-solid fa-hand-holding-dollar'),
+                nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-receipt'),
+                nav_item("{$base}/receipts.php", 'Receipts', $activeKey, 'receipts', null, 'fa-solid fa-file-invoice'),
+            ]),
             nav_group('More', [
-                nav_item("{$base}/receipts.php", 'Receipts', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/reports.php", 'Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
                 nav_item("{$base}/branding.php", 'Header / Footer', $activeKey, 'branding', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
@@ -40,14 +46,19 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/results/entry.php", 'Result Entry', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
                 nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
             ]),
-            nav_group('Operations', [
+            nav_group('Operations & Finance', [
+                nav_item("{$base}/patient-dues.php", 'Patient Dues', $activeKey, 'patient-dues', null, 'fa-solid fa-hand-holding-dollar'),
+                nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-file-invoice-dollar'),
+                nav_item("{$base}/stock-management.php", 'Stock & Returns', $activeKey, 'stock', null, 'fa-solid fa-boxes-stacked'),
+                nav_item("{$base}/doctors-share.php", "Doctor's Share", $activeKey, 'doctors-share', null, 'fa-solid fa-user-doctor'),
+                nav_item("/portals/collection-center/sample-tracking.php", 'Sample Transit & Tracking', $activeKey, 'sample-tracking', null, 'fa-solid fa-barcode'),
                 nav_item("{$base}/waste-record.php", 'Waste Record', $activeKey, 'waste-record', null, 'fa-solid fa-trash-can'),
                 nav_item("{$base}/delete-entry.php", 'Delete Entry', $activeKey, 'delete-entry', null, 'fa-solid fa-user-xmark'),
-                nav_item("{$base}/doctors-share.php", "Doctor's Share", $activeKey, 'doctors-share', null, 'fa-solid fa-user-doctor'),
             ]),
-            nav_group('Catalog', [
+            nav_group('Catalog & Templates', [
                 nav_item("{$base}/tests/index.php", 'Add Test', $activeKey, 'tests', null, 'fa-solid fa-flask'),
                 nav_item("{$base}/tests/prices.php", 'Add / Update Price', $activeKey, 'prices', null, 'fa-solid fa-tags'),
+                nav_item("{$base}/templates.php", 'Report Templates', $activeKey, 'templates', null, 'fa-solid fa-bookmark'),
             ]),
             nav_group('Settings', [
                 nav_item("{$base}/settings/report-template.php", 'Header & Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
@@ -55,6 +66,7 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('More', [
                 nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
+                nav_item("{$base}/patients/card.php", 'Print Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
                 nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/settings/profile.php", 'Lab Profile', $activeKey, 'settings-profile', null, 'fa-solid fa-hospital'),
                 nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users'),
@@ -89,6 +101,7 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Management', [
                 nav_item("{$base}/labs.php", 'Labs & Branches', $activeKey, 'labs', null, 'fa-solid fa-sitemap'),
                 nav_item("{$base}/users.php", 'Users & Permissions', $activeKey, 'users', null, 'fa-solid fa-user-shield'),
+                nav_item("{$base}/audit-trail.php", 'Audit Trail', $activeKey, 'audit-trail', null, 'fa-solid fa-clock-rotate-left'),
                 nav_item("{$base}/tests.php", 'Tests Catalog', $activeKey, 'tests', null, 'fa-solid fa-flask'),
                 nav_item("{$base}/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-stacked'),
                 nav_item("{$base}/branding.php", 'Client Branding', $activeKey, 'branding', null, 'fa-solid fa-heading'),

@@ -192,6 +192,10 @@ function runSetup(): array
             "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
             "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
             "ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL",
+            "ALTER TABLE users ADD COLUMN permissions TEXT NULL",
+            "ALTER TABLE lab_entries ADD COLUMN transit_status VARCHAR(64) DEFAULT 'collected'",
+            "ALTER TABLE lab_entries ADD COLUMN transit_updated_at TIMESTAMP NULL",
+            "ALTER TABLE lab_entries ADD COLUMN barcode VARCHAR(64) NULL",
         ] as $alter) {
             try {
                 $pdo->exec($alter);
@@ -199,6 +203,24 @@ function runSetup(): array
                 // Column already exists
             }
         }
+
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS audit_logs (
+                id              VARCHAR(64) PRIMARY KEY,
+                organization_id VARCHAR(64) NOT NULL,
+                user_id         VARCHAR(64) NULL,
+                user_name       VARCHAR(255) NULL,
+                portal          VARCHAR(64) NULL,
+                action          VARCHAR(64) NOT NULL,
+                entity_type     VARCHAR(64) NOT NULL,
+                entity_id       VARCHAR(64) NULL,
+                details         TEXT NULL,
+                ip_address      VARCHAR(64) NULL,
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_audit_org (organization_id),
+                INDEX idx_audit_action (action)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch (\Throwable $ignored) {}
 
         try {
             $pdo->exec("UPDATE lab_settings SET bill_footer_text = 'Get well soon.' WHERE bill_footer_text IS NULL OR bill_footer_text = '' OR bill_footer_text LIKE '%electronically verified%' OR bill_footer_text LIKE '%queries call reception%'");
@@ -261,6 +283,88 @@ function runSetup(): array
             UNIQUE KEY uq_doctor_share_org_name (organization_id, doctor_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS expenses (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+            branch          VARCHAR(64) NOT NULL DEFAULT 'CC-01',
+            title           VARCHAR(255) NOT NULL,
+            category        VARCHAR(100) NOT NULL DEFAULT 'Other',
+            amount          DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            payment_mode    VARCHAR(50) NOT NULL DEFAULT 'Cash',
+            receipt_no      VARCHAR(100) NULL,
+            notes           TEXT NULL,
+            expense_date    DATE NOT NULL,
+            created_by      VARCHAR(64) NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_expenses_org_date (organization_id, expense_date),
+            INDEX idx_expenses_branch (branch)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS inventory_items (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+            name            VARCHAR(255) NOT NULL,
+            category        VARCHAR(100) NOT NULL DEFAULT 'Reagent',
+            unit            VARCHAR(50) NOT NULL DEFAULT 'Tests',
+            quantity        INT NOT NULL DEFAULT 0,
+            min_level       INT NOT NULL DEFAULT 10,
+            unit_price      DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            supplier        VARCHAR(255) NULL,
+            expiry_date     DATE NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_inventory_org (organization_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS purchase_returns (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+            item_id         VARCHAR(64) NOT NULL,
+            item_name       VARCHAR(255) NOT NULL,
+            quantity        INT NOT NULL DEFAULT 1,
+            reason          VARCHAR(255) NOT NULL,
+            return_date     DATE NOT NULL,
+            refund_amount   DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            supplier        VARCHAR(255) NULL,
+            status          VARCHAR(50) NOT NULL DEFAULT 'Completed',
+            created_by      VARCHAR(64) NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_returns_org (organization_id),
+            INDEX idx_returns_item (item_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS report_templates (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+            title           VARCHAR(255) NOT NULL,
+            department      VARCHAR(100) NOT NULL DEFAULT 'General',
+            content         MEDIUMTEXT NOT NULL,
+            is_private      TINYINT(1) NOT NULL DEFAULT 0,
+            created_by      VARCHAR(64) NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_templates_org (organization_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS due_payments (
+            id              VARCHAR(64) PRIMARY KEY,
+            organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+            lab_no          VARCHAR(64) NOT NULL,
+            patient_id      VARCHAR(64) NOT NULL,
+            patient_name    VARCHAR(255) NOT NULL,
+            amount_paid     DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            previous_due    DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            remaining_due   DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            payment_mode    VARCHAR(50) NOT NULL DEFAULT 'Cash',
+            receipt_no      VARCHAR(100) NULL,
+            notes           TEXT NULL,
+            collected_by    VARCHAR(64) NULL,
+            payment_date    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_due_payments_org (organization_id),
+            INDEX idx_due_payments_lab (lab_no),
+            INDEX idx_due_payments_patient (patient_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         // Seed Default Doctor Signatories
         $signatoriesSeed = [
             ['SIG-01', 'ORG-001', 1, 'Dr Alina', "M.B.B.S, M Phill Hematology", 'Consultant Pathologist', 1, 0],
@@ -297,9 +401,72 @@ function runSetup(): array
             $stmtCbcRes->execute($rRow);
         }
 
+        // Seed Inventory Items
+        $inventorySeed = [
+            ['STK-001', 'ORG-001', 'CBC Diluent & Lyse Reagent Pack (5L)', 'Hematology Reagents', 'Packs', 12, 5, 14500.00, 'Sysmex Pakistan', date('Y-m-d', strtotime('+8 months'))],
+            ['STK-002', 'ORG-001', 'Blood Glucose Test Strips (Pack of 100)', 'Consumables', 'Boxes', 25, 10, 3200.00, 'Roche Diagnostics', date('Y-m-d', strtotime('+12 months'))],
+            ['STK-003', 'ORG-001', 'EDTA Lavender Top Vacuum Tubes (K2) 3ml', 'Vials & Tubes', 'Trays (100)', 4, 8, 2400.00, 'BD Vacutainer', date('Y-m-d', strtotime('+18 months'))],
+            ['STK-004', 'ORG-001', 'Serum Clot Activator Red Top Tubes 5ml', 'Vials & Tubes', 'Trays (100)', 15, 6, 2200.00, 'BD Vacutainer', date('Y-m-d', strtotime('+14 months'))],
+            ['STK-005', 'ORG-001', 'Lipid Profile Enzymatic Reagent Kit', 'Biochemistry', 'Kits', 3, 4, 18000.00, 'Merck Clinical', date('Y-m-d', strtotime('+4 months'))],
+            ['STK-006', 'ORG-001', 'Uric Acid Liquid Stable Reagent 100ml', 'Biochemistry', 'Bottles', 6, 3, 5500.00, 'Randox Laboratories', date('Y-m-d', strtotime('+6 months'))],
+            ['STK-007', 'ORG-001', 'Disposable Sterile Blood Lancets (200s)', 'Consumables', 'Boxes', 18, 5, 850.00, 'MediSafe Medical', date('Y-m-d', strtotime('+24 months'))],
+            ['STK-008', 'ORG-001', 'Urine 10-Parameter Test Strips', 'Consumables', 'Bottles', 2, 5, 2800.00, 'Siemens Healthineers', date('Y-m-d', strtotime('+2 months'))],
+        ];
+        $stmtInv = $pdo->prepare("INSERT IGNORE INTO inventory_items (id, organization_id, name, category, unit, quantity, min_level, unit_price, supplier, expiry_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        foreach ($inventorySeed as $inv) {
+            $stmtInv->execute($inv);
+        }
+
+        // Seed Report Templates
+        $templatesSeed = [
+            [
+                'TPL-US-01', 'ORG-001', 'Ultrasound Whole Abdomen & Pelvis (Normal)', 'Radiology',
+                "LIVER: Normal in size, shape and acoustic texture. No focal mass lesion or intrahepatic biliary dilatation seen.\n\nGALLBLADDER: Normal in size, thin-walled, acoustic lumen is clear. No calculus or mass noted.\n\nPANCREAS & SPLEEN: Normal in size and homogenous texture. No mass lesion noted.\n\nKIDNEYS: Both kidneys are normal in size, position and cortical thickness. Normal corticomedullary differentiation preserved. No calculus or hydronephrosis seen.\n\nURINARY BLADDER: Well distended, smooth wall, lumen clear.\n\nIMPRESSION: Normal ultrasound study of whole abdomen and pelvis.",
+                0, 'admin'
+            ],
+            [
+                'TPL-XR-01', 'ORG-001', 'Chest X-Ray PA View (Normal Clinical Finding)', 'Radiology',
+                "CHEST PA VIEW:\n\n- Lung fields: Clear with normal bronchovascular markings. No focal airspace consolidation, mass, or cavity noted.\n- Costophrenic & cardiophrenic angles: Sharp and clear bilaterally.\n- Cardiac silhouette: Normal in size and contour. Cardiothoracic ratio is within normal limits (< 50%).\n- Hilar structures & mediastinum: Normal appearance.\n- Bony cage & soft tissues: Intact.\n\nIMPRESSION: Normal radiological study of chest.",
+                0, 'admin'
+            ],
+            [
+                'TPL-ECG-01', 'ORG-001', '12-Lead Electrocardiogram (Normal Sinus Rhythm)', 'Cardiology',
+                "12-LEAD ECG FINDINGS:\n\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 72 bpm\n- PR Interval: 0.16 sec (Normal: 0.12 - 0.20s)\n- QRS Duration: 0.08 sec (Normal: < 0.10s)\n- QTc: 410 ms\n- Axis: Normal cardiac axis (+45°)\n- ST-T wave changes: No significant ST elevation/depression or T wave inversion.\n\nIMPRESSION: Normal 12-lead Electrocardiogram (ECG).",
+                0, 'admin'
+            ],
+            [
+                'TPL-HISTO-01', 'ORG-001', 'Histopathology Biopsy Routine Narrative', 'Histopathology',
+                "GROSS EXAMINATION:\nReceived specimen labeled as biopsy in formalin container consisting of grayish-white soft tissue pieces measuring 1.2 x 0.8 x 0.4 cm. Entire tissue submitted for processing.\n\nMICROSCOPIC EXAMINATION:\nSections show stratified squamous epithelium with underlying fibrovascular stroma. Mild non-specific chronic inflammatory infiltrate composed of mature lymphocytes and plasma cells is noted. No evidence of cellular atypia, dysplasia, or malignancy seen in the examined sections.\n\nDIAGNOSIS: Non-specific chronic inflammation. Negative for malignancy.",
+                1, 'admin'
+            ],
+            [
+                'TPL-MICRO-01', 'ORG-001', 'Urine Culture & Sensitivity (No Growth 48 Hrs)', 'Microbiology',
+                "SPECIMEN: Clean catch mid-stream urine (MSU)\n\nCULTURE & SENSITIVITY:\n- Sample inoculated on CLED and MacConkey agar plates and incubated aerobically at 37°C for 48 hours.\n\nRESULT:\nNo bacterial pathogen isolated after 48 hours of aerobic incubation at 37°C (< 1,000 CFU/ml).\n\nCOMMENT: Sterile urine culture.",
+                0, 'admin'
+            ],
+        ];
+        $stmtTpl = $pdo->prepare("INSERT IGNORE INTO report_templates (id, organization_id, title, department, content, is_private, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        foreach ($templatesSeed as $tpl) {
+            $stmtTpl->execute($tpl);
+        }
+
+        // Seed Sample Expenses
+        $expensesSeed = [
+            ['EXP-001', 'ORG-001', 'CC-01', 'Daily Clinic Sanitization & Disinfectants', 'Sanitization', 1200.00, 'Cash', 'RCP-EXP-101', 'Weekly floor and sample desk disinfection pack', date('Y-m-d'), 'admin'],
+            ['EXP-002', 'ORG-001', 'BR-MAIN-LAB', 'Cold Chain Ice Packs & Sample Courier', 'Logistics', 2500.00, 'Online/Bank', 'TCS-99120', 'Dispatch to reference laboratory', date('Y-m-d'), 'admin'],
+            ['EXP-003', 'ORG-001', 'CC-01', 'Thermal Receipt Paper Rolls (Pack of 10)', 'Supplies', 1800.00, 'Cash', 'RCP-EXP-102', 'Counter thermal rolls for receipt printing', date('Y-m-d'), 'admin'],
+        ];
+        $stmtExp = $pdo->prepare("INSERT IGNORE INTO expenses (id, organization_id, branch, title, category, amount, payment_mode, receipt_no, notes, expense_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        foreach ($expensesSeed as $exp) {
+            $stmtExp->execute($exp);
+        }
+
         $logs[] = "Test catalog loaded from tests.csv (source of truth).";
         $logs[] = "mock_tests in bootstrap.php loads from DB via test_repo.";
         $logs[] = "Default doctor signatories seeded for report footer.";
+        $logs[] = "Default inventory items seeded for stock management.";
+        $logs[] = "Clinical report templates seeded for radiology, cardiology, and pathology.";
+        $logs[] = "Sample expense records initialized.";
 
         $logs[] = "All tables & seed data inserted successfully!";
         return ['success' => true, 'logs' => $logs];

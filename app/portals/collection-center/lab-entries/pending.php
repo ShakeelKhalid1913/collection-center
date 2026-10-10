@@ -35,6 +35,7 @@ foreach ($sourceEntries as $e) {
         '<span class="font-semibold ' . ($remaining > 0 ? 'text-amber-600' : 'text-emerald-600') . '">' . e(format_money($remaining)) . '</span>',
         '<span class="text-xs text-slate-500 whitespace-nowrap">' . e(format_date($dateVal)) . '</span>',
         '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
+        '<a href="/portals/collection-center/barcode-label.php?lab_no=' . $labQ . '" target="_blank" class="btn btn-secondary text-xs px-2.5 py-1 text-slate-800" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode text-blue-600"></i></a>' .
         '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1" title="Edit tests"><i class="fa-solid fa-pen-to-square"></i></a>' .
         '<a href="/portals/collection-center/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700">Receipt</a>' .
         '</div>',

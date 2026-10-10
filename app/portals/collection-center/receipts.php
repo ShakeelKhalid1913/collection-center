@@ -11,6 +11,7 @@ $labNo = trim((string)($_GET['lab_no'] ?? $_POST['lab_no'] ?? ''));
 $q = trim((string)($_GET['q'] ?? $_POST['q'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $labNo !== '' && isset($_POST['save_payment'])) {
+    require_permission('process_billing');
     $existing = lab_repo()->findByLabNo($labNo);
     if ($existing) {
         $amount = (float)($_POST['amount'] ?? $existing['amount'] ?? 0);
@@ -25,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $labNo !== '' && isset($_POST['save
             'discount' => $discount,
             'paid' => $paid,
         ]);
+        audit_log('PROCESS_PAYMENT', 'lab_entries', $labNo, "Recorded payment of Rs. {$paid} (Discount: Rs. {$discount}, Net: Rs. {$amount})");
         $redirect = '/portals/collection-center/receipts.php?lab_no=' . urlencode($labNo);
         if ($q !== '') {
             $redirect .= '&q=' . urlencode($q);

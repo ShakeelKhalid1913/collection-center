@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/documents.php';
+require_once __DIR__ . '/barcode.php';
 
 // Database & Repositories
 require_once __DIR__ . '/../database/Database.php';
@@ -19,6 +20,10 @@ require_once __DIR__ . '/../repositories/ResultRepository.php';
 require_once __DIR__ . '/../repositories/SettingRepository.php';
 require_once __DIR__ . '/../repositories/WasteRecordRepository.php';
 require_once __DIR__ . '/../repositories/DoctorShareRepository.php';
+require_once __DIR__ . '/../repositories/ExpenseRepository.php';
+require_once __DIR__ . '/../repositories/StockRepository.php';
+require_once __DIR__ . '/../repositories/TemplateRepository.php';
+require_once __DIR__ . '/../repositories/PatientDuesRepository.php';
 
 use App\Database\Database;
 use App\Repositories\UserRepository;
@@ -29,6 +34,10 @@ use App\Repositories\ResultRepository;
 use App\Repositories\SettingRepository;
 use App\Repositories\WasteRecordRepository;
 use App\Repositories\DoctorShareRepository;
+use App\Repositories\ExpenseRepository;
+use App\Repositories\StockRepository;
+use App\Repositories\TemplateRepository;
+use App\Repositories\PatientDuesRepository;
 
 const APP_NAME = 'Lab Dash Pro';
 
@@ -231,6 +240,62 @@ function doctor_share_repo(): DoctorShareRepository
 {
     static $repo = null;
     return $repo ??= new DoctorShareRepository();
+}
+
+function expense_repo(): ExpenseRepository
+{
+    static $repo = null;
+    return $repo ??= new ExpenseRepository();
+}
+
+function stock_repo(): StockRepository
+{
+    static $repo = null;
+    return $repo ??= new StockRepository();
+}
+
+function template_repo(): TemplateRepository
+{
+    static $repo = null;
+    return $repo ??= new TemplateRepository();
+}
+
+function dues_repo(): PatientDuesRepository
+{
+    static $repo = null;
+    return $repo ??= new PatientDuesRepository();
+}
+
+function audit_log(string $action, string $entityType, ?string $entityId = null, ?string $details = null): bool
+{
+    try {
+        $user = current_user();
+        $orgId = $user['organization_id'] ?? 'ORG-001';
+        $userId = $user['id'] ?? null;
+        $userName = $user['name'] ?? 'System';
+        $portal = current_portal();
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $id = 'AUD-' . bin2hex(random_bytes(6));
+
+        return db()->execute(
+            "INSERT INTO audit_logs (id, organization_id, user_id, user_name, portal, action, entity_type, entity_id, details, ip_address)
+             VALUES (:id, :org, :uid, :uname, :portal, :action, :etype, :eid, :details, :ip)",
+            [
+                'id' => $id,
+                'org' => $orgId,
+                'uid' => $userId,
+                'uname' => $userName,
+                'portal' => $portal,
+                'action' => $action,
+                'etype' => $entityType,
+                'eid' => $entityId,
+                'details' => $details,
+                'ip' => $ip,
+            ]
+        );
+    } catch (\Throwable) {
+        return false;
+    }
 }
 
 /**
@@ -504,6 +569,10 @@ function start_user_session(array $user): void
         $portal = 'collection-center';
     }
     $_SESSION['portal'] = $portal;
+    $permissions = [];
+    if (!empty($user['permissions'])) {
+        $permissions = is_array($user['permissions']) ? $user['permissions'] : (json_decode((string)$user['permissions'], true) ?: []);
+    }
     $_SESSION['user'] = [
         'id' => $user['id'],
         'name' => $user['name'],
@@ -512,7 +581,43 @@ function start_user_session(array $user): void
         'portal' => $portal,
         'organization_id' => $user['organization_id'] ?? 'ORG-001',
         'branch_id' => $user['branch_id'] ?? null,
+        'permissions' => $permissions,
     ];
+}
+
+function user_has_permission(string $permission): bool
+{
+    $user = current_user();
+    if (empty($user)) {
+        return false;
+    }
+    // Admin always has all permissions
+    if (($user['portal'] ?? '') === 'admin') {
+        return true;
+    }
+    $perms = $user['permissions'] ?? [];
+    if (!is_array($perms) || empty($perms)) {
+        // If not explicitly set, grant defaults by portal
+        return true;
+    }
+    return !empty($perms[$permission]);
+}
+
+function require_permission(string $permission, string $redirect = ''): void
+{
+    if (!user_has_permission($permission)) {
+        http_response_code(403);
+        $home = $redirect !== '' ? $redirect : (PORTALS[current_portal()]['path'] ?? '/');
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Permission Denied</title>
+        <style>body{font-family:system-ui;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:1.5rem}
+        .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2rem;max-width:440px;text-align:center}
+        a{color:#c2f13c;font-weight:600}</style></head><body><div class="card">
+        <h1 style="margin:0 0 .5rem;font-size:1.25rem;color:#f43f5e"><i class="fa-solid fa-lock"></i> Restricted Action</h1>
+        <p style="color:#94a3b8;line-height:1.5">You do not have the required permission (<code>' . htmlspecialchars($permission, ENT_QUOTES, 'UTF-8') . '</code>) configured by administrator.</p>
+        <p><a href="' . htmlspecialchars($home, ENT_QUOTES, 'UTF-8') . '">Return to dashboard</a> · <a href="/logout.php">Sign out</a></p>
+        </div></body></html>';
+        exit;
+    }
 }
 
 function require_auth(?string $portal = null): void

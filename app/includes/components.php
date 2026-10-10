@@ -292,12 +292,17 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     }
     $waText = rawurlencode('Your lab report is ready. Download: ' . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] : '') . $reportUrl);
     $waLink = 'https://wa.me/' . $waPhone . '?text=' . $waText;
-    $file = e(preg_replace('/[^a-zA-Z0-9_\-]+/', '-', $pdfFilename) ?: 'lab-report');
+    $barcodeBtn = '';
+    if (preg_match('/lab_no=([^&]+)/', $reportUrl, $m)) {
+        $bLabNo = urldecode($m[1]);
+        $barcodeBtn = '<a href="/portals/collection-center/barcode-label.php?lab_no=' . urlencode($bLabNo) . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
+    }
 
     return <<<HTML
     <div class="no-print flex flex-wrap gap-3 items-center" data-print-toolbar>
         <button type="button" onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print" aria-hidden="true"></i> Print</button>
         <button type="button" class="btn btn-secondary" data-download-pdf data-pdf-name="{$file}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF</button>
+        {$barcodeBtn}
         <a href="{$waLink}" target="_blank" rel="noopener" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
         <span class="text-xs text-slate-500" data-pdf-status></span>
         <div class="flex flex-wrap items-center gap-3 ml-auto text-sm text-slate-700 border border-slate-200 bg-white rounded-lg px-3 py-2">

@@ -10,6 +10,7 @@ $message = '';
 $orgId = current_user()['organization_id'] ?? 'ORG-001';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_permission('header_footer_edit');
     if (isset($_POST['action']) && $_POST['action'] === 'save_signatories') {
         $sigs = [];
         for ($i = 0; $i < 5; $i++) {

@@ -12,6 +12,7 @@ $q = trim((string)($_GET['q'] ?? ''));
 $dept = trim((string)($_GET['dept'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_price') {
+    require_permission('rates_edit');
     $testId = trim((string)($_POST['test_id'] ?? ''));
     $price = (float)($_POST['price'] ?? 0);
     if ($testId === '') {
