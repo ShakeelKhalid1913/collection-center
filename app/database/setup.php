@@ -10,7 +10,7 @@ use PDOException;
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/import_tests_csv.php';
 
-function runSetup(): array  
+function runSetup(): array
 {
     $config = require __DIR__ . '/../config/database.php';
     $logs = [];
@@ -39,7 +39,7 @@ function runSetup(): array
 
         // Seed Organization & Branch
         $pdo->exec("INSERT IGNORE INTO organizations (id, name) VALUES ('ORG-001', 'Lab Dash Pro Diagnostics')");
-        $pdo->exec("INSERT IGNORE INTO branches (id, organization_id, code, name, branch_type, address, phone) VALUES 
+        $pdo->exec("INSERT IGNORE INTO branches (id, organization_id, code, name, branch_type, address, phone) VALUES
             ('BR-GULBERG', 'ORG-001', 'CC-01', 'Gulberg Collection Point', 'collection_center', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333'),
             ('BR-MAIN-LAB', 'ORG-001', 'LAB-01', 'Main Pathology Laboratory', 'main_lab', 'Central Lab Tower, Faisalabad', '+92 42 111 222 444'),
             ('BR-IMAGING', 'ORG-001', 'IMG-01', 'Diagnostic Imaging Center', 'imaging', 'Imaging Block, Faisalabad', '+92 42 111 222 555')
@@ -48,7 +48,7 @@ function runSetup(): array
         // Seed Default Users (Password: 1913)
         $defaultPassword = password_hash('1913', PASSWORD_BCRYPT);
         $stmtUser = $pdo->prepare("INSERT IGNORE INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)");
-        
+
         $defaultUsers = [
             ['USR-01', 'ORG-001', 'BR-GULBERG', 'staff@citylab.pk', $defaultPassword, 'Collection Staff', 'Collection Center Staff', 'collection_center'],
             ['USR-02', 'ORG-001', 'BR-MAIN-LAB', 'lab@citylab.pk', $defaultPassword, 'Dr. Main Lab', 'Laboratory Staff', 'main_lab'],
@@ -147,7 +147,7 @@ function runSetup(): array
         }
 
         // Seed Settings
-        $pdo->exec("INSERT IGNORE INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text) VALUES 
+        $pdo->exec("INSERT IGNORE INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text) VALUES
             ('ORG-001', 'Lab Dash Pro Diagnostics', '12-A Main Boulevard, Faisalabad', '+92 42 111 222 333', 'reports@labdashpro.pk', 'Lab Dash Pro — Diagnostic & Laboratory Services', 'Get well soon. Thank you.', 'LDP')
         ");
 

@@ -297,6 +297,7 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
         $bLabNo = urldecode($m[1]);
         $barcodeBtn = '<a href="/portals/collection-center/barcode-label.php?lab_no=' . urlencode($bLabNo) . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
     }
+    $file = e($pdfFilename !== '' ? $pdfFilename : 'lab-report');
 
     return <<<HTML
     <div class="no-print flex flex-wrap gap-3 items-center" data-print-toolbar>
