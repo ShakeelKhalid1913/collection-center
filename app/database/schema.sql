@@ -226,7 +226,9 @@ CREATE TABLE IF NOT EXISTS lab_settings (
     footer_image     LONGBLOB NULL,
     footer_image_mime VARCHAR(64) NULL,
     footer_image_ver INT NOT NULL DEFAULT 0,
-    footer_layout_json TEXT NULL
+    footer_layout_json TEXT NULL,
+    report_font      VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic',
+    bill_font        VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS collection_centers (

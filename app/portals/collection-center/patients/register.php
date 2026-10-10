@@ -66,8 +66,7 @@ $form = '<form method="post">' . card(
     form_field('Date of birth', 'dob', 'date', null, '', true) .
     form_field('CNIC / B-Form / Passport', 'cnic', 'text', null, 'xxxxx-xxxxxxx-x', true) .
     select_field('Blood group', 'blood_group', $blood, '', true) .
-    form_field('Email', 'email', 'email', null, '', true) .
-    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Self', true) .
+    doctor_input_field('Referring Doctor', 'doctor', 'Walk-in / Self') .
     form_field('Registration Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     '<div class="sm:col-span-2 lg:col-span-3">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .

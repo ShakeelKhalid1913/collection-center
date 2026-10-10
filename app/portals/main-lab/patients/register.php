@@ -55,8 +55,7 @@ $content .= card(
     form_field('Mobile', 'phone') .
     form_field('Age', 'age', 'number') .
     select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male', 'Other' => 'Other']) .
-    select_field('Blood group', 'blood_group', $blood, '', true) .
-    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Walk-in / Self', true) .
+    doctor_input_field('Referring Doctor', 'doctor', 'Walk-in / Self') .
     form_field('Registration Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     '<div class="sm:col-span-2">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .

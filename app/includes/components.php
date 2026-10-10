@@ -396,4 +396,87 @@ function criteria_table_builder_field(string $fieldName, ?string $rawText = '', 
     HTML;
 }
 
+function doctor_input_field(
+    string $label = 'Referring doctor',
+    string $name = 'doctor',
+    ?string $value = null,
+    bool $optional = true,
+    string $placeholder = 'Type doctor name or select from list...'
+): string {
+    $val = e($value ?? '');
+    $labelHtml = field_label_html($label, $optional);
+    $fc = FIELD_CLASS;
+
+    $orgId = current_user()['organization_id'] ?? 'ORG-001';
+    $options = ['' => '— Quick select doctor —'];
+    foreach (mock('mock_doctors') as $d) {
+        $options[$d['name']] = $d['name'] . ($d['specialty'] !== '—' ? ' (' . $d['specialty'] . ')' : '');
+    }
+    try {
+        foreach (doctor_share_repo()->getAll($orgId) as $ds) {
+            $docName = trim((string)($ds['doctor_name'] ?? ''));
+            if ($docName !== '' && !isset($options[$docName])) {
+                $options[$docName] = $docName;
+            }
+        }
+    } catch (\Throwable) {}
+
+    $selectOpts = '';
+    foreach ($options as $k => $text) {
+        $selectOpts .= '<option value="' . e((string)$k) . '">' . e($text) . '</option>';
+    }
+
+    $uniqueId = 'doc_' . substr(md5($name . rand()), 0, 6);
+
+    return <<<HTML
+    <div>
+        <label class="field-label" for="{$uniqueId}">{$labelHtml}</label>
+        <div class="flex gap-2">
+            <select class="{$fc} text-xs w-2/5 shrink-0" onchange="if(this.value){ document.getElementById('{$uniqueId}').value = this.value; }">
+                {$selectOpts}
+            </select>
+            <input type="text" id="{$uniqueId}" name="{$name}" class="{$fc} flex-1" value="{$val}" placeholder="{$placeholder}">
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">Pick from list or freely type any referring doctor name.</p>
+    </div>
+    HTML;
+}
+
+function route_input_field(
+    string $label = 'Route to',
+    string $name = 'route',
+    ?string $value = 'Laboratory — Pathology (HQ)',
+    bool $optional = true,
+    string $placeholder = 'Type route or select from list...'
+): string {
+    $val = e($value ?? 'Laboratory — Pathology (HQ)');
+    $labelHtml = field_label_html($label, $optional);
+    $fc = FIELD_CLASS;
+
+    $options = ['' => '— Quick select route —'];
+    foreach (mock('mock_routes') as $r) {
+        $options[$r['label']] = $r['label'];
+    }
+
+    $selectOpts = '';
+    foreach ($options as $k => $text) {
+        $selectOpts .= '<option value="' . e((string)$k) . '">' . e($text) . '</option>';
+    }
+
+    $uniqueId = 'route_' . substr(md5($name . rand()), 0, 6);
+
+    return <<<HTML
+    <div>
+        <label class="field-label" for="{$uniqueId}">{$labelHtml}</label>
+        <div class="flex gap-2">
+            <select class="{$fc} text-xs w-2/5 shrink-0" onchange="if(this.value){ document.getElementById('{$uniqueId}').value = this.value; }">
+                {$selectOpts}
+            </select>
+            <input type="text" id="{$uniqueId}" name="{$name}" class="{$fc} flex-1" value="{$val}" placeholder="{$placeholder}">
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">Pick bench or freely type any custom route destination.</p>
+    </div>
+    HTML;
+}
+
 

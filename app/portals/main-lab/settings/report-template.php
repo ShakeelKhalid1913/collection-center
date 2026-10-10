@@ -51,6 +51,26 @@ $sBillHeader = e($s['bill_header']);
 $sFooter = e($s['footer']);
 $sBillFooter = e($s['bill_footer']);
 
+$supportedFonts = supported_document_fonts();
+$currentReportFont = $s['report_font'] ?? 'times_bold_italic';
+$currentBillFont = $s['bill_font'] ?? 'times_bold_italic';
+
+$reportFontOpts = '';
+foreach ($supportedFonts as $key => $f) {
+    $sel = $key === $currentReportFont ? ' selected' : '';
+    $style = 'font-family: ' . e($f['family']) . '; font-weight: ' . e($f['weight']) . '; font-style: ' . e($f['style']) . ';';
+    $reportFontOpts .= '<option value="' . e($key) . '" style="' . $style . '"' . $sel . '>' . e($f['name']) . '</option>';
+}
+
+$billFontOpts = '';
+foreach ($supportedFonts as $key => $f) {
+    $sel = $key === $currentBillFont ? ' selected' : '';
+    $style = 'font-family: ' . e($f['family']) . '; font-weight: ' . e($f['weight']) . '; font-style: ' . e($f['style']) . ';';
+    $billFontOpts .= '<option value="' . e($key) . '" style="' . $style . '"' . $sel . '>' . e($f['name']) . '</option>';
+}
+
+$fontMapJson = json_encode($supportedFonts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
 $content .= <<<HTML
 <form method="post" enctype="multipart/form-data" class="space-y-6">
     <input type="hidden" name="action" value="save_branding">
@@ -156,6 +176,53 @@ $content .= <<<HTML
         </div>
     </div>
 
+    <!-- Section 5: Typography & Font Selection (Below Patient Info) -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 text-purple-700 font-bold text-sm">
+                    <i class="fa-solid fa-font"></i>
+                </span>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-800">Typography &amp; Document Fonts (Below Patient Info)</h2>
+                    <p class="text-xs text-slate-500">Choose the font styling used across the test results, reference ranges, and billing table</p>
+                </div>
+            </div>
+            <span class="badge badge-purple">Typography</span>
+        </div>
+        <div class="p-5 grid gap-6 sm:grid-cols-2">
+            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-medical text-blue-600"></i>
+                    <label class="field-label text-xs font-bold text-slate-800 mb-0">Lab Report Font (Below Patient Info)</label>
+                </div>
+                <p class="text-xs text-slate-500 leading-normal">Applied to the test parameters, reference values, units, and clinical findings on generated lab reports.</p>
+                <select name="report_font" id="report_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                    {$reportFontOpts}
+                </select>
+                <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
+                    <div id="report-font-preview-text" class="text-sm text-slate-900 transition-all p-1">CBC / Hemoglobin: 14.2 g/dL &nbsp;|&nbsp; Ref: 12.0 - 16.0 &nbsp;|&nbsp; Unit: g/dL</div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-emerald-600"></i>
+                    <label class="field-label text-xs font-bold text-slate-800 mb-0">Billing / Receipt Font (Below Patient Info)</label>
+                </div>
+                <p class="text-xs text-slate-500 leading-normal">Applied to the billed tests table, prices, discounts, and payment summary on patient bills/receipts.</p>
+                <select name="bill_font" id="bill_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                    {$billFontOpts}
+                </select>
+                <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
+                    <div id="bill-font-preview-text" class="text-sm text-slate-900 transition-all p-1">Complete Blood Count: Rs 900 &nbsp;|&nbsp; Total Due: Rs 0 (PAID)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Submit Branding Buttons -->
     <div class="flex flex-wrap items-center gap-3 pt-2">
         <button type="submit" class="btn btn-primary text-sm py-2.5 px-5 shadow-sm">
@@ -227,6 +294,38 @@ $content .= <<<HTML
         </div>
     </form>
 </div>
+
+<script>
+(function() {
+    const fontMap = {$fontMapJson};
+
+    window.updateFontPreviews = function() {
+        const rSelect = document.getElementById('report_font_select');
+        const rPreview = document.getElementById('report-font-preview-text');
+        if (rSelect && rPreview && fontMap[rSelect.value]) {
+            const f = fontMap[rSelect.value];
+            rPreview.style.fontFamily = f.family;
+            rPreview.style.fontWeight = f.weight;
+            rPreview.style.fontStyle = f.style;
+        }
+
+        const bSelect = document.getElementById('bill_font_select');
+        const bPreview = document.getElementById('bill-font-preview-text');
+        if (bSelect && bPreview && fontMap[bSelect.value]) {
+            const f = fontMap[bSelect.value];
+            bPreview.style.fontFamily = f.family;
+            bPreview.style.fontWeight = f.weight;
+            bPreview.style.fontStyle = f.style;
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateFontPreviews);
+    } else {
+        updateFontPreviews();
+    }
+})();
+</script>
 HTML;
 
 render_page('Report Template', 'main-lab', 'settings-report', $content);

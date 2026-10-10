@@ -108,6 +108,72 @@ function build_patient_document_meta(array $patient, ?array $entry, string $cont
     return '<div class="lab-report__meta">' . $metaCells . '</div>';
 }
 
+function supported_document_fonts(): array
+{
+    return [
+        'times_bold_italic' => [
+            'name' => 'Times New Roman (Bold Italic Clinical)',
+            'family' => "'Times New Roman', Times, Georgia, serif",
+            'weight' => '700',
+            'style' => 'italic',
+        ],
+        'times' => [
+            'name' => 'Times New Roman (Regular)',
+            'family' => "'Times New Roman', Times, Georgia, serif",
+            'weight' => '400',
+            'style' => 'normal',
+        ],
+        'times_bold' => [
+            'name' => 'Times New Roman (Bold)',
+            'family' => "'Times New Roman', Times, Georgia, serif",
+            'weight' => '700',
+            'style' => 'normal',
+        ],
+        'arial' => [
+            'name' => 'Arial / Helvetica (Modern Clean)',
+            'family' => "Arial, Helvetica, 'Segoe UI', sans-serif",
+            'weight' => '500',
+            'style' => 'normal',
+        ],
+        'arial_bold' => [
+            'name' => 'Arial (Bold)',
+            'family' => "Arial, Helvetica, 'Segoe UI', sans-serif",
+            'weight' => '700',
+            'style' => 'normal',
+        ],
+        'calibri' => [
+            'name' => 'Calibri (Clean Office)',
+            'family' => "Calibri, Carlito, 'Segoe UI', sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'inter' => [
+            'name' => 'Inter / Roboto (Digital Sans-Serif)',
+            'family' => "Inter, Roboto, -apple-system, sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'georgia' => [
+            'name' => 'Georgia (Elegant Serif)',
+            'family' => "Georgia, 'Times New Roman', serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'segoe' => [
+            'name' => 'Segoe UI (Standard Windows)',
+            'family' => "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'monospace' => [
+            'name' => 'Consolas / Monospace (Laboratory Analyzer)',
+            'family' => "Consolas, 'Liberation Mono', Courier, monospace",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+    ];
+}
+
 function branding_settings(?string $orgId = null): array
 {
     $orgId = $orgId ?? (current_user()['organization_id'] ?? 'ORG-001');
@@ -150,6 +216,8 @@ function branding_settings(?string $orgId = null): array
             : '',
         'footer_layout_json' => (string)($set['footer_layout_json'] ?? ''),
         'footer_layout' => $set['footer_layout'] ?? (!empty($set['footer_layout_json']) ? json_decode((string)$set['footer_layout_json'], true) : null),
+        'report_font' => (string)($set['report_font'] ?? 'times_bold_italic'),
+        'bill_font' => (string)($set['bill_font'] ?? 'times_bold_italic'),
     ];
 }
 
@@ -295,6 +363,8 @@ function save_branding_request(string $orgId): array
         'header_image_position' => $_POST['header_image_position'] ?? 'left',
         'header_layout_json' => isset($_POST['header_layout_json']) ? (string)$_POST['header_layout_json'] : null,
         'footer_layout_json' => isset($_POST['footer_layout_json']) ? (string)$_POST['footer_layout_json'] : null,
+        'report_font' => $_POST['report_font'] ?? 'times_bold_italic',
+        'bill_font' => $_POST['bill_font'] ?? 'times_bold_italic',
     ], $orgId);
 
     if (!$ok) {
@@ -1332,8 +1402,51 @@ function render_report_sheet(
             . '</div></div>';
     }
 
+    $reportFontKey = $settings['report_font'] ?? 'times_bold_italic';
+    $allFonts = supported_document_fonts();
+    $fontConf = $allFonts[$reportFontKey] ?? $allFonts['times_bold_italic'];
+    $rFamily = $fontConf['family'];
+    $rWeight = $fontConf['weight'];
+    $rStyle = $fontConf['style'];
+    $styleAttr = htmlspecialchars("--report-body-font: {$rFamily}; --report-body-weight: {$rWeight}; --report-body-style: {$rStyle};", ENT_COMPAT, 'UTF-8');
+
+    $reportFontStyle = <<<CSS
+<style>
+.lab-report .lab-report__body,
+.lab-report .lab-report__body *,
+.lab-report .lab-report__table,
+.lab-report .lab-report__table *,
+.lab-report .lab-report__table thead th,
+.lab-report .lab-report__table tbody td,
+.lab-report .lab-report__param-cell,
+.lab-report .lab-report__range-cell,
+.lab-report .lab-report__unit-cell,
+.lab-report .lab-report__result,
+.lab-report .lab-report__result *,
+.lab-report .lab-report__test-head td,
+.lab-report .lab-report__sir-legend,
+.lab-report .lab-report__sir-legend *,
+.lab-report .lab-report__methodology-box,
+.lab-report .lab-report__methodology-box *,
+.lab-report .lab-report__methodology-p,
+.lab-report .lab-report__comments,
+.lab-report .lab-report__comments * {
+    font-family: {$rFamily} !important;
+}
+.lab-report .lab-report__table tbody td,
+.lab-report .lab-report__param-cell,
+.lab-report .lab-report__range-cell,
+.lab-report .lab-report__unit-cell,
+.lab-report .lab-report__result {
+    font-weight: {$rWeight} !important;
+    font-style: {$rStyle} !important;
+}
+</style>
+CSS;
+
     return <<<HTML
-    <div class="print-area lab-report{$breakClass}">
+    <div class="print-area lab-report{$breakClass}" style="{$styleAttr}">
+        {$reportFontStyle}
         {$headerHtml}
 
         <section class="lab-report__body">
@@ -1445,11 +1558,38 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $discFmt = 'Rs ' . number_format($discount, 0);
     $afterFmt = 'Rs ' . number_format($afterDiscount, 0);
     $paidFmt = 'Rs ' . number_format($paid, 0);
-    $dueFmt = 'Rs ' . number_format($due, 0);
-    $stamp = $isPaid ? '<div class="lab-bill__stamp" aria-hidden="true">PAID</div>' : '';
+    $billFontKey = $settings['bill_font'] ?? 'times_bold_italic';
+    $allFonts = supported_document_fonts();
+    $bFontConf = $allFonts[$billFontKey] ?? $allFonts['times_bold_italic'];
+    $bFamily = $bFontConf['family'];
+    $bWeight = $bFontConf['weight'];
+    $bStyle = $bFontConf['style'];
+    $bStyleAttr = htmlspecialchars("--bill-body-font: {$bFamily}; --bill-body-weight: {$bWeight}; --bill-body-style: {$bStyle};", ENT_COMPAT, 'UTF-8');
+
+    $billFontStyle = <<<CSS
+<style>
+.lab-bill .lab-bill__table,
+.lab-bill .lab-bill__table *,
+.lab-bill .lab-bill__table th,
+.lab-bill .lab-bill__table td,
+.lab-bill .lab-bill__table tbody td,
+.lab-bill .lab-bill__table thead th,
+.lab-bill .lab-bill__totals,
+.lab-bill .lab-bill__totals *,
+.lab-bill .lab-bill__totals td {
+    font-family: {$bFamily} !important;
+}
+.lab-bill .lab-bill__table td,
+.lab-bill .lab-bill__totals td {
+    font-weight: {$bWeight} !important;
+    font-style: {$bStyle} !important;
+}
+</style>
+CSS;
 
     return <<<HTML
-    <div class="print-area lab-bill">
+    <div class="print-area lab-bill" style="{$bStyleAttr}">
+        {$billFontStyle}
         {$headerHtml}
         {$metaBlock}
 

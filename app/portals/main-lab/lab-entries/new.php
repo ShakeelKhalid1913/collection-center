@@ -20,14 +20,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $catalog = resolve_catalog_from_post($_POST);
-    $doctor = resolve_doctor_name($_POST['doctor_id'] ?? '');
+    $typedDoc = trim((string)($_POST['doctor'] ?? ''));
+    $selectedDoc = resolve_doctor_name($_POST['doctor_id'] ?? '');
+    $doctor = $typedDoc !== '' ? $typedDoc : $selectedDoc;
+    if ($doctor === '') {
+        $doctor = 'Walk-in / Self';
+    }
+
+    $typedRoute = trim((string)($_POST['route'] ?? ''));
+    $selectedRoute = resolve_route_label($_POST['route_id'] ?? '');
+    $route = $typedRoute !== '' ? $typedRoute : $selectedRoute;
+    if ($route === '') {
+        $route = 'Laboratory — Pathology (HQ)';
+    }
 
     $res = lab_repo()->create([
         'patient_id' => $patientId ?: 'WALK-IN',
         'patient_name' => $patientName,
         'tests' => $catalog['tests'],
         'doctor' => $doctor,
-        'route' => resolve_route_label($_POST['route_id'] ?? ''),
+        'route' => $route,
         'priority' => $_POST['priority'] ?? 'Normal',
         'status' => 'pending',
         'sample_status' => $_POST['sample_status'] ?? 'pending',
@@ -35,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'paid' => $catalog['paid'],
         'discount' => $catalog['discount'],
         'clinical_notes' => $_POST['clinical'] ?? '',
+        'created_at' => !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s'),
         'branch' => 'MAIN-LAB',
         'branch_id' => current_user()['branch_id'] ?? 'BR-MAIN',
         'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
@@ -75,16 +88,17 @@ $content .= $message;
 $content .= '<form method="post" data-billing class="space-y-4">';
 
 $content .= card(
-    '<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">' .
+    '<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5">' .
     select_field('Patient', 'patient_id', $patientOpts, $selectedPatientId) .
     form_field('Or MR / Patient ID', 'patient_scan', 'text', $selectedPatientId, 'P-xxxxx', true) .
-    select_field('Referring doctor', 'doctor_id', $doctorOpts) .
+    doctor_input_field('Referring doctor', 'doctor', 'Walk-in / Self') .
+    route_input_field('Route to', 'route', 'Laboratory — Pathology (HQ)') .
+    form_field('Entry Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     select_field('Priority', 'priority', [
         'Normal' => 'Normal',
         'Urgent' => 'Urgent',
         'STAT' => 'STAT',
     ], 'Normal', true) .
-    '<input type="hidden" name="route_id" value="RT-MAIN">' .
     '<input type="hidden" name="sample_status" value="pending">' .
     '</div>'
 );

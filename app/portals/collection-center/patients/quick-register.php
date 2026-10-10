@@ -20,6 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $doctor = 'Walk-in / Self';
         }
 
+        $typedRoute = trim((string)($_POST['route'] ?? ''));
+        $selectedRoute = resolve_route_label($_POST['route_id'] ?? '');
+        $route = $typedRoute !== '' ? $typedRoute : $selectedRoute;
+        if ($route === '') {
+            $route = 'Laboratory — Pathology (HQ)';
+        }
+
         $entryTime = !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s');
 
         $patientRes = patient_repo()->create([
@@ -53,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'patient_name' => $fullName,
                 'tests' => $catalog['tests'],
                 'doctor' => $doctor,
-                'route' => resolve_route_label($_POST['route_id'] ?? ''),
+                'route' => $route,
                 'priority' => $_POST['priority'] ?? 'Normal',
                 'status' => 'pending',
                 'sample_status' => $_POST['sample_status'] ?? 'pending',
@@ -110,7 +117,6 @@ $patientBlock = card(
     form_field('CNIC / B-Form', 'cnic', 'text', null, 'xxxxx-xxxxxxx-x', true) .
     select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field('Email', 'email', 'email', null, 'patient@email.com', true) .
-    form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Self', true) .
     '<div class="sm:col-span-2 lg:col-span-3">' .
     form_field('Address', 'address', 'text', null, 'House / area / city (shown on report header)', true) .
     '</div>' .
@@ -122,10 +128,10 @@ $patientBlock = card(
 
 $routingBlock = card(
     panel_head('2. Routing & referral') .
-    '<p class="form-section-note">Referring doctor and laboratory route.</p>' .
+    '<p class="form-section-note">Referring doctor and laboratory route. Pick from dropdown or type any custom name directly.</p>' .
     '<div class="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">' .
-    select_field('Referring doctor', 'doctor_id', $doctorOpts) .
-    select_field('Route to', 'route_id', $routeOpts, 'RT-MAIN') .
+    doctor_input_field('Referring doctor', 'doctor', 'Walk-in / Self') .
+    route_input_field('Route to', 'route', 'Laboratory — Pathology (HQ)') .
     select_field('Priority', 'priority', [
         'Normal' => 'Normal',
         'Urgent' => 'Urgent (same day)',

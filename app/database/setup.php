@@ -175,6 +175,8 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN footer_image_mime VARCHAR(64) NULL",
             "ALTER TABLE lab_settings ADD COLUMN footer_image_ver INT NOT NULL DEFAULT 0",
             "ALTER TABLE lab_settings ADD COLUMN footer_layout_json TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
+            "ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
             "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",

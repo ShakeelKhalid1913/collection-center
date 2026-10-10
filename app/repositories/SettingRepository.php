@@ -31,12 +31,20 @@ class SettingRepository
                         footer_image_mime,
                         footer_image_ver,
                         footer_layout_json,
+                        report_font,
+                        bill_font,
                         CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image,
                         CASE WHEN footer_image IS NOT NULL AND LENGTH(footer_image) > 0 THEN 1 ELSE 0 END AS has_footer_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
                 ['org_id' => $orgId]
             );
             if ($row) {
+                if (empty($row['report_font'])) {
+                    $row['report_font'] = 'times_bold_italic';
+                }
+                if (empty($row['bill_font'])) {
+                    $row['bill_font'] = 'times_bold_italic';
+                }
                 if (isset($row['bill_footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['bill_footer_text'])) {
                     $row['bill_footer_text'] = 'Get well soon.';
                     try {
@@ -150,14 +158,16 @@ class SettingRepository
             'footer_layout_json' => array_key_exists('footer_layout_json', $data)
                 ? (string)($data['footer_layout_json'] ?? '')
                 : ($existing['footer_layout_json'] ?? null),
+            'report_font' => (string)($data['report_font'] ?? $existing['report_font'] ?? 'times_bold_italic'),
+            'bill_font' => (string)($data['bill_font'] ?? $existing['bill_font'] ?? 'times_bold_italic'),
         ];
 
         $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font)",
                 $payload
             );
         } else {
@@ -174,7 +184,9 @@ class SettingRepository
                     bill_footer_text = :bill_footer_text,
                     header_image_position = :header_image_position,
                     header_layout_json = :header_layout_json,
-                    footer_layout_json = :footer_layout_json
+                    footer_layout_json = :footer_layout_json,
+                    report_font = :report_font,
+                    bill_font = :bill_font
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -344,19 +356,12 @@ class SettingRepository
             return;
         }
         $done = true;
-        try {
-            $this->db->execute(
-                "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'"
-            );
-        } catch (\Throwable $ignored) {
-            // Column already exists
-        }
-        try {
-            $this->db->execute(
-                "ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL"
-            );
-        } catch (\Throwable $ignored) {
-            // Column already exists
+        $pdo = $this->db->getPdo();
+        if ($pdo !== null) {
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'"); } catch (\Throwable) {}
         }
     }
 }

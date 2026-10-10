@@ -44,7 +44,10 @@ $content .= card(
     '<p class="text-sm font-semibold text-slate-800">Cash bill / receipt letterhead</p>' .
     '<p class="text-xs text-slate-500">Leave blank to reuse report header/footer.</p>' .
     form_field('Bill header line', 'bill_header', 'text', $s['bill_header'], 'Optional distinct bill header', true) .
-    form_field('Bill footer', 'bill_footer', 'text', $s['bill_footer'], 'Optional distinct bill footer', true) .
+    '<hr class="border-slate-200">' .
+    '<p class="text-sm font-semibold text-slate-800">Typography &amp; Document Fonts (Below Patient Info)</p>' .
+    select_field('Lab Report Font (Below Patient Info)', 'report_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['report_font'] ?? 'times_bold_italic') .
+    select_field('Billing / Receipt Font (Below Patient Info)', 'bill_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['bill_font'] ?? 'times_bold_italic') .
     '<div class="flex flex-wrap gap-2">' .
     btn_submit('Save branding') .
     btn_secondary('/portals/collection-center/reports/preview.php', 'Preview report') .

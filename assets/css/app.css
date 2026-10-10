@@ -1534,10 +1534,10 @@ textarea.field {
   margin: 0 auto;
   background: #fff;
   color: #000000 !important;
-  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-family: inherit;
   font-size: 13px;
   line-height: 1.45;
-  font-weight: 700 !important;
+  font-weight: 700;
   border: 1px solid #cbd5e1;
   padding: 0.4rem 1.25rem 0.35rem 1.25rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
@@ -1545,11 +1545,6 @@ textarea.field {
   flex-direction: column;
   min-height: 275mm;
   box-sizing: border-box;
-}
-
-.lab-report,
-.lab-report *:not(.fa):not(.fas):not(.far):not(.fal):not(.fad):not(.fab):not([class*="fa-"]) {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
 }
 
 .lab-report__header {
@@ -2053,7 +2048,7 @@ textarea.field {
   color: #000000 !important;
   text-align: left;
   font-size: 0.68rem;
-  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
   font-style: italic !important;
   text-transform: uppercase;
@@ -2121,15 +2116,15 @@ textarea.field {
   border: none !important;
   vertical-align: middle;
   color: #000000 !important;
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: 700 !important;
-  font-style: italic !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--report-body-weight, 700) !important;
+  font-style: var(--report-body-style, italic) !important;
 }
 
 .lab-report__param-cell {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: 700 !important;
-  font-style: italic !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--report-body-weight, 700) !important;
+  font-style: var(--report-body-style, italic) !important;
   color: #000000 !important;
   text-align: left !important;
 }
@@ -2140,9 +2135,9 @@ textarea.field {
   padding-right: 0.6rem !important;
   padding-left: 0.2rem !important;
   font-variant-numeric: tabular-nums;
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: 700 !important;
-  font-style: italic !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--report-body-weight, 700) !important;
+  font-style: var(--report-body-style, italic) !important;
   color: #000000 !important;
 }
 
@@ -2253,7 +2248,7 @@ textarea.field {
 }
 
 .lab-report__result {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
   font-style: italic !important;
   font-size: 0.92rem;
@@ -2503,9 +2498,9 @@ textarea.field {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1rem;
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: bold !important;
-  font-style: italic !important;
+  font-family: var(--bill-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--bill-body-weight, bold) !important;
+  font-style: var(--bill-body-style, italic) !important;
 }
 
 .lab-bill__table,
@@ -2517,12 +2512,12 @@ textarea.field {
 .lab-bill__totals td,
 .lab-bill__brand-footer,
 .lab-bill__brand-footer * {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: bold !important;
-  font-style: italic !important;
+  font-family: var(--bill-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--bill-body-weight, bold) !important;
+  font-style: var(--bill-body-style, italic) !important;
 }
 
-/* Result Entry Form Table: Consistent Times New Roman, bold italic matching generated report */
+/* Result Entry Form Table: dynamically driven by selected report font */
 .results-entry-table,
 .results-entry-table th,
 .results-entry-table td,
@@ -2532,29 +2527,29 @@ textarea.field {
 .results-entry-table textarea,
 .results-entry-table [data-flag-display],
 .results-entry-table [data-flag-display] * {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: bold !important;
-  font-style: italic !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--report-body-weight, bold) !important;
+  font-style: var(--report-body-style, italic) !important;
 }
 
 .results-entry-table th {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
-  font-style: italic !important;
+  font-style: var(--report-body-style, italic) !important;
   letter-spacing: 0.03em;
 }
 
 .results-entry-table input.result-value-input {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
-  font-style: italic !important;
+  font-style: var(--report-body-style, italic) !important;
   font-size: 0.95rem !important;
 }
 
 .results-entry-table input[data-ref-range-input] {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-  font-weight: bold !important;
-  font-style: italic !important;
+  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-weight: var(--report-body-weight, bold) !important;
+  font-style: var(--report-body-style, italic) !important;
 }
 
 .lab-bill__table th {
@@ -3050,10 +3045,26 @@ textarea.field {
     min-height: 150px !important;
   }
 
-  .lab-report,
-  .lab-report *:not(.fa):not(.fas):not(.far):not(.fal):not(.fad):not(.fab):not([class*="fa-"]) {
-    font-family: "Times New Roman", Times, Georgia, serif !important;
+  .lab-report {
     color: #000000 !important;
+  }
+  .lab-report .lab-report__body,
+  .lab-report .lab-report__body *,
+  .lab-report .lab-report__table,
+  .lab-report .lab-report__table *,
+  .lab-report .lab-report__table thead th,
+  .lab-report .lab-report__table tbody td,
+  .lab-report .lab-report__param-cell,
+  .lab-report .lab-report__range-cell,
+  .lab-report .lab-report__unit-cell,
+  .lab-report .lab-report__result,
+  .lab-report .lab-report__result *,
+  .lab-report .lab-report__test-head td,
+  .lab-report .lab-report__sir-legend,
+  .lab-report .lab-report__sir-legend *,
+  .lab-report .lab-report__methodology-p,
+  .lab-report .lab-report__comments {
+    font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   }
 
   .lab-report__lab-name {

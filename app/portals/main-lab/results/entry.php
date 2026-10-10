@@ -376,6 +376,15 @@ $activeTestMethodologySafe = e($activeTestMethodology);
 $posLabel = $testCount > 0 ? (($testIndex + 1) . ' of ' . $testCount) : '0 of 0';
 $baseUrlJs = e($baseUrl);
 
+$bSettings = branding_settings();
+$reportFontKey = $bSettings['report_font'] ?? 'times_bold_italic';
+$allFonts = supported_document_fonts();
+$fontConf = $allFonts[$reportFontKey] ?? $allFonts['times_bold_italic'];
+$entryFontFamily = $fontConf['family'];
+$entryFontWeight = $fontConf['weight'];
+$entryFontStyle = $fontConf['style'];
+$entryStyleAttr = htmlspecialchars("--report-body-font: {$entryFontFamily}; --report-body-weight: {$entryFontWeight}; --report-body-style: {$entryFontStyle};", ENT_COMPAT, 'UTF-8');
+
 $content = page_header(
     'Enter Results',
     'Type values like the printed report. Tick Show to include a row on the report. Enter jumps to the next row.'
@@ -383,7 +392,23 @@ $content = page_header(
 $content .= $message;
 
 $content .= <<<HTML
-<form method="post" id="results-workspace" data-results-entry>
+<style>
+.results-entry-table,
+.results-entry-table th,
+.results-entry-table td,
+.results-entry-table input,
+.results-entry-table select,
+.results-entry-table textarea {
+    font-family: {$entryFontFamily} !important;
+}
+.results-entry-table td,
+.results-entry-table .results-entry-param,
+.results-entry-table input {
+    font-weight: {$entryFontWeight} !important;
+    font-style: {$entryFontStyle} !important;
+}
+</style>
+<form method="post" id="results-workspace" data-results-entry style="{$entryStyleAttr}">
 <input type="hidden" name="lab_no" value="{$labNoSafe}">
 <input type="hidden" name="active_test" value="{$activeTestLabel}">
 
