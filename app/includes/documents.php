@@ -1235,7 +1235,7 @@ function render_report_sheet(
         ? (isset($_SERVER['HTTP_HOST'])
             ? (((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
                 . '://' . $_SERVER['HTTP_HOST']
-                . '/portals/main-lab/reports/preview.php?lab_no=' . rawurlencode($labNoRaw))
+                . '/track.php?lab_no=' . rawurlencode($labNoRaw))
             : $labNoRaw)
         : ($settings['name'] ?? 'Lab Report');
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&margin=0&data=' . rawurlencode($qrPayload);

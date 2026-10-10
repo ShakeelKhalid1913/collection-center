@@ -51,7 +51,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-file-invoice-dollar'),
                 nav_item("{$base}/stock-management.php", 'Stock & Returns', $activeKey, 'stock', null, 'fa-solid fa-boxes-stacked'),
                 nav_item("{$base}/doctors-share.php", "Doctor's Share", $activeKey, 'doctors-share', null, 'fa-solid fa-user-doctor'),
-                nav_item("/portals/collection-center/sample-tracking.php", 'Sample Transit & Tracking', $activeKey, 'sample-tracking', null, 'fa-solid fa-barcode'),
+                nav_item("{$base}/sample-tracking.php", 'Sample Transit & Tracking', $activeKey, 'sample-tracking', null, 'fa-solid fa-barcode'),
                 nav_item("{$base}/waste-record.php", 'Waste Record', $activeKey, 'waste-record', null, 'fa-solid fa-trash-can'),
                 nav_item("{$base}/delete-entry.php", 'Delete Entry', $activeKey, 'delete-entry', null, 'fa-solid fa-user-xmark'),
             ]),
