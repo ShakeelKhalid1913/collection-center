@@ -2053,7 +2053,9 @@ textarea.field {
   color: #000000 !important;
   text-align: left;
   font-size: 0.68rem;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: 900 !important;
+  font-style: italic !important;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 0.22rem 0.35rem;
@@ -2075,25 +2077,29 @@ textarea.field {
 }
 
 .lab-report__th-test {
-  width: 44%;
+  width: 50%;
+  text-align: left !important;
 }
 
 .lab-report__th-range {
-  width: 22%;
-  text-align: left !important;
-  padding-left: 0.5rem !important;
+  width: 20%;
+  text-align: right !important;
+  padding-right: 0.6rem !important;
+  padding-left: 0.2rem !important;
 }
 
 .lab-report__th-unit {
   width: 15%;
-  text-align: left !important;
-  padding-left: 0.5rem !important;
+  text-align: right !important;
+  padding-right: 0.6rem !important;
+  padding-left: 0.2rem !important;
 }
 
 .lab-report__th-result {
-  width: 19%;
-  text-align: left !important;
-  padding-left: 0.5rem !important;
+  width: 15%;
+  text-align: right !important;
+  padding-right: 0.6rem !important;
+  padding-left: 0.2rem !important;
   line-height: 1.15;
 }
 
@@ -2101,32 +2107,42 @@ textarea.field {
   display: block;
   font-size: 0.6rem;
   font-weight: 800 !important;
+  font-style: italic !important;
   text-transform: none;
   letter-spacing: 0;
   margin-top: 0.05rem;
+  text-align: right !important;
 }
 
 /* Body matches Infinity sample: compact rows */
 .lab-report__table tbody td {
-  padding: 0.16rem 0.45rem;
+  padding: 0.16rem 0.35rem;
   line-height: 1.25;
   border: none !important;
   vertical-align: middle;
   color: #000000 !important;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: 700 !important;
+  font-style: italic !important;
 }
 
 .lab-report__param-cell {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: 700 !important;
+  font-style: italic !important;
   color: #000000 !important;
+  text-align: left !important;
 }
 
 .lab-report__range-cell,
 .lab-report__unit-cell {
-  text-align: left !important;
-  padding-left: 0.5rem !important;
+  text-align: right !important;
+  padding-right: 0.6rem !important;
+  padding-left: 0.2rem !important;
   font-variant-numeric: tabular-nums;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: 700 !important;
+  font-style: italic !important;
   color: #000000 !important;
 }
 
@@ -2237,10 +2253,13 @@ textarea.field {
 }
 
 .lab-report__result {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: 900 !important;
+  font-style: italic !important;
   font-size: 0.92rem;
-  text-align: left !important;
-  padding-left: 0.5rem !important;
+  text-align: right !important;
+  padding-right: 0.6rem !important;
+  padding-left: 0.2rem !important;
   color: #000000 !important;
 }
 
@@ -2498,6 +2517,41 @@ textarea.field {
 .lab-bill__totals td,
 .lab-bill__brand-footer,
 .lab-bill__brand-footer * {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: bold !important;
+  font-style: italic !important;
+}
+
+/* Result Entry Form Table: Consistent Times New Roman, bold italic matching generated report */
+.results-entry-table,
+.results-entry-table th,
+.results-entry-table td,
+.results-entry-table .results-entry-param,
+.results-entry-table input,
+.results-entry-table select,
+.results-entry-table textarea,
+.results-entry-table [data-flag-display],
+.results-entry-table [data-flag-display] * {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: bold !important;
+  font-style: italic !important;
+}
+
+.results-entry-table th {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: 900 !important;
+  font-style: italic !important;
+  letter-spacing: 0.03em;
+}
+
+.results-entry-table input.result-value-input {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  font-weight: 900 !important;
+  font-style: italic !important;
+  font-size: 0.95rem !important;
+}
+
+.results-entry-table input[data-ref-range-input] {
   font-family: "Times New Roman", Times, Georgia, serif !important;
   font-weight: bold !important;
   font-style: italic !important;

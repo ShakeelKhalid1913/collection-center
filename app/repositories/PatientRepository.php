@@ -96,29 +96,35 @@ class PatientRepository
             $hasDocCol = false;
         }
 
+        $createdAt = !empty($data['created_at'])
+            ? date('Y-m-d H:i:s', strtotime((string)$data['created_at']))
+            : (!empty($data['entry_time'])
+                ? date('Y-m-d H:i:s', strtotime((string)$data['entry_time']))
+                : date('Y-m-d H:i:s'));
+
         if ($hasDocCol) {
             $sql = "INSERT INTO patients (
                         id, organization_id, patient_no, title, full_name, relation, relation_of,
                         phone, phone_alt, email, cnic, blood_group, dob, age, gender,
                         address, city, emergency_name, emergency_phone, referring_doctor, internal_notes,
-                        patient_type, panel_code, branch, created_by
+                        patient_type, panel_code, branch, created_by, created_at
                     ) VALUES (
                         :id, :org_id, :patient_no, :title, :full_name, :relation, :relation_of,
                         :phone, :phone_alt, :email, :cnic, :blood_group, :dob, :age, :gender,
                         :address, :city, :emergency_name, :emergency_phone, :referring_doctor, :notes,
-                        :patient_type, :panel_code, :branch, :created_by
+                        :patient_type, :panel_code, :branch, :created_by, :created_at
                     )";
         } else {
             $sql = "INSERT INTO patients (
                         id, organization_id, patient_no, title, full_name, relation, relation_of,
                         phone, phone_alt, email, cnic, blood_group, dob, age, gender,
                         address, city, emergency_name, emergency_phone, internal_notes,
-                        patient_type, panel_code, branch, created_by
+                        patient_type, panel_code, branch, created_by, created_at
                     ) VALUES (
                         :id, :org_id, :patient_no, :title, :full_name, :relation, :relation_of,
                         :phone, :phone_alt, :email, :cnic, :blood_group, :dob, :age, :gender,
                         :address, :city, :emergency_name, :emergency_phone, :notes,
-                        :patient_type, :panel_code, :branch, :created_by
+                        :patient_type, :panel_code, :branch, :created_by, :created_at
                     )";
         }
 
@@ -152,6 +158,7 @@ class PatientRepository
             'panel_code' => $data['panel_code'] ?? $data['panel'] ?? '',
             'branch' => $data['branch'] ?? 'CC-01',
             'created_by' => $data['created_by'] ?? null,
+            'created_at' => $createdAt,
         ];
 
         if ($hasDocCol) {

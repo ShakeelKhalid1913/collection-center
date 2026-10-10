@@ -20,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $doctor = 'Walk-in / Self';
         }
 
+        $entryTime = !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s');
+
         $patientRes = patient_repo()->create([
             'patient_no' => trim($_POST['patient_no'] ?? ''),
             'title' => $_POST['title'] ?? 'Mr',
@@ -37,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notes' => $_POST['notes'] ?? '',
             'branch' => 'CC-01',
             'created_by' => current_user()['id'] ?? null,
+            'created_at' => $entryTime,
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
 
@@ -60,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'clinical_notes' => $_POST['clinical'] ?? '',
                 'branch' => 'CC-01',
                 'branch_id' => current_user()['branch_id'] ?? 'BR-GULBERG',
+                'created_at' => $entryTime,
                 'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
             ]);
 
@@ -132,6 +136,7 @@ $routingBlock = card(
         'collected' => 'Collected now',
         'home' => 'Home collection requested',
     ], 'pending') .
+    form_field('Registration Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', false) .
     form_field('Clinical remarks', 'clinical', 'text', null, 'Fasting / suspected diagnosis…', true) .
     '</div>'
 );

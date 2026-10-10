@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'paid' => $catalog['paid'],
         'discount' => $catalog['discount'],
         'clinical_notes' => $_POST['clinical'] ?? '',
+        'created_at' => !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s'),
         'branch' => 'CC-01',
         'branch_id' => current_user()['branch_id'] ?? 'BR-GULBERG',
         'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
@@ -69,10 +70,11 @@ $content .= $message;
 $content .= '<form method="post" data-billing class="space-y-4">';
 
 $content .= card(
-    '<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">' .
+    '<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5 sm:p-5">' .
     select_field('Patient', 'patient_id', $patientOpts, $selectedPatientId) .
     form_field('Or MR / Patient ID', 'patient_scan', 'text', $selectedPatientId, 'P-xxxxx', true) .
     select_field('Referring doctor', 'doctor_id', $doctorOpts) .
+    form_field('Entry Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     select_field('Priority', 'priority', [
         'Normal' => 'Normal',
         'Urgent' => 'Urgent',

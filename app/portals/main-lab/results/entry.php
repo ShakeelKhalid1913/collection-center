@@ -148,7 +148,7 @@ $status = e((string)($entry['status'] ?? 'pending'));
 $age = e((string)($patient['age'] ?? '—'));
 $gender = e((string)($patient['gender'] ?? '—'));
 $phone = e((string)($patient['phone'] ?? '—'));
-$regAt = e(format_date($entry['created_at'] ?? null));
+$regAt = e(format_datetime_report($entry['created_at'] ?? null));
 $notes = e((string)($entry['clinical_notes'] ?? ''));
 $labNoSafe = e($labNo);
 
@@ -308,30 +308,30 @@ foreach ($activeRows as $r) {
 
     $tableBody .= <<<HTML
     <tr class="border-b border-slate-100{$rowDim}" data-result-row>
-        <td class="px-3 py-2 align-top">
+        <td class="px-2.5 py-1.5 align-top">
             <label class="inline-flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" name="results[{$rId}][show]" value="1" class="mt-1"{$showChecked}>
                 <span class="w-full">
                     <span class="block text-[10px] uppercase text-slate-400 font-semibold">Show</span>
-                    <span class="font-semibold text-slate-900 text-sm">{$paramName}</span>
+                    <span class="font-semibold text-slate-900 text-sm results-entry-param">{$paramName}</span>
                     {$subHtml}
                 </span>
             </label>
             <input type="hidden" name="results[{$rId}][flag]" value="{$flag}" data-auto-flag>
         </td>
-        <td class="px-3 py-2 text-sm align-top">
-            <input type="text" name="results[{$rId}][unit]" value="{$unit}" class="field text-xs w-24 py-1 px-2" placeholder="—" title="Unit of measurement (e.g. g/dL, mg/dL)">
+        <td class="px-2 py-1.5 text-sm align-top text-right">
+            <input type="text" name="results[{$rId}][range]" value="{$range}" class="field text-xs w-32 py-1 px-2 font-mono text-right" placeholder="—" title="Reference range / number (e.g. 12-16)" data-ref-range-input>
         </td>
-        <td class="px-3 py-2 text-sm align-top">
-            <input type="text" name="results[{$rId}][range]" value="{$range}" class="field text-xs w-32 py-1 px-2 font-mono" placeholder="—" title="Reference range / number (e.g. 12-16)" data-ref-range-input>
+        <td class="px-2 py-1.5 text-sm align-top text-right">
+            <input type="text" name="results[{$rId}][unit]" value="{$unit}" class="field text-xs w-20 py-1 px-2 text-right" placeholder="—" title="Unit of measurement (e.g. g/dL, mg/dL)">
         </td>
-        <td class="px-3 py-2 align-top min-w-[9rem]">
+        <td class="px-2 py-1.5 align-top min-w-[8.5rem] text-right">
             {$valueControl}
             <div class="mt-1">
-                <textarea name="results[{$rId}][result_note]" rows="2" class="field text-xs w-full py-1 px-2 text-slate-700 placeholder:text-slate-400" placeholder="Note / sub-result" title="Extra finding or note shown directly below result on report">{$resultNote}</textarea>
+                <textarea name="results[{$rId}][result_note]" rows="2" class="field text-xs w-full py-1 px-2 text-slate-700 placeholder:text-slate-400 text-right" placeholder="Note / sub-result" title="Extra finding or note shown directly below result on report">{$resultNote}</textarea>
             </div>
         </td>
-        <td class="px-3 py-2 align-top text-sm" data-flag-display>{$flagDisplay}</td>
+        <td class="px-2 py-1.5 align-top text-sm text-center" data-flag-display>{$flagDisplay}</td>
     </tr>
     HTML;
 }
@@ -498,14 +498,14 @@ $content .= <<<HTML
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
+            <table class="min-w-full text-sm results-entry-table">
                 <thead class="bg-slate-800 text-white text-xs uppercase tracking-wider">
                     <tr>
-                        <th class="px-3 py-2.5 text-left">Parameter</th>
-                        <th class="px-3 py-2.5 text-left">Unit</th>
-                        <th class="px-3 py-2.5 text-left">Reference Range</th>
-                        <th class="px-3 py-2.5 text-left">Result</th>
-                        <th class="px-3 py-2.5 text-left">Flag</th>
+                        <th class="px-3 py-2.5 text-left" style="width: 47%;">Parameter</th>
+                        <th class="px-2.5 py-2.5 text-right" style="width: 20%;">Reference Range</th>
+                        <th class="px-2.5 py-2.5 text-right" style="width: 15%;">Unit</th>
+                        <th class="px-2.5 py-2.5 text-right" style="width: 13%;">Result</th>
+                        <th class="px-2.5 py-2.5 text-center" style="width: 5%;">Flag</th>
                     </tr>
                 </thead>
                 <tbody>

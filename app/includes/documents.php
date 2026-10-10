@@ -1310,6 +1310,7 @@ function render_report_sheet(
     $footerBlock = '';
     $credit = software_credit_footer(true);
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
+    $contactBar = $addrLine !== '' ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
     $signatoriesHtml = render_report_signatories($signatories);
     $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically varified report - not valid for legal proceedings unless stamped®</p>';
     $customFooterHtml = '';

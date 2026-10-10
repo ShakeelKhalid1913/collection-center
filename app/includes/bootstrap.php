@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+date_default_timezone_set('Asia/Karachi');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

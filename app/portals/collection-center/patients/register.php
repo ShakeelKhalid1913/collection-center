@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notes' => $_POST['notes'] ?? '',
             'branch' => 'CC-01',
             'created_by' => current_user()['id'] ?? null,
+            'created_at' => !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s'),
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
         if ($res['success']) {
@@ -67,6 +68,7 @@ $form = '<form method="post">' . card(
     select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field('Email', 'email', 'email', null, '', true) .
     form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Self', true) .
+    form_field('Registration Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     '<div class="sm:col-span-2 lg:col-span-3">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .
     '</div>' .

@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'address' => trim($_POST['address'] ?? ''),
             'branch' => 'LAB-01',
             'created_by' => current_user()['id'] ?? null,
+            'created_at' => !empty($_POST['entry_time']) ? $_POST['entry_time'] : date('Y-m-d H:i:s'),
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
         if ($res['success']) {
@@ -56,6 +57,7 @@ $content .= card(
     select_field('Gender', 'gender', ['Female' => 'Female', 'Male' => 'Male', 'Other' => 'Other']) .
     select_field('Blood group', 'blood_group', $blood, '', true) .
     form_field("Doctor's Name", 'doctor', 'text', null, 'e.g. Dr. Fatima Noor / Walk-in / Self', true) .
+    form_field('Registration Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .
     '<div class="sm:col-span-2">' .
     form_field('Address', 'address', 'text', null, 'House, street, area, city', true) .
     '</div>' .

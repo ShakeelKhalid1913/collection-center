@@ -48,11 +48,16 @@ class LabEntryRepository
     {
         $id = 'LAB-' . bin2hex(random_bytes(6));
         $labNo = $data['lab_no'] ?? ('L-' . date('Y') . '-' . sprintf('%04d', rand(1000, 9999)));
+        $createdAt = !empty($data['created_at'])
+            ? date('Y-m-d H:i:s', strtotime((string)$data['created_at']))
+            : (!empty($data['entry_time'])
+                ? date('Y-m-d H:i:s', strtotime((string)$data['entry_time']))
+                : date('Y-m-d H:i:s'));
 
         $sql = "INSERT INTO lab_entries 
-                (id, organization_id, branch_id, lab_no, patient_id, patient_name, tests, doctor, route, priority, status, sample_status, amount, paid, discount, branch, clinical_notes)
+                (id, organization_id, branch_id, lab_no, patient_id, patient_name, tests, doctor, route, priority, status, sample_status, amount, paid, discount, branch, clinical_notes, created_at)
                 VALUES 
-                (:id, :org_id, :branch_id, :lab_no, :patient_id, :patient_name, :tests, :doctor, :route, :priority, :status, :sample_status, :amount, :paid, :discount, :branch, :clinical_notes)";
+                (:id, :org_id, :branch_id, :lab_no, :patient_id, :patient_name, :tests, :doctor, :route, :priority, :status, :sample_status, :amount, :paid, :discount, :branch, :clinical_notes, :created_at)";
 
         $ok = $this->db->execute($sql, [
             'id' => $id,
@@ -75,6 +80,7 @@ class LabEntryRepository
             'discount' => (float)($data['discount'] ?? 0),
             'branch' => $data['branch'] ?? 'CC-01',
             'clinical_notes' => $data['clinical_notes'] ?? '',
+            'created_at' => $createdAt,
         ]);
 
         if ($ok) {
@@ -120,13 +126,17 @@ class LabEntryRepository
     {
         $fields = [];
         $params = ['lab_no' => $labNo];
-        $allowed = ['tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes'];
+        $allowed = ['tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes', 'created_at'];
         foreach ($allowed as $f) {
             if (array_key_exists($f, $data)) {
                 $fields[] = "{$f} = :{$f}";
-                $params[$f] = $f === 'tests'
-                    ? \normalize_tests_list((string)$data[$f])
-                    : $data[$f];
+                if ($f === 'tests') {
+                    $params[$f] = \normalize_tests_list((string)$data[$f]);
+                } elseif ($f === 'created_at') {
+                    $params[$f] = date('Y-m-d H:i:s', strtotime((string)$data[$f]));
+                } else {
+                    $params[$f] = $data[$f];
+                }
             }
         }
         if (empty($fields)) return true;
