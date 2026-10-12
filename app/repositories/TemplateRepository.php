@@ -92,8 +92,9 @@ class TemplateRepository
         }
     }
 
-    public function getAll(string $orgId = 'ORG-001', ?string $userId = null, string $department = ''): array
+    public function getAll(?string $orgId = null, ?string $userId = null, string $department = ''): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $where = ["organization_id = :org_id"];
         $params = ['org_id' => $orgId];
 
@@ -112,8 +113,9 @@ class TemplateRepository
         return $this->db->fetchAll($sql, $params);
     }
 
-    public function getById(string $id, string $orgId = 'ORG-001'): ?array
+    public function getById(string $id, ?string $orgId = null): ?array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchOne("SELECT * FROM report_templates WHERE id = :id AND organization_id = :org_id", [
             'id' => $id,
             'org_id' => $orgId,
@@ -123,6 +125,7 @@ class TemplateRepository
     public function create(array $data): bool
     {
         $id = $data['id'] ?? ('TPL-' . date('ymd') . '-' . rand(100, 999));
+        $orgId = $data['organization_id'] ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $sql = "INSERT INTO report_templates (
             id, organization_id, title, department, content, is_private, created_by, created_at
         ) VALUES (
@@ -131,7 +134,7 @@ class TemplateRepository
 
         return $this->db->execute($sql, [
             'id' => $id,
-            'org_id' => $data['organization_id'] ?? 'ORG-001',
+            'org_id' => $orgId,
             'title' => trim((string)$data['title']),
             'department' => $data['department'] ?? 'General',
             'content' => trim((string)$data['content']),
@@ -140,8 +143,9 @@ class TemplateRepository
         ]);
     }
 
-    public function update(string $id, array $data, string $orgId = 'ORG-001'): bool
+    public function update(string $id, array $data, ?string $orgId = null): bool
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $sql = "UPDATE report_templates SET 
             title = :title, department = :department, content = :content, is_private = :is_private 
             WHERE id = :id AND organization_id = :org_id";
@@ -156,8 +160,9 @@ class TemplateRepository
         ]);
     }
 
-    public function delete(string $id, string $orgId = 'ORG-001'): bool
+    public function delete(string $id, ?string $orgId = null): bool
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->execute("DELETE FROM report_templates WHERE id = :id AND organization_id = :org_id", [
             'id' => $id,
             'org_id' => $orgId,

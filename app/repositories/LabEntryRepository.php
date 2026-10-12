@@ -15,32 +15,67 @@ class LabEntryRepository
         $this->db = Database::getInstance();
     }
 
-    public function getAll(string $orgId = 'ORG-001', int $limit = 100): array
+    public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null): array
     {
-        return $this->db->fetchAll(
-            "SELECT * FROM lab_entries WHERE organization_id = ? ORDER BY created_at DESC LIMIT {$limit}",
-            [$orgId]
-        );
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        if (is_int($branchOrLimit)) {
+            $limit = $branchOrLimit;
+            $branchId = null;
+        } else {
+            $branchId = $branchOrLimit;
+            $limit = $limit ?? 100;
+        }
+
+        $sql = "SELECT * FROM lab_entries WHERE organization_id = :org";
+        $params = ['org' => $orgId];
+        if ($branchId !== null && $branchId !== '') {
+            $sql .= " AND (branch_id = :branch OR branch = :branch)";
+            $params['branch'] = $branchId;
+        }
+        $sql .= " ORDER BY created_at DESC LIMIT " . (int)$limit;
+        return $this->db->fetchAll($sql, $params);
     }
 
-    public function getEntriesWithPatients(string $orgId = 'ORG-001', int $limit = 250): array
+    public function getEntriesWithPatients(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null): array
     {
-        return $this->db->fetchAll(
-            "SELECT le.lab_no, le.patient_id, le.patient_name, le.tests, le.doctor, le.status, le.created_at,
-                    COALESCE(p.patient_no, le.patient_id) AS mr_no,
-                    COALESCE(p.full_name, le.patient_name) AS full_name,
-                    p.phone, p.age, p.gender
-             FROM lab_entries le
-             LEFT JOIN patients p ON (p.id = le.patient_id OR p.patient_no = le.patient_id)
-             WHERE le.organization_id = ?
-             ORDER BY le.created_at DESC
-             LIMIT {$limit}",
-            [$orgId]
-        );
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        if (is_int($branchOrLimit)) {
+            $limit = $branchOrLimit;
+            $branchId = null;
+        } else {
+            $branchId = $branchOrLimit;
+            $limit = $limit ?? 250;
+        }
+
+        $sql = "SELECT le.lab_no, le.patient_id, le.patient_name, le.tests, le.doctor, le.status, le.created_at,
+                       le.amount, le.paid, le.discount, le.is_b2b, le.b2b_client_name, le.branch_id, le.branch,
+                       COALESCE(p.patient_no, le.patient_id) AS mr_no,
+                       COALESCE(p.full_name, le.patient_name) AS full_name,
+                       p.phone, p.age, p.gender
+                FROM lab_entries le
+                LEFT JOIN patients p ON (p.id = le.patient_id OR p.patient_no = le.patient_id)
+                WHERE le.organization_id = :org";
+        $params = ['org' => $orgId];
+        if ($branchId !== null && $branchId !== '') {
+            $sql .= " AND (le.branch_id = :branch OR le.branch = :branch)";
+            $params['branch'] = $branchId;
+        }
+        $sql .= " ORDER BY le.created_at DESC LIMIT " . (int)$limit;
+        return $this->db->fetchAll($sql, $params);
     }
 
-    public function findByLabNo(string $labNo): ?array
+    public function findByLabNo(string $labNo, ?string $orgId = null): ?array
     {
+        if ($orgId === null && function_exists('current_user')) {
+            $user = current_user();
+            if (!empty($user['organization_id']) && empty($user['is_super_admin'])) {
+                $orgId = $user['organization_id'];
+            }
+        }
+
+        if ($orgId !== null && $orgId !== '') {
+            return $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no AND organization_id = :org LIMIT 1", ['lab_no' => $labNo, 'org' => $orgId]);
+        }
         return $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no LIMIT 1", ['lab_no' => $labNo]);
     }
 
@@ -246,11 +281,15 @@ class LabEntryRepository
         );
     }
 
-    public function searchEntries(string $orgId = 'ORG-001', string $q = '', ?string $dateFrom = null, ?string $dateTo = null, int $limit = 200): array
+    public function searchEntries(string $orgId = 'ORG-001', string $q = '', ?string $dateFrom = null, ?string $dateTo = null, ?string $branchId = null, int $limit = 200): array
     {
         $sql = 'SELECT * FROM lab_entries WHERE organization_id = :org';
         $params = ['org' => $orgId];
 
+        if ($branchId !== null && $branchId !== '') {
+            $sql .= ' AND (branch_id = :branch OR branch = :branch)';
+            $params['branch'] = $branchId;
+        }
         if ($q !== '') {
             $sql .= ' AND (lab_no LIKE :q OR patient_name LIKE :q OR patient_id LIKE :q OR doctor LIKE :q OR tests LIKE :q)';
             $params['q'] = '%' . $q . '%';
@@ -264,7 +303,7 @@ class LabEntryRepository
             $params['date_to'] = $dateTo;
         }
 
-        $sql .= " ORDER BY created_at DESC LIMIT {$limit}";
+        $sql .= " ORDER BY created_at DESC LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
     }
 }

@@ -26,8 +26,9 @@ class UserRepository
         return $this->db->fetchOne($sql, ['email' => $email]);
     }
 
-    public function getAll(string $orgId = 'ORG-001'): array
+    public function getAll(?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
             "SELECT u.*, b.name AS branch_name 
              FROM users u
@@ -38,8 +39,9 @@ class UserRepository
         );
     }
 
-    public function countActive(string $orgId = 'ORG-001'): int
+    public function countActive(?string $orgId = null): int
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $row = $this->db->fetchOne(
             "SELECT COUNT(*) AS cnt FROM users WHERE organization_id = :org_id AND is_active = 1",
             ['org_id' => $orgId]

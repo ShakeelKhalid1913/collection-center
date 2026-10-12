@@ -55,6 +55,10 @@ $supportedFonts = supported_document_fonts();
 $currentReportFont = $s['report_font'] ?? 'times_bold_italic';
 $currentBillFont = $s['bill_font'] ?? 'times_bold_italic';
 
+$supportedFontSizes = supported_document_font_sizes();
+$currentReportFontSize = $s['report_font_size'] ?? 'normal';
+$currentBillFontSize = $s['bill_font_size'] ?? 'normal';
+
 $reportFontOpts = '';
 foreach ($supportedFonts as $key => $f) {
     $sel = $key === $currentReportFont ? ' selected' : '';
@@ -69,7 +73,20 @@ foreach ($supportedFonts as $key => $f) {
     $billFontOpts .= '<option value="' . e($key) . '" style="' . $style . '"' . $sel . '>' . e($f['name']) . '</option>';
 }
 
+$reportFontSizeOpts = '';
+foreach ($supportedFontSizes as $key => $sz) {
+    $sel = $key === $currentReportFontSize ? ' selected' : '';
+    $reportFontSizeOpts .= '<option value="' . e($key) . '"' . $sel . '>' . e($sz['name']) . '</option>';
+}
+
+$billFontSizeOpts = '';
+foreach ($supportedFontSizes as $key => $sz) {
+    $sel = $key === $currentBillFontSize ? ' selected' : '';
+    $billFontSizeOpts .= '<option value="' . e($key) . '"' . $sel . '>' . e($sz['name']) . '</option>';
+}
+
 $fontMapJson = json_encode($supportedFonts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+$fontSizeMapJson = json_encode($supportedFontSizes, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 $content .= <<<HTML
 <form method="post" enctype="multipart/form-data" class="space-y-6">
@@ -197,12 +214,23 @@ $content .= <<<HTML
                     <label class="field-label text-xs font-bold text-slate-800 mb-0">Lab Report Font (Below Patient Info)</label>
                 </div>
                 <p class="text-xs text-slate-500 leading-normal">Applied to the test parameters, reference values, units, and clinical findings on generated lab reports.</p>
-                <select name="report_font" id="report_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                    {$reportFontOpts}
-                </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Font Family &amp; Style</label>
+                        <select name="report_font" id="report_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                            {$reportFontOpts}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Text Size</label>
+                        <select name="report_font_size" id="report_font_size_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                            {$reportFontSizeOpts}
+                        </select>
+                    </div>
+                </div>
                 <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
                     <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
-                    <div id="report-font-preview-text" class="text-sm text-slate-900 transition-all p-1">CBC / Hemoglobin: 14.2 g/dL &nbsp;|&nbsp; Ref: 12.0 - 16.0 &nbsp;|&nbsp; Unit: g/dL</div>
+                    <div id="report-font-preview-text" class="text-slate-900 transition-all p-1">CBC / Hemoglobin: 14.2 g/dL &nbsp;|&nbsp; Ref: 12.0 - 16.0 &nbsp;|&nbsp; Unit: g/dL</div>
                 </div>
             </div>
 
@@ -212,12 +240,23 @@ $content .= <<<HTML
                     <label class="field-label text-xs font-bold text-slate-800 mb-0">Billing / Receipt Font (Below Patient Info)</label>
                 </div>
                 <p class="text-xs text-slate-500 leading-normal">Applied to the billed tests table, prices, discounts, and payment summary on patient bills/receipts.</p>
-                <select name="bill_font" id="bill_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                    {$billFontOpts}
-                </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Font Family &amp; Style</label>
+                        <select name="bill_font" id="bill_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                            {$billFontOpts}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Text Size</label>
+                        <select name="bill_font_size" id="bill_font_size_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
+                            {$billFontSizeOpts}
+                        </select>
+                    </div>
+                </div>
                 <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
                     <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
-                    <div id="bill-font-preview-text" class="text-sm text-slate-900 transition-all p-1">Complete Blood Count: Rs 900 &nbsp;|&nbsp; Total Due: Rs 0 (PAID)</div>
+                    <div id="bill-font-preview-text" class="text-slate-900 transition-all p-1">Complete Blood Count: Rs 900 &nbsp;|&nbsp; Total Due: Rs 0 (PAID)</div>
                 </div>
             </div>
         </div>
@@ -298,9 +337,11 @@ $content .= <<<HTML
 <script>
 (function() {
     const fontMap = {$fontMapJson};
+    const fontSizeMap = {$fontSizeMapJson};
 
     window.updateFontPreviews = function() {
         const rSelect = document.getElementById('report_font_select');
+        const rSizeSelect = document.getElementById('report_font_size_select');
         const rPreview = document.getElementById('report-font-preview-text');
         if (rSelect && rPreview && fontMap[rSelect.value]) {
             const f = fontMap[rSelect.value];
@@ -308,14 +349,25 @@ $content .= <<<HTML
             rPreview.style.fontWeight = f.weight;
             rPreview.style.fontStyle = f.style;
         }
+        if (rSizeSelect && rPreview && fontSizeMap[rSizeSelect.value]) {
+            const sz = fontSizeMap[rSizeSelect.value];
+            rPreview.style.fontSize = sz.size;
+            rPreview.style.lineHeight = sz.line_height;
+        }
 
         const bSelect = document.getElementById('bill_font_select');
+        const bSizeSelect = document.getElementById('bill_font_size_select');
         const bPreview = document.getElementById('bill-font-preview-text');
         if (bSelect && bPreview && fontMap[bSelect.value]) {
             const f = fontMap[bSelect.value];
             bPreview.style.fontFamily = f.family;
             bPreview.style.fontWeight = f.weight;
             bPreview.style.fontStyle = f.style;
+        }
+        if (bSizeSelect && bPreview && fontSizeMap[bSizeSelect.value]) {
+            const sz = fontSizeMap[bSizeSelect.value];
+            bPreview.style.fontSize = sz.size;
+            bPreview.style.lineHeight = sz.line_height;
         }
     };
 

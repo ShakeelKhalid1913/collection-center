@@ -133,6 +133,7 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
             continue;
         }
         $cat = (string)($t['category'] ?? 'Other');
+        $b2b = (int)($t['b2b_price'] ?? round(((float)$t['price']) * 0.75));
         $items[] = [
             'dept' => strtolower($cat),
             'dept_label' => $cat,
@@ -140,6 +141,7 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
             'code' => $t['code'],
             'meta' => $cat . ' · Sample: ' . ($t['sample'] ?? '—'),
             'price' => (int)$t['price'],
+            'b2b_price' => $b2b,
             'search' => strtolower($t['name'] . ' ' . $t['code'] . ' ' . $cat),
         ];
     }
@@ -183,11 +185,14 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
     $searchHits = '';
     $hiddenChecks = '';
     foreach ($items as $it) {
+        $b2bPr = $it['b2b_price'] ?? $it['price'];
         $searchHits .= '<button type="button" class="catalog-hit" data-catalog-hit'
             . ' data-name="' . e($it['name']) . '"'
             . ' data-dept="' . e($it['dept']) . '"'
             . ' data-search="' . e($it['search']) . '"'
-            . ' data-price="' . $it['price'] . '">'
+            . ' data-price="' . $it['price'] . '"'
+            . ' data-regular-price="' . $it['price'] . '"'
+            . ' data-b2b-price="' . $b2bPr . '">'
             . '<span class="catalog-hit__body">'
             . '<span class="catalog-hit__title">' . e($it['name']) . ' <span class="catalog-code">' . e($it['code']) . '</span></span>'
             . '<span class="catalog-hit__meta">' . e($it['meta']) . '</span>'
@@ -199,8 +204,8 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
         $checked = $isSelected ? ' checked' : '';
         $rowHidden = $isSelected ? '' : ' hidden';
 
-        $hiddenChecks .= '<label class="catalog-item catalog-item--selected' . $rowHidden . '" data-catalog-item data-dept="' . e($it['dept']) . '" data-name="' . e($it['search']) . '" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '" data-meta="' . e($it['meta']) . '">'
-            . '<input type="checkbox" name="tests[]" value="' . e($it['name']) . '" class="catalog-check" data-price="' . $it['price'] . '" data-code="' . e($it['code']) . '"' . $checked . '>'
+        $hiddenChecks .= '<label class="catalog-item catalog-item--selected' . $rowHidden . '" data-catalog-item data-dept="' . e($it['dept']) . '" data-name="' . e($it['search']) . '" data-price="' . $it['price'] . '" data-regular-price="' . $it['price'] . '" data-b2b-price="' . $b2bPr . '" data-code="' . e($it['code']) . '" data-meta="' . e($it['meta']) . '">'
+            . '<input type="checkbox" name="tests[]" value="' . e($it['name']) . '" class="catalog-check" data-price="' . $it['price'] . '" data-regular-price="' . $it['price'] . '" data-b2b-price="' . $b2bPr . '" data-code="' . e($it['code']) . '"' . $checked . '>'
             . '<span class="catalog-item__body">'
             . '<span class="catalog-item__title">' . e($it['name']) . ' <span class="catalog-code">' . e($it['code']) . '</span></span>'
             . '<span class="catalog-item__meta">' . e($it['meta']) . '</span>'

@@ -45,8 +45,9 @@ class PatientDuesRepository
         } catch (\Throwable $e) {}
     }
 
-    public function getDuesList(string $orgId = 'ORG-001', string $search = '', string $branch = ''): array
+    public function getDuesList(?string $orgId = null, string $search = '', string $branch = ''): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         // Calculate due = (amount - paid - discount)
         $where = [
             "e.organization_id = :org_id",
@@ -150,7 +151,7 @@ class PatientDuesRepository
     public function getPaymentHistory(string $orgId = 'ORG-001', int $limit = 50): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM due_payments WHERE organization_id = :org_id ORDER BY payment_date DESC LIMIT {$limit}",
+            "SELECT * FROM due_payments WHERE organization_id = :org_id ORDER BY payment_date DESC LIMIT " . (int)$limit,
             ['org_id' => $orgId]
         );
     }

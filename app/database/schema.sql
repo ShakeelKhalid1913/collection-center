@@ -3,6 +3,10 @@
 CREATE TABLE IF NOT EXISTS organizations (
     id            VARCHAR(64) PRIMARY KEY,
     name          VARCHAR(255) NOT NULL,
+    phone         VARCHAR(64) NULL,
+    email         VARCHAR(255) NULL,
+    address       TEXT NULL,
+    is_active     TINYINT(1) DEFAULT 1,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -28,6 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     role            VARCHAR(64) NOT NULL,
     portal          ENUM('main_lab','collection_center','imaging','admin') NOT NULL,
     permissions     TEXT NULL,
+    is_super_admin  TINYINT(1) DEFAULT 0,
     is_active       TINYINT(1) DEFAULT 1,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
@@ -159,17 +164,20 @@ CREATE TABLE IF NOT EXISTS lab_entry_tests (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS samples (
-    id           VARCHAR(64) PRIMARY KEY,
-    lab_no       VARCHAR(32) NOT NULL,
-    patient      VARCHAR(255) NOT NULL,
-    sample       VARCHAR(64) NOT NULL,
-    status       VARCHAR(32) NOT NULL DEFAULT 'received',
-    received_at  VARCHAR(64) NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    lab_no          VARCHAR(32) NOT NULL,
+    patient         VARCHAR(255) NOT NULL,
+    sample          VARCHAR(64) NOT NULL,
+    status          VARCHAR(32) NOT NULL DEFAULT 'received',
+    received_at     VARCHAR(64) NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_samples_org (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    CREATE TABLE IF NOT EXISTS results (
+CREATE TABLE IF NOT EXISTS results (
     id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
     lab_no          VARCHAR(32) NOT NULL,
     patient         VARCHAR(255) NOT NULL,
     test            VARCHAR(255) NOT NULL,
@@ -188,23 +196,26 @@ CREATE TABLE IF NOT EXISTS samples (
     verified_at     DATETIME NULL,
     verified_by     VARCHAR(64) NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_results_org (organization_id),
     INDEX idx_results_lab (lab_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS imaging_scans (
-    id           VARCHAR(64) PRIMARY KEY,
-    scan_no      VARCHAR(32) NOT NULL UNIQUE,
-    patient      VARCHAR(255) NOT NULL,
-    patient_id   VARCHAR(64) NULL,
-    modality     VARCHAR(64) NOT NULL,
-    study        VARCHAR(255) NOT NULL,
-    status       VARCHAR(32) NOT NULL DEFAULT 'pending',
-    scan_date    DATE NOT NULL,
-    radiologist  VARCHAR(255) NULL,
-    clinical_notes TEXT NULL,
-    findings     TEXT NULL,
-    impression   TEXT NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              VARCHAR(64) PRIMARY KEY,
+    organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001',
+    scan_no         VARCHAR(32) NOT NULL UNIQUE,
+    patient         VARCHAR(255) NOT NULL,
+    patient_id      VARCHAR(64) NULL,
+    modality        VARCHAR(64) NOT NULL,
+    study           VARCHAR(255) NOT NULL,
+    status          VARCHAR(32) NOT NULL DEFAULT 'pending',
+    scan_date       DATE NOT NULL,
+    radiologist     VARCHAR(255) NULL,
+    clinical_notes  TEXT NULL,
+    findings        TEXT NULL,
+    impression      TEXT NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_imaging_org (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS lab_settings (

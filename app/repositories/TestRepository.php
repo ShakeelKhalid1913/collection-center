@@ -19,22 +19,27 @@ class TestRepository
     private function ensureSchema(): void
     {
         static $done = false;
-        if ($done) {
+        if ($done || !$this->db->isConnected()) {
             return;
         }
         $done = true;
-        foreach ([
-            "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
-            "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
-            "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
-            "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
-            "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
-            "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
-        ] as $sql) {
-            try {
-                $this->db->execute($sql);
-            } catch (\Throwable $ignored) {
+        try {
+            $cols = $this->db->fetchAll("SHOW COLUMNS FROM tests");
+            $existing = array_column($cols, 'Field');
+            $toAdd = [
+                'methodology' => "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
+                'normal_value' => "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
+                'reference_value' => "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
+                'result_type' => "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
+                'result_options' => "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
+                'report_template' => "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
+            ];
+            foreach ($toAdd as $col => $sql) {
+                if (!in_array($col, $existing, true)) {
+                    $this->db->execute($sql);
+                }
             }
+        } catch (\Throwable $ignored) {
         }
     }
 
@@ -46,24 +51,27 @@ class TestRepository
         );
     }
 
-    public function getTests(string $orgId = 'ORG-001'): array
+    public function getTests(?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
             "SELECT * FROM tests WHERE organization_id = :org_id ORDER BY category, name",
             ['org_id' => $orgId]
         );
     }
 
-    public function getPackages(string $orgId = 'ORG-001'): array
+    public function getPackages(?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
             "SELECT * FROM packages WHERE organization_id = :org_id ORDER BY name",
             ['org_id' => $orgId]
         );
     }
 
-    public function countTests(string $orgId = 'ORG-001'): int
+    public function countTests(?string $orgId = null): int
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $row = $this->db->fetchOne(
             "SELECT COUNT(*) AS cnt FROM tests WHERE organization_id = :org_id",
             ['org_id' => $orgId]
@@ -71,8 +79,9 @@ class TestRepository
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countPackages(string $orgId = 'ORG-001'): int
+    public function countPackages(?string $orgId = null): int
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $row = $this->db->fetchOne(
             "SELECT COUNT(*) AS cnt FROM packages WHERE organization_id = :org_id",
             ['org_id' => $orgId]
@@ -80,8 +89,9 @@ class TestRepository
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function findByCodes(array $codes, string $orgId = 'ORG-001'): array
+    public function findByCodes(array $codes, ?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         if ($codes === []) {
             return [];
         }
@@ -248,8 +258,9 @@ class TestRepository
         return true;
     }
 
-    public function findByCode(string $code, string $orgId = 'ORG-001'): ?array
+    public function findByCode(string $code, ?string $orgId = null): ?array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $code = trim($code);
         if ($code === '') {
             return null;

@@ -171,6 +171,84 @@ function supported_document_fonts(): array
             'weight' => '600',
             'style' => 'normal',
         ],
+        'poppins' => [
+            'name' => 'Poppins (Modern Clean Geometric)',
+            'family' => "'Poppins', 'Segoe UI', -apple-system, sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'open_sans' => [
+            'name' => 'Open Sans (Neutral Highly Readable)',
+            'family' => "'Open Sans', Arial, Helvetica, sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'merriweather' => [
+            'name' => 'Merriweather (Distinguished Editorial Serif)',
+            'family' => "'Merriweather', Georgia, serif",
+            'weight' => '700',
+            'style' => 'normal',
+        ],
+        'courier' => [
+            'name' => 'Courier Prime (Typewriter Clinical)',
+            'family' => "'Courier Prime', 'Courier New', Courier, monospace",
+            'weight' => '700',
+            'style' => 'normal',
+        ],
+        'trebuchet' => [
+            'name' => 'Trebuchet MS (Clear Diagnostic Sans)',
+            'family' => "'Trebuchet MS', 'Lucida Sans Unicode', sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'century_gothic' => [
+            'name' => 'Century Gothic (Spacious Geometric)',
+            'family' => "'Century Gothic', 'Apple Gothic', sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+        'tahoma' => [
+            'name' => 'Tahoma (Compact Technical)',
+            'family' => "Tahoma, Verdana, sans-serif",
+            'weight' => '600',
+            'style' => 'normal',
+        ],
+    ];
+}
+
+function supported_document_font_sizes(): array
+{
+    return [
+        'compact' => [
+            'name' => 'Compact (11px / High Density)',
+            'size' => '11px',
+            'line_height' => '1.3',
+        ],
+        'normal' => [
+            'name' => 'Normal (12px / Standard Default)',
+            'size' => '12px',
+            'line_height' => '1.38',
+        ],
+        'standard' => [
+            'name' => 'Standard (13px / Crisp Readable)',
+            'size' => '13px',
+            'line_height' => '1.42',
+        ],
+        'medium' => [
+            'name' => 'Medium (14px / Enhanced Visibility)',
+            'size' => '14px',
+            'line_height' => '1.48',
+        ],
+        'large' => [
+            'name' => 'Large (15px / Large Report)',
+            'size' => '15px',
+            'line_height' => '1.52',
+        ],
+        'xlarge' => [
+            'name' => 'Extra Large (16px / High Contrast)',
+            'size' => '16px',
+            'line_height' => '1.58',
+        ],
     ];
 }
 
@@ -218,6 +296,8 @@ function branding_settings(?string $orgId = null): array
         'footer_layout' => $set['footer_layout'] ?? (!empty($set['footer_layout_json']) ? json_decode((string)$set['footer_layout_json'], true) : null),
         'report_font' => (string)($set['report_font'] ?? 'times_bold_italic'),
         'bill_font' => (string)($set['bill_font'] ?? 'times_bold_italic'),
+        'report_font_size' => (string)($set['report_font_size'] ?? 'normal'),
+        'bill_font_size' => (string)($set['bill_font_size'] ?? 'normal'),
     ];
 }
 
@@ -365,6 +445,8 @@ function save_branding_request(string $orgId): array
         'footer_layout_json' => isset($_POST['footer_layout_json']) ? (string)$_POST['footer_layout_json'] : null,
         'report_font' => $_POST['report_font'] ?? 'times_bold_italic',
         'bill_font' => $_POST['bill_font'] ?? 'times_bold_italic',
+        'report_font_size' => $_POST['report_font_size'] ?? 'normal',
+        'bill_font_size' => $_POST['bill_font_size'] ?? 'normal',
     ], $orgId);
 
     if (!$ok) {
@@ -1058,6 +1140,127 @@ function render_report_document(
 }
 
 /**
+ * Render graphical visual range gauge for lipid profile and multi-parameter chemistry panels.
+ * Matches clinical visual report layout with reference criteria, horizontal axis scale, pinpoint marker, and prominent value.
+ */
+function render_parameter_gauge(
+    string $paramName,
+    float $numVal,
+    string $unit,
+    string $rangeRaw,
+    string $flag,
+    string $subText
+): string {
+    $paramLower = strtolower($paramName);
+
+    if (str_contains($paramLower, 'cholesterol') && !str_contains($paramLower, 'hdl') && !str_contains($paramLower, 'ldl')) {
+        $maxScale = 250.0;
+        $ticks = [0, 50, 100, 150, 200, 250];
+        $isHigh = $numVal >= 200.0;
+        $isLow = false;
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal Less Than 200.00</span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 200.00</span>';
+        if ($subText === '') {
+            $subText = "Less than : 200 (Desirable)\n200 - 239 : (Borderline High)\nMore than: 240 (High)";
+        }
+    } elseif (str_contains($paramLower, 'triglyceride')) {
+        $maxScale = 350.0;
+        $ticks = [0, 50, 100, 150, 200, 250, 300, 350];
+        $isHigh = $numVal >= 200.0;
+        $isLow = false;
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal Less Than 200.00</span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 200.00</span>';
+        if ($subText === '') {
+            $subText = "Adults < 65 Years : < 200\nAdults > 65 Years : < 365";
+        }
+    } elseif (str_contains($paramLower, 'hdl')) {
+        $maxScale = 60.0;
+        $ticks = [0, 10, 20, 30, 40, 50, 60];
+        $isLow = $numVal < 45.0;
+        $isHigh = $numVal > 65.0;
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal 45.00 - 65.00</span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#d97706;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Low Level &lt; 45.00</span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 65.00</span>';
+        if ($subText === '') {
+            $subText = "Male : 35 - 55\nFemale : 45 - 65\n- Without known CAD >= 55: DESIRABLE\n- With known CAD <= 35: OPTIMAL";
+        }
+    } elseif (str_contains($paramLower, 'ldl')) {
+        $maxScale = 200.0;
+        $ticks = [0, 50, 100, 150, 200];
+        $isHigh = $numVal >= 130.0;
+        $isLow = false;
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Optimal &lt; 100.00</span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 130.00</span>';
+    } else {
+        $maxScale = max(100.0, $numVal * 1.35);
+        $ticks = [0, round($maxScale * 0.25), round($maxScale * 0.5), round($maxScale * 0.75), round($maxScale)];
+        $isHigh = strtolower($flag) === 'h';
+        $isLow = strtolower($flag) === 'l';
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;">Ref: ' . e($rangeRaw) . '</span>';
+    }
+
+    if ($isHigh || strtolower($flag) === 'h') {
+        $themeColor = '#dc2626';
+    } elseif ($isLow || strtolower($flag) === 'l') {
+        $themeColor = '#d97706';
+    } else {
+        $themeColor = '#16a34a';
+    }
+
+    $pct = min(96.0, max(4.0, ($numVal / max(1.0, $maxScale)) * 100.0));
+
+    $criteriaLines = array_filter(array_map('trim', explode("\n", html_entity_decode($subText, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+    $criteriaHtml = '';
+    foreach ($criteriaLines as $cl) {
+        $criteriaHtml .= '<div>' . e($cl) . '</div>';
+    }
+
+    $tickLabelsHtml = '';
+    foreach ($ticks as $t) {
+        $tickLabelsHtml .= '<span>' . number_format((float)$t, 2) . '</span>';
+    }
+
+    $paramNameEsc = e($paramName);
+    $unitEsc = e($unit);
+    $displayVal = (floor($numVal) == $numVal) ? (string)(int)$numVal : number_format($numVal, 1);
+
+    return <<<HTML
+<tr class="lab-report__gauge-row" style="border-bottom: 2px solid #e2e8f0; page-break-inside: avoid;">
+    <td colspan="4" style="padding: 14px 6px 16px 6px !important;">
+        <div style="display: grid; grid-template-columns: 30% 44% 26%; align-items: center; gap: 14px;">
+            <div>
+                <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">{$paramNameEsc}</div>
+                <div style="font-size: 10.5px; color: #475569; line-height: 1.45; font-family: inherit;">
+                    {$criteriaHtml}
+                </div>
+            </div>
+            <div style="position: relative; padding: 22px 4px 6px 4px;">
+                <div style="position: absolute; left: {$pct}%; top: 0px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 3;">
+                    <span style="background: {$themeColor}; color: #ffffff; font-size: 11px; font-weight: 800; padding: 1.5px 7px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.25); white-space: nowrap;">{$displayVal}</span>
+                    <span style="width: 2px; height: 12px; background: {$themeColor};"></span>
+                </div>
+                <div style="position: relative; height: 9px; background: #e2e8f0; border-radius: 5px; margin-top: 10px; border: 1px solid #cbd5e1;">
+                    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {$pct}%; background: {$themeColor}; opacity: 0.35; border-radius: 4px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; font-family: monospace; margin-top: 5px; font-weight: 600;">
+                    {$tickLabelsHtml}
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 7px;">
+                    {$legendHtml}
+                </div>
+            </div>
+            <div style="text-align: right; padding-right: 8px;">
+                <div style="font-size: 32px; font-weight: 900; color: {$themeColor}; line-height: 1; letter-spacing: -0.5px;">
+                    {$displayVal} <span style="font-size: 13px; font-weight: 700; color: #64748b; margin-left: 2px;">{$unitEsc}</span>
+                </div>
+            </div>
+        </div>
+    </td>
+</tr>
+HTML;
+}
+
+/**
  * Build result table rows for one report page.
  */
 function build_report_result_rows(array $resultLines): string
@@ -1197,6 +1400,25 @@ function build_report_result_rows(array $resultLines): string
         $resNote = trim((string)($line['result_note'] ?? ''));
         if ($resNote !== '') {
             $resNoteHtml = '<div class="lab-report__result-note">' . nl2br(e($resNote)) . '</div>';
+        }
+
+        $isLipidPanel = (str_contains(strtoupper($testTitle), 'LIPID')
+            || str_contains(strtoupper($paramRaw), 'CHOLESTEROL')
+            || str_contains(strtoupper($paramRaw), 'TRIGLYCERIDE')
+            || str_contains(strtoupper($paramRaw), 'HDL')
+            || str_contains(strtoupper($paramRaw), 'LDL'));
+
+        if ($isLipidPanel && is_numeric($resultRaw)) {
+            $subText = (string)($line['sub_table'] ?? '');
+            $rows .= render_parameter_gauge(
+                $paramRaw,
+                (float)$resultRaw,
+                (string)($line['unit'] ?? 'mg/dL'),
+                (string)($line['range'] ?? ''),
+                $flagRaw,
+                $subText
+            );
+            continue;
         }
 
         $rows .= '<tr>
@@ -1408,7 +1630,14 @@ function render_report_sheet(
     $rFamily = $fontConf['family'];
     $rWeight = $fontConf['weight'];
     $rStyle = $fontConf['style'];
-    $styleAttr = htmlspecialchars("--report-body-font: {$rFamily}; --report-body-weight: {$rWeight}; --report-body-style: {$rStyle};", ENT_COMPAT, 'UTF-8');
+
+    $reportFontSizeKey = $settings['report_font_size'] ?? 'normal';
+    $allFontSizes = supported_document_font_sizes();
+    $fontSizeConf = $allFontSizes[$reportFontSizeKey] ?? $allFontSizes['normal'];
+    $rSize = $fontSizeConf['size'];
+    $rLineHeight = $fontSizeConf['line_height'];
+
+    $styleAttr = htmlspecialchars("--report-body-font: {$rFamily}; --report-body-weight: {$rWeight}; --report-body-style: {$rStyle}; --report-body-size: {$rSize};", ENT_COMPAT, 'UTF-8');
 
     $reportFontStyle = <<<CSS
 <style>
@@ -1440,6 +1669,8 @@ function render_report_sheet(
 .lab-report .lab-report__result {
     font-weight: {$rWeight} !important;
     font-style: {$rStyle} !important;
+    font-size: {$rSize} !important;
+    line-height: {$rLineHeight} !important;
 }
 </style>
 CSS;
@@ -1564,7 +1795,14 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $bFamily = $bFontConf['family'];
     $bWeight = $bFontConf['weight'];
     $bStyle = $bFontConf['style'];
-    $bStyleAttr = htmlspecialchars("--bill-body-font: {$bFamily}; --bill-body-weight: {$bWeight}; --bill-body-style: {$bStyle};", ENT_COMPAT, 'UTF-8');
+
+    $billFontSizeKey = $settings['bill_font_size'] ?? 'normal';
+    $allFontSizes = supported_document_font_sizes();
+    $bSizeConf = $allFontSizes[$billFontSizeKey] ?? $allFontSizes['normal'];
+    $bSize = $bSizeConf['size'];
+    $bLineHeight = $bSizeConf['line_height'];
+
+    $bStyleAttr = htmlspecialchars("--bill-body-font: {$bFamily}; --bill-body-weight: {$bWeight}; --bill-body-style: {$bStyle}; --bill-body-size: {$bSize};", ENT_COMPAT, 'UTF-8');
 
     $billFontStyle = <<<CSS
 <style>
@@ -1583,6 +1821,8 @@ function render_receipt_document(array $settings, array $entry, array $patient):
 .lab-bill .lab-bill__totals td {
     font-weight: {$bWeight} !important;
     font-style: {$bStyle} !important;
+    font-size: {$bSize} !important;
+    line-height: {$bLineHeight} !important;
 }
 </style>
 CSS;

@@ -43,8 +43,9 @@ class ExpenseRepository
         } catch (\Throwable $e) {}
     }
 
-    public function getAll(string $orgId = 'ORG-001', array $filters = []): array
+    public function getAll(?string $orgId = null, array $filters = []): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $where = ["organization_id = :org_id"];
         $params = ['org_id' => $orgId];
 

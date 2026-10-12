@@ -84,8 +84,9 @@ class StockRepository
         }
     }
 
-    public function getItems(string $orgId = 'ORG-001', string $search = '', string $category = ''): array
+    public function getItems(?string $orgId = null, string $search = '', string $category = ''): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $where = ["organization_id = :org_id"];
         $params = ['org_id' => $orgId];
 
@@ -102,8 +103,9 @@ class StockRepository
         return $this->db->fetchAll($sql, $params);
     }
 
-    public function getItemById(string $id, string $orgId = 'ORG-001'): ?array
+    public function getItemById(string $id, ?string $orgId = null): ?array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchOne("SELECT * FROM inventory_items WHERE id = :id AND organization_id = :org_id", [
             'id' => $id,
             'org_id' => $orgId,
@@ -133,8 +135,9 @@ class StockRepository
         ]);
     }
 
-    public function updateItem(string $id, array $data, string $orgId = 'ORG-001'): bool
+    public function updateItem(string $id, array $data, ?string $orgId = null): bool
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $sql = "UPDATE inventory_items SET 
             name = :name, category = :category, unit = :unit, 
             quantity = :quantity, min_level = :min_level, unit_price = :unit_price, 
@@ -155,8 +158,9 @@ class StockRepository
         ]);
     }
 
-    public function adjustStock(string $id, int $adjustment, string $orgId = 'ORG-001'): bool
+    public function adjustStock(string $id, int $adjustment, ?string $orgId = null): bool
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $sql = "UPDATE inventory_items SET quantity = GREATEST(0, quantity + :adj) WHERE id = :id AND organization_id = :org_id";
         return $this->db->execute($sql, [
             'adj' => $adjustment,
@@ -165,16 +169,18 @@ class StockRepository
         ]);
     }
 
-    public function deleteItem(string $id, string $orgId = 'ORG-001'): bool
+    public function deleteItem(string $id, ?string $orgId = null): bool
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->execute("DELETE FROM inventory_items WHERE id = :id AND organization_id = :org_id", [
             'id' => $id,
             'org_id' => $orgId,
         ]);
     }
 
-    public function getReturns(string $orgId = 'ORG-001'): array
+    public function getReturns(?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $sql = "SELECT * FROM purchase_returns WHERE organization_id = :org_id ORDER BY return_date DESC, created_at DESC LIMIT 100";
         return $this->db->fetchAll($sql, ['org_id' => $orgId]);
     }

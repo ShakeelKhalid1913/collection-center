@@ -41,8 +41,9 @@ class WasteRecordRepository
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
 
-    public function getAll(string $orgId = 'ORG-001', int $limit = 100): array
+    public function getAll(?string $orgId = null, int $limit = 100): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
             "SELECT id, organization_id, title, notes, record_date, created_by, created_at,
                     (mou_image IS NOT NULL) AS has_mou,
@@ -51,14 +52,15 @@ class WasteRecordRepository
              FROM waste_records
              WHERE organization_id = ?
              ORDER BY record_date DESC, created_at DESC
-             LIMIT {$limit}",
+             LIMIT " . (int)$limit,
             [$orgId]
         );
     }
 
-    public function find(string $id): ?array
+    public function find(string $id, ?string $orgId = null): ?array
     {
-        return $this->db->fetchOne('SELECT * FROM waste_records WHERE id = :id LIMIT 1', ['id' => $id]);
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        return $this->db->fetchOne('SELECT * FROM waste_records WHERE id = :id AND organization_id = :org LIMIT 1', ['id' => $id, 'org' => $orgId]);
     }
 
     public function create(array $data): bool

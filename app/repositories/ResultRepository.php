@@ -19,36 +19,60 @@ class ResultRepository
     private function ensureSchema(): void
     {
         static $done = false;
-        if ($done) {
+        if ($done || !$this->db->isConnected()) {
             return;
         }
         $done = true;
-        foreach ([
-            'ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1',
-            'ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1',
-        ] as $sql) {
-            try {
-                $this->db->execute($sql);
-            } catch (\Throwable $ignored) {
-                // Column already exists
+        try {
+            $cols1 = $this->db->fetchAll("SHOW COLUMNS FROM results LIKE 'is_visible'");
+            if (empty($cols1)) {
+                $this->db->execute('ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1');
             }
+            $cols2 = $this->db->fetchAll("SHOW COLUMNS FROM results LIKE 'print_page'");
+            if (empty($cols2)) {
+                $this->db->execute('ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1');
+            }
+            $cols3 = $this->db->fetchAll("SHOW COLUMNS FROM results LIKE 'organization_id'");
+            if (empty($cols3)) {
+                $this->db->execute("ALTER TABLE results ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'");
+            }
+            $cols4 = $this->db->fetchAll("SHOW COLUMNS FROM samples LIKE 'organization_id'");
+            if (empty($cols4)) {
+                $this->db->execute("ALTER TABLE samples ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'");
+            }
+            $cols5 = $this->db->fetchAll("SHOW COLUMNS FROM imaging_scans LIKE 'organization_id'");
+            if (empty($cols5)) {
+                $this->db->execute("ALTER TABLE imaging_scans ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'");
+            }
+        } catch (\Throwable $ignored) {
+            // Column inspection/addition failed silently
         }
     }
 
-    public function getSamples(): array
-    {
-        return $this->db->fetchAll("SELECT * FROM samples ORDER BY created_at DESC");
-    }
-
-    public function getPendingResults(): array
+    public function getSamples(string $orgId = 'ORG-001'): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM results WHERE verified_at IS NULL AND (value IS NULL OR value = '') ORDER BY created_at DESC"
+            "SELECT * FROM samples WHERE organization_id = :org_id ORDER BY created_at DESC",
+            ['org_id' => $orgId]
         );
     }
 
-    public function getResultsByLabNo(string $labNo): array
+    public function getPendingResults(string $orgId = 'ORG-001'): array
     {
+        return $this->db->fetchAll(
+            "SELECT * FROM results WHERE organization_id = :org_id AND verified_at IS NULL AND (value IS NULL OR value = '') ORDER BY created_at DESC",
+            ['org_id' => $orgId]
+        );
+    }
+
+    public function getResultsByLabNo(string $labNo, ?string $orgId = null): array
+    {
+        if ($orgId !== null && $orgId !== '') {
+            return $this->db->fetchAll(
+                "SELECT * FROM results WHERE lab_no = :lab_no AND organization_id = :org_id ORDER BY print_page ASC, sort_order ASC, id ASC",
+                ['lab_no' => $labNo, 'org_id' => $orgId]
+            );
+        }
         return $this->db->fetchAll(
             "SELECT * FROM results WHERE lab_no = :lab_no ORDER BY print_page ASC, sort_order ASC, id ASC",
             ['lab_no' => $labNo]
@@ -530,7 +554,7 @@ class ResultRepository
         );
     }
 
-    public function getUnverifiedResults(): array
+    public function getUnverifiedResults(string $orgId = 'ORG-001'): array
     {
         // One row per lab visit that has entered values still waiting for sign-off
         return $this->db->fetchAll(
@@ -542,15 +566,18 @@ class ResultRepository
                 SUM(CASE WHEN r.value IS NOT NULL AND r.value != '' THEN 1 ELSE 0 END) AS filled_count,
                 MIN(r.id) AS id
              FROM results r
-             WHERE r.verified_at IS NULL
+             WHERE r.organization_id = :org_id
+               AND r.verified_at IS NULL
                AND EXISTS (
                     SELECT 1 FROM results r2
                     WHERE r2.lab_no = r.lab_no
+                      AND r2.organization_id = :org_id
                       AND r2.verified_at IS NULL
                       AND r2.value IS NOT NULL AND r2.value != ''
                )
              GROUP BY r.lab_no
-             ORDER BY r.lab_no DESC"
+             ORDER BY r.lab_no DESC",
+            ['org_id' => $orgId]
         );
     }
 
@@ -599,13 +626,22 @@ class ResultRepository
         return $ok;
     }
 
-    public function getImagingScans(): array
+    public function getImagingScans(string $orgId = 'ORG-001'): array
     {
-        return $this->db->fetchAll("SELECT * FROM imaging_scans ORDER BY created_at DESC");
+        return $this->db->fetchAll(
+            "SELECT * FROM imaging_scans WHERE organization_id = :org_id ORDER BY created_at DESC",
+            ['org_id' => $orgId]
+        );
     }
 
-    public function findImagingScan(string $scanNo): ?array
+    public function findImagingScan(string $scanNo, ?string $orgId = null): ?array
     {
+        if ($orgId !== null && $orgId !== '') {
+            return $this->db->fetchOne(
+                "SELECT * FROM imaging_scans WHERE (scan_no = :scan_no OR id = :id) AND organization_id = :org_id LIMIT 1",
+                ['scan_no' => $scanNo, 'id' => $scanNo, 'org_id' => $orgId]
+            );
+        }
         return $this->db->fetchOne(
             "SELECT * FROM imaging_scans WHERE scan_no = :scan_no OR id = :id LIMIT 1",
             ['scan_no' => $scanNo, 'id' => $scanNo]
@@ -616,12 +652,14 @@ class ResultRepository
     {
         $id = 'IMG-' . bin2hex(random_bytes(5));
         $scanNo = $data['scan_no'] ?? ($this->modalityPrefix($data['modality'] ?? 'xray') . '-' . date('Y') . '-' . sprintf('%03d', rand(100, 999)));
+        $orgId = $data['organization_id'] ?? current_user()['organization_id'] ?? 'ORG-001';
 
         $ok = $this->db->execute(
-            "INSERT INTO imaging_scans (id, scan_no, patient, patient_id, modality, study, status, scan_date, radiologist, clinical_notes)
-             VALUES (:id, :scan_no, :patient, :patient_id, :modality, :study, :status, :scan_date, :radiologist, :clinical_notes)",
+            "INSERT INTO imaging_scans (id, organization_id, scan_no, patient, patient_id, modality, study, status, scan_date, radiologist, clinical_notes)
+             VALUES (:id, :org_id, :scan_no, :patient, :patient_id, :modality, :study, :status, :scan_date, :radiologist, :clinical_notes)",
             [
                 'id' => $id,
+                'org_id' => $orgId,
                 'scan_no' => $scanNo,
                 'patient' => $data['patient'] ?? '',
                 'patient_id' => $data['patient_id'] ?? null,
@@ -656,99 +694,108 @@ class ResultRepository
         return $this->db->fetchAll("SELECT * FROM collection_centers ORDER BY name");
     }
 
-    public function countPendingSamples(): int
+    public function countPendingSamples(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM samples WHERE status NOT IN ('completed')"
+            "SELECT COUNT(*) AS cnt FROM samples WHERE organization_id = :org_id AND status NOT IN ('completed')",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countSamplesToday(): int
+    public function countSamplesToday(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM samples WHERE DATE(created_at) = CURDATE()"
+            "SELECT COUNT(*) AS cnt FROM samples WHERE organization_id = :org_id AND DATE(created_at) = CURDATE()",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countPendingResults(): int
+    public function countPendingResults(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM results WHERE verified_at IS NULL AND (value IS NULL OR value = '')"
+            "SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND verified_at IS NULL AND (value IS NULL OR value = '')",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countPendingVerification(): int
+    public function countPendingVerification(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM results WHERE verified_at IS NULL AND value IS NOT NULL AND value != ''"
+            "SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND verified_at IS NULL AND value IS NOT NULL AND value != ''",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countVerifiedToday(): int
+    public function countVerifiedToday(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM results WHERE DATE(verified_at) = CURDATE()"
+            "SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND DATE(verified_at) = CURDATE()",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countCritical(): int
+    public function countCritical(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM results WHERE flag IN ('critical','H','L') AND verified_at IS NULL"
+            "SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND flag IN ('critical','H','L') AND verified_at IS NULL",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countImagingPending(): int
+    public function countImagingPending(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE status IN ('pending','in_progress')"
+            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE organization_id = :org_id AND status IN ('pending','in_progress')",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countImagingReported(): int
+    public function countImagingReported(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE status IN ('reported','completed')"
+            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE organization_id = :org_id AND status IN ('reported','completed')",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countImagingToday(): int
+    public function countImagingToday(string $orgId = 'ORG-001'): int
     {
         $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE scan_date = CURDATE()"
+            "SELECT COUNT(*) AS cnt FROM imaging_scans WHERE organization_id = :org_id AND scan_date = CURDATE()",
+            ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countTotalBiomarkers(): int
+    public function countTotalBiomarkers(string $orgId = 'ORG-001'): int
     {
-        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results");
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id", ['org_id' => $orgId]);
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countOutOfRange(): int
+    public function countOutOfRange(string $orgId = 'ORG-001'): int
     {
-        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE flag IN ('critical','H','L')");
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND flag IN ('critical','H','L')", ['org_id' => $orgId]);
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countInReview(): int
+    public function countInReview(string $orgId = 'ORG-001'): int
     {
-        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE verified_at IS NULL");
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND verified_at IS NULL", ['org_id' => $orgId]);
         return (int)($row['cnt'] ?? 0);
     }
 
-    public function countInRange(): int
+    public function countInRange(string $orgId = 'ORG-001'): int
     {
-        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE (verified_at IS NOT NULL OR (value IS NOT NULL AND value != '')) AND (flag IS NULL OR flag = '' OR flag = 'normal')");
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM results WHERE organization_id = :org_id AND (verified_at IS NOT NULL OR (value IS NOT NULL AND value != '')) AND (flag IS NULL OR flag = '' OR flag = 'normal')", ['org_id' => $orgId]);
         return (int)($row['cnt'] ?? 0);
     }
 
@@ -788,8 +835,9 @@ class ResultRepository
         return round(($verified / $total) * 100, 1);
     }
 
-    public function getRealDepartmentCounts(int $limit = 4): array
+    public function getRealDepartmentCounts(int $limit = 4, ?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $lim = (int)$limit;
         return $this->db->fetchAll(
             "SELECT COALESCE(NULLIF(t.category, ''), 'General Pathology') AS dept,
@@ -797,21 +845,24 @@ class ResultRepository
                     COUNT(DISTINCT r.lab_no) AS order_count,
                     SUM(CASE WHEN r.flag IN ('critical','H','L') THEN 1 ELSE 0 END) AS out_of_range
              FROM results r
-             LEFT JOIN tests t ON (t.name = r.test OR t.code = r.test)
+             LEFT JOIN tests t ON ((t.name = r.test OR t.code = r.test) AND t.organization_id = :t_org)
+             WHERE r.organization_id = :r_org
              GROUP BY COALESCE(NULLIF(t.category, ''), 'General Pathology')
              ORDER BY biomarker_count DESC
-             LIMIT {$lim}"
+             LIMIT " . $lim,
+            ['t_org' => $orgId, 'r_org' => $orgId]
         );
     }
 
-    public function getRealOrganMetrics(array $keywords): array
+    public function getRealOrganMetrics(array $keywords, ?string $orgId = null): array
     {
         if (empty($keywords)) {
             return ['total' => 0, 'out_of_range' => 0, 'in_review' => 0, 'in_range' => 0];
         }
 
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $clauses = [];
-        $params = [];
+        $params = ['org_id' => $orgId];
         foreach ($keywords as $i => $kw) {
             $clauses[] = "(test LIKE :kt{$i} OR parameter LIKE :kp{$i} OR section LIKE :ks{$i})";
             $params["kt{$i}"] = '%' . $kw . '%';
@@ -825,7 +876,7 @@ class ResultRepository
                        SUM(CASE WHEN verified_at IS NULL AND (value IS NULL OR value = '') THEN 1 ELSE 0 END) AS in_review,
                        SUM(CASE WHEN (verified_at IS NOT NULL OR (value IS NOT NULL AND value != '')) AND (flag IS NULL OR flag = '' OR flag = 'normal') THEN 1 ELSE 0 END) AS in_range
                 FROM results
-                WHERE {$where}";
+                WHERE organization_id = :org_id AND ({$where})";
 
         $row = $this->db->fetchOne($sql, $params);
         return [

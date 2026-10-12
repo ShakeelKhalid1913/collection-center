@@ -26,8 +26,12 @@ require_once __DIR__ . '/../repositories/ExpenseRepository.php';
 require_once __DIR__ . '/../repositories/StockRepository.php';
 require_once __DIR__ . '/../repositories/TemplateRepository.php';
 require_once __DIR__ . '/../repositories/PatientDuesRepository.php';
+require_once __DIR__ . '/../repositories/B2BRepository.php';
+require_once __DIR__ . '/../repositories/EmployeeRepository.php';
+require_once __DIR__ . '/../repositories/OrganizationRepository.php';
 
 use App\Database\Database;
+use App\Repositories\OrganizationRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\TestRepository;
@@ -40,6 +44,8 @@ use App\Repositories\ExpenseRepository;
 use App\Repositories\StockRepository;
 use App\Repositories\TemplateRepository;
 use App\Repositories\PatientDuesRepository;
+use App\Repositories\B2BRepository;
+use App\Repositories\EmployeeRepository;
 
 const APP_NAME = 'Lab Dash Pro';
 
@@ -268,6 +274,24 @@ function dues_repo(): PatientDuesRepository
     return $repo ??= new PatientDuesRepository();
 }
 
+function b2b_repo(): B2BRepository
+{
+    static $repo = null;
+    return $repo ??= new B2BRepository();
+}
+
+function employee_repo(): EmployeeRepository
+{
+    static $repo = null;
+    return $repo ??= new EmployeeRepository();
+}
+
+function org_repo(): OrganizationRepository
+{
+    static $repo = null;
+    return $repo ??= new OrganizationRepository();
+}
+
 function audit_log(string $action, string $entityType, ?string $entityId = null, ?string $details = null): bool
 {
     try {
@@ -307,6 +331,8 @@ function mock(string $key): array
 {
     switch ($key) {
         case 'mock_patients':
+            $curUser = current_user();
+            $orgId = $curUser['organization_id'] ?? 'ORG-001';
             return array_map(fn($p) => [
                 'id' => $p['id'] ?? $p['patient_no'],
                 'title' => $p['title'] ?? '',
@@ -322,9 +348,12 @@ function mock(string $key): array
                 'notes' => $p['internal_notes'] ?? '',
                 'registered' => date('Y-m-d', strtotime($p['created_at'] ?? 'now')),
                 'branch' => $p['branch'] ?? 'CC-01',
-            ], patient_repo()->getAll());
+            ], patient_repo()->getAll($orgId));
 
         case 'mock_lab_entries':
+            $curUser = current_user();
+            $orgId = $curUser['organization_id'] ?? 'ORG-001';
+            $branchId = ($curUser['portal'] ?? '') === 'collection-center' ? ($curUser['branch_id'] ?? null) : null;
             return array_map(fn($e) => [
                 'lab_no' => $e['lab_no'],
                 'patient' => $e['patient_name'] ?? $e['patient'] ?? '',
@@ -335,12 +364,15 @@ function mock(string $key): array
                 'amount' => (float)($e['amount'] ?? 0),
                 'paid' => (float)($e['paid'] ?? 0),
                 'discount' => (float)($e['discount'] ?? 0),
+                'is_b2b' => !empty($e['is_b2b']),
+                'b2b_client_name' => $e['b2b_client_name'] ?? '',
                 'doctor' => $e['doctor'] ?? 'Walk-in / Self',
                 'route' => $e['route'] ?? 'Laboratory — Pathology',
                 'priority' => $e['priority'] ?? 'Normal',
                 'date' => date('Y-m-d', strtotime($e['created_at'] ?? 'now')),
                 'branch' => $e['branch'] ?? 'CC-01',
-            ], lab_repo()->getAll());
+                'branch_id' => $e['branch_id'] ?? '',
+            ], lab_repo()->getAll($orgId, $branchId));
 
         case 'mock_tests':
             // Catalog source of truth: tests table (TestRepository), not a static list.
@@ -350,6 +382,7 @@ function mock(string $key): array
                 'name' => $t['name'],
                 'category' => $t['category'] ?? 'General',
                 'price' => (float)($t['price'] ?? 0),
+                'b2b_price' => (float)($t['b2b_price'] ?? round(((float)($t['price'] ?? 0)) * 0.75, 0)),
                 'sample' => $t['sample_type'] ?? 'Blood',
                 'unit' => $t['unit'] ?? '—',
                 'range' => $t['normal_range'] ?? '—',
@@ -365,12 +398,15 @@ function mock(string $key): array
             ], test_repo()->getPackages());
 
         case 'mock_samples':
-            return result_repo()->getSamples();
+            $orgId = current_user()['organization_id'] ?? 'ORG-001';
+            return result_repo()->getSamples($orgId);
 
         case 'mock_results_pending':
-            return result_repo()->getPendingResults();
+            $orgId = current_user()['organization_id'] ?? 'ORG-001';
+            return result_repo()->getPendingResults($orgId);
 
         case 'mock_imaging':
+            $orgId = current_user()['organization_id'] ?? 'ORG-001';
             return array_map(fn($s) => [
                 'id' => $s['id'] ?? '',
                 'scan_no' => $s['scan_no'],
@@ -383,7 +419,7 @@ function mock(string $key): array
                 'radiologist' => $s['radiologist'] ?? '',
                 'findings' => $s['findings'] ?? '',
                 'impression' => $s['impression'] ?? '',
-            ], result_repo()->getImagingScans());
+            ], result_repo()->getImagingScans($orgId));
 
         case 'mock_lab_settings':
             return branding_settings();
@@ -520,12 +556,17 @@ function resolve_catalog_from_post(array $post): array
     )));
     $selected = array_values(array_unique($selected));
 
+    $isB2b = !empty($post['is_b2b']) && $post['is_b2b'] !== '0';
+    $b2bClientId = trim((string)($post['b2b_client_id'] ?? ''));
+    $b2bClientName = trim((string)($post['b2b_client_name'] ?? ''));
+
     $amount = (float)($post['amount'] ?? 0);
     if ($amount <= 0 && $selected !== []) {
         $priceMap = [];
         foreach (mock('mock_tests') as $t) {
-            $priceMap[$t['name']] = (float)$t['price'];
-            $priceMap[$t['code']] = (float)$t['price'];
+            $p = $isB2b ? (float)($t['b2b_price'] ?? round(((float)$t['price']) * 0.75)) : (float)$t['price'];
+            $priceMap[$t['name']] = $p;
+            $priceMap[$t['code']] = $p;
         }
         foreach (mock('mock_packages') as $p) {
             $priceMap[$p['name']] = (float)$p['price'];
@@ -547,6 +588,9 @@ function resolve_catalog_from_post(array $post): array
             'gross' => $amount > 0 ? $amount : 1650.0,
             'discount' => $discount,
             'paid' => (float)($post['paid'] ?? 0),
+            'is_b2b' => $isB2b ? 1 : 0,
+            'b2b_client_id' => $b2bClientId,
+            'b2b_client_name' => $b2bClientName,
         ];
     }
 
@@ -556,6 +600,9 @@ function resolve_catalog_from_post(array $post): array
         'gross' => $amount,
         'discount' => $discount,
         'paid' => (float)($post['paid'] ?? 0),
+        'is_b2b' => $isB2b ? 1 : 0,
+        'b2b_client_id' => $b2bClientId,
+        'b2b_client_name' => $b2bClientName,
     ];
 }
 
@@ -584,7 +631,14 @@ function start_user_session(array $user): void
         'organization_id' => $user['organization_id'] ?? 'ORG-001',
         'branch_id' => $user['branch_id'] ?? null,
         'permissions' => $permissions,
+        'is_super_admin' => !empty($user['is_super_admin']) || ($user['email'] ?? '') === 'admin@ldp.com',
     ];
+}
+
+function is_super_admin(): bool
+{
+    $u = current_user();
+    return !empty($u['is_super_admin']) || ($u['email'] ?? '') === 'admin@ldp.com';
 }
 
 function user_has_permission(string $permission): bool
@@ -593,8 +647,8 @@ function user_has_permission(string $permission): bool
     if (empty($user)) {
         return false;
     }
-    // Admin always has all permissions
-    if (($user['portal'] ?? '') === 'admin') {
+    // Super Admin or Admin always has all permissions
+    if (!empty($user['is_super_admin']) || ($user['portal'] ?? '') === 'admin') {
         return true;
     }
     $perms = $user['permissions'] ?? [];
@@ -654,6 +708,11 @@ function current_user(): array
     return $_SESSION['user'] ?? [];
 }
 
+function current_org_id(): string
+{
+    return current_user()['organization_id'] ?? 'ORG-001';
+}
+
 function current_portal(): string
 {
     return portal_from_db((string)($_SESSION['portal'] ?? ''));
@@ -684,11 +743,12 @@ function flash_error(string $message): string
 
 function nav_badge_counts(): array
 {
+    $orgId = current_org_id();
     return [
-        'cc_pending' => (string)lab_repo()->countByStatuses(['pending', 'collected']),
-        'samples_pending' => (string)result_repo()->countPendingSamples(),
-        'results_verify' => (string)result_repo()->countPendingVerification(),
-        'critical' => (string)result_repo()->countCritical(),
-        'imaging_pending' => (string)result_repo()->countImagingPending(),
+        'cc_pending' => (string)lab_repo()->countByStatuses(['pending', 'collected'], $orgId),
+        'samples_pending' => (string)result_repo()->countPendingSamples($orgId),
+        'results_verify' => (string)result_repo()->countPendingVerification($orgId),
+        'critical' => (string)result_repo()->countCritical($orgId),
+        'imaging_pending' => (string)result_repo()->countImagingPending($orgId),
     ];
 }

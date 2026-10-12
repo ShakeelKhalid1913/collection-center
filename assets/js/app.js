@@ -86,6 +86,61 @@
     discountEl?.addEventListener('input', () => recalc('discount'));
     discountPctEl?.addEventListener('input', () => recalc('pct'));
     paidEl?.addEventListener('input', () => recalc('paid'));
+
+    const b2bRadios = document.querySelectorAll('input[name="is_b2b"]');
+    const b2bSelect = document.querySelector('[data-b2b-client-select]');
+
+    function updateB2BPricing() {
+      const activeRadio = document.querySelector('input[name="is_b2b"]:checked');
+      const isB2B = activeRadio ? (activeRadio.value === '1') : false;
+      const b2bBox = document.querySelector('[data-b2b-client-box]');
+      if (b2bBox) {
+        b2bBox.style.display = isB2B ? '' : 'none';
+      }
+
+      checks.forEach((c) => {
+        const p = isB2B ? (c.dataset.b2bPrice || c.dataset.price) : (c.dataset.regularPrice || c.dataset.price);
+        c.dataset.price = p;
+        const item = c.closest('[data-catalog-item]');
+        const priceLabel = item?.querySelector('.catalog-item__price');
+        if (priceLabel) {
+          priceLabel.textContent = money(Number(p));
+        }
+      });
+
+      document.querySelectorAll('[data-catalog-hit]').forEach((h) => {
+        const p = isB2B ? (h.dataset.b2bPrice || h.dataset.price) : (h.dataset.regularPrice || h.dataset.price);
+        h.dataset.price = p;
+        const priceLabel = h.querySelector('.catalog-hit__price');
+        if (priceLabel) {
+          priceLabel.textContent = money(Number(p));
+        }
+      });
+
+      if (isB2B && b2bSelect && b2bSelect.value) {
+        const opt = b2bSelect.options[b2bSelect.selectedIndex];
+        const discPct = opt?.getAttribute('data-discount');
+        if (discPct && discountPctEl && Number(discountPctEl.value) === 0) {
+          discountPctEl.value = discPct;
+          recalc('pct');
+          return;
+        }
+      }
+      recalc('b2b');
+    }
+
+    b2bRadios.forEach((r) => r.addEventListener('change', updateB2BPricing));
+    b2bSelect?.addEventListener('change', () => {
+      const opt = b2bSelect.options[b2bSelect.selectedIndex];
+      const discPct = opt?.getAttribute('data-discount');
+      if (discPct && discountPctEl) {
+        discountPctEl.value = discPct;
+        recalc('pct');
+      } else {
+        recalc('b2b_select');
+      }
+    });
+
     recalc('init');
   }
 

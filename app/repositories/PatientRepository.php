@@ -15,24 +15,40 @@ class PatientRepository
         $this->db = Database::getInstance();
     }
 
-    public function getAll(string $orgId = 'ORG-001', int $limit = 100): array
+    public function getAll(?string $orgId = null, int $limit = 100): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
-            "SELECT * FROM patients WHERE organization_id = ? ORDER BY created_at DESC LIMIT {$limit}",
+            "SELECT * FROM patients WHERE organization_id = ? ORDER BY created_at DESC LIMIT " . (int)$limit,
             [$orgId]
         );
     }
 
-    public function findById(string $id): ?array
+    public function findById(string $id, ?string $orgId = null): ?array
     {
+        if ($orgId === null && function_exists('current_user')) {
+            $user = current_user();
+            if (!empty($user['organization_id']) && empty($user['is_super_admin'])) {
+                $orgId = $user['organization_id'];
+            }
+        }
+
+        if ($orgId !== null && $orgId !== '') {
+            return $this->db->fetchOne(
+                "SELECT * FROM patients WHERE (id = :id OR patient_no = :patient_no) AND organization_id = :org_id LIMIT 1",
+                ['id' => $id, 'patient_no' => $id, 'org_id' => $orgId]
+            );
+        }
+
         return $this->db->fetchOne(
             "SELECT * FROM patients WHERE id = :id OR patient_no = :patient_no LIMIT 1",
             ['id' => $id, 'patient_no' => $id]
         );
     }
 
-    public function search(string $query, string $orgId = 'ORG-001'): array
+    public function search(string $query, ?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $like = '%' . $query . '%';
         $sql = "SELECT * FROM patients 
                 WHERE organization_id = :org_id 
@@ -55,8 +71,9 @@ class PatientRepository
         ]);
     }
 
-    public function countAll(string $orgId = 'ORG-001'): int
+    public function countAll(?string $orgId = null): int
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         $row = $this->db->fetchOne(
             "SELECT COUNT(*) AS cnt FROM patients WHERE organization_id = :org_id",
             ['org_id' => $orgId]
@@ -184,11 +201,18 @@ class PatientRepository
         return ['success' => $ok, 'id' => $id, 'patient_no' => $patientNo];
     }
 
-    public function update(string $id, array $data): bool
+    public function update(string $id, array $data, ?string $orgId = null): bool
     {
         $this->ensureReferringDoctorColumn();
         $fields = [];
         $params = ['id' => $id];
+
+        if ($orgId === null && function_exists('current_user')) {
+            $user = current_user();
+            if (!empty($user['organization_id']) && empty($user['is_super_admin'])) {
+                $orgId = $user['organization_id'];
+            }
+        }
 
         $allowed = [
             'title', 'full_name', 'relation', 'relation_of', 'phone', 'phone_alt',
@@ -224,16 +248,25 @@ class PatientRepository
             return false;
         }
 
-        $sql = "UPDATE patients SET " . implode(', ', $fields) . " WHERE id = :id OR patient_no = :id";
+        $where = "(id = :id OR patient_no = :id)";
+        if ($orgId !== null && $orgId !== '') {
+            $where .= " AND organization_id = :org_id";
+            $params['org_id'] = $orgId;
+        }
+
+        $sql = "UPDATE patients SET " . implode(', ', $fields) . " WHERE {$where}";
         $ok = $this->db->execute($sql, $params);
 
         if ($ok && $doctor !== '') {
             try {
-                // Update doctor on all lab orders belonging to this patient
-                $this->db->execute(
-                    "UPDATE lab_entries SET doctor = :doc WHERE patient_id = :id OR patient_id IN (SELECT patient_no FROM patients WHERE id = :id)",
-                    ['doc' => $doctor, 'id' => $id]
-                );
+                // Update doctor on all lab orders belonging to this patient in the same org
+                $docSql = "UPDATE lab_entries SET doctor = :doc WHERE (patient_id = :id OR patient_id IN (SELECT patient_no FROM patients WHERE id = :id))";
+                $docParams = ['doc' => $doctor, 'id' => $id];
+                if ($orgId !== null && $orgId !== '') {
+                    $docSql .= " AND organization_id = :org_id";
+                    $docParams['org_id'] = $orgId;
+                }
+                $this->db->execute($docSql, $docParams);
             } catch (\Throwable $ignored) {}
         }
 

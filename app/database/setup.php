@@ -32,9 +32,64 @@ function runSetup(): array
         $logs[] = "Executing database schema (schema.sql)...";
         $schemaSql = file_get_contents(__DIR__ . '/schema.sql');
         $pdo->exec($schemaSql);
-        $logs[] = "Database schema initialized successfully.";
+        // Step 4: Run column migrations for older DB schemas
+        foreach ([
+            "ALTER TABLE imaging_scans ADD COLUMN patient_id VARCHAR(64) NULL",
+            "ALTER TABLE imaging_scans ADD COLUMN radiologist VARCHAR(255) NULL",
+            "ALTER TABLE imaging_scans ADD COLUMN clinical_notes TEXT NULL",
+            "ALTER TABLE imaging_scans ADD COLUMN findings TEXT NULL",
+            "ALTER TABLE imaging_scans ADD COLUMN impression TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN bill_header_text TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN bill_footer_text TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image LONGBLOB NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
+            "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'",
+            "ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN footer_image LONGBLOB NULL",
+            "ALTER TABLE lab_settings ADD COLUMN footer_image_mime VARCHAR(64) NULL",
+            "ALTER TABLE lab_settings ADD COLUMN footer_image_ver INT NOT NULL DEFAULT 0",
+            "ALTER TABLE lab_settings ADD COLUMN footer_layout_json TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
+            "ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
+            "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
+            "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
+            "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
+            "ALTER TABLE test_parameters ADD COLUMN section VARCHAR(128) NULL",
+            "ALTER TABLE test_parameters ADD COLUMN sub_table TEXT NULL",
+            "ALTER TABLE test_parameters ADD COLUMN result_note TEXT NULL",
+            "ALTER TABLE results ADD COLUMN section VARCHAR(128) NULL",
+            "ALTER TABLE results ADD COLUMN reference_range VARCHAR(128) NULL",
+            "ALTER TABLE results ADD COLUMN sub_table TEXT NULL",
+            "ALTER TABLE results ADD COLUMN result_note TEXT NULL",
+            "ALTER TABLE results ADD COLUMN sort_order INT DEFAULT 0",
+            "ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1",
+            "ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1",
+            "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
+            "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
+            "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
+            "ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL",
+            "ALTER TABLE users ADD COLUMN permissions TEXT NULL",
+            "ALTER TABLE users ADD COLUMN is_super_admin TINYINT(1) DEFAULT 0",
+            "ALTER TABLE organizations ADD COLUMN phone VARCHAR(64) NULL",
+            "ALTER TABLE organizations ADD COLUMN email VARCHAR(255) NULL",
+            "ALTER TABLE organizations ADD COLUMN address TEXT NULL",
+            "ALTER TABLE organizations ADD COLUMN is_active TINYINT(1) DEFAULT 1",
+            "ALTER TABLE lab_entries ADD COLUMN transit_status VARCHAR(64) DEFAULT 'collected'",
+            "ALTER TABLE lab_entries ADD COLUMN transit_updated_at TIMESTAMP NULL",
+            "ALTER TABLE lab_entries ADD COLUMN barcode VARCHAR(64) NULL",
+            "ALTER TABLE samples ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
+            "ALTER TABLE results ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
+            "ALTER TABLE imaging_scans ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
+        ] as $alter) {
+            try {
+                $pdo->exec($alter);
+            } catch (PDOException $ignored) {
+                // Column already exists
+            }
+        }
 
-        // Step 4: Seed Data
+        // Step 5: Seed Data
         $logs[] = "Seeding default data...";
 
         // Seed Organization & Branch
@@ -58,7 +113,15 @@ function runSetup(): array
         foreach ($defaultUsers as $userRow) {
             $stmtUser->execute($userRow);
         }
-        $logs[] = "Default staff users seeded with password '1913': staff@citylab.pk, lab@citylab.pk, imaging@citylab.pk, admin@citylab.pk.";
+
+        // Seed Super Admin (admin@ldp.com / admin123)
+        $superAdminPass = password_hash('admin123', PASSWORD_BCRYPT);
+        $stmtSuper = $pdo->prepare("INSERT INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, is_super_admin, is_active)
+            VALUES ('USR-SUPER-01', 'ORG-001', 'BR-MAIN-LAB', 'admin@ldp.com', ?, 'LDP Super Admin', 'Super Admin', 'admin', 1, 1)
+            ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), is_super_admin = 1, is_active = 1");
+        $stmtSuper->execute([$superAdminPass]);
+        $logs[] = "Default staff users seeded with password '1913'.";
+        $logs[] = "Super Admin initialized.";
 
         // Seed Patients
         $stmtPatient = $pdo->prepare("INSERT IGNORE INTO patients (id, organization_id, patient_no, title, full_name, relation, phone, age, gender, cnic, blood_group, email, address, internal_notes, branch) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -157,54 +220,7 @@ function runSetup(): array
             ('CC-02', 'Model Town Collection Point', 'CC-02', 14)
         ");
 
-        // Ensure imaging columns exist on older DBs
-        foreach ([
-            "ALTER TABLE imaging_scans ADD COLUMN patient_id VARCHAR(64) NULL",
-            "ALTER TABLE imaging_scans ADD COLUMN radiologist VARCHAR(255) NULL",
-            "ALTER TABLE imaging_scans ADD COLUMN clinical_notes TEXT NULL",
-            "ALTER TABLE imaging_scans ADD COLUMN findings TEXT NULL",
-            "ALTER TABLE imaging_scans ADD COLUMN impression TEXT NULL",
-            "ALTER TABLE lab_settings ADD COLUMN bill_header_text TEXT NULL",
-            "ALTER TABLE lab_settings ADD COLUMN bill_footer_text TEXT NULL",
-            "ALTER TABLE lab_settings ADD COLUMN header_image LONGBLOB NULL",
-            "ALTER TABLE lab_settings ADD COLUMN header_image_mime VARCHAR(64) NULL",
-            "ALTER TABLE lab_settings ADD COLUMN header_image_ver INT NOT NULL DEFAULT 0",
-            "ALTER TABLE lab_settings ADD COLUMN header_image_position VARCHAR(32) NOT NULL DEFAULT 'left'",
-            "ALTER TABLE lab_settings ADD COLUMN header_layout_json TEXT NULL",
-            "ALTER TABLE lab_settings ADD COLUMN footer_image LONGBLOB NULL",
-            "ALTER TABLE lab_settings ADD COLUMN footer_image_mime VARCHAR(64) NULL",
-            "ALTER TABLE lab_settings ADD COLUMN footer_image_ver INT NOT NULL DEFAULT 0",
-            "ALTER TABLE lab_settings ADD COLUMN footer_layout_json TEXT NULL",
-            "ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
-            "ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
-            "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
-            "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
-            "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
-            "ALTER TABLE test_parameters ADD COLUMN section VARCHAR(128) NULL",
-            "ALTER TABLE test_parameters ADD COLUMN sub_table TEXT NULL",
-            "ALTER TABLE test_parameters ADD COLUMN result_note TEXT NULL",
-            "ALTER TABLE results ADD COLUMN section VARCHAR(128) NULL",
-            "ALTER TABLE results ADD COLUMN reference_range VARCHAR(128) NULL",
-            "ALTER TABLE results ADD COLUMN sub_table TEXT NULL",
-            "ALTER TABLE results ADD COLUMN result_note TEXT NULL",
-            "ALTER TABLE results ADD COLUMN sort_order INT DEFAULT 0",
-            "ALTER TABLE results ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1",
-            "ALTER TABLE results ADD COLUMN print_page INT NOT NULL DEFAULT 1",
-            "ALTER TABLE tests ADD COLUMN result_type VARCHAR(32) NULL",
-            "ALTER TABLE tests ADD COLUMN result_options VARCHAR(255) NULL",
-            "ALTER TABLE tests ADD COLUMN report_template VARCHAR(64) NULL",
-            "ALTER TABLE patients ADD COLUMN referring_doctor VARCHAR(255) NULL",
-            "ALTER TABLE users ADD COLUMN permissions TEXT NULL",
-            "ALTER TABLE lab_entries ADD COLUMN transit_status VARCHAR(64) DEFAULT 'collected'",
-            "ALTER TABLE lab_entries ADD COLUMN transit_updated_at TIMESTAMP NULL",
-            "ALTER TABLE lab_entries ADD COLUMN barcode VARCHAR(64) NULL",
-        ] as $alter) {
-            try {
-                $pdo->exec($alter);
-            } catch (PDOException $ignored) {
-                // Column already exists
-            }
-        }
+
 
         try {
             $pdo->exec("CREATE TABLE IF NOT EXISTS audit_logs (

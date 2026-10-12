@@ -47,7 +47,9 @@ $content .= card(
     '<hr class="border-slate-200">' .
     '<p class="text-sm font-semibold text-slate-800">Typography &amp; Document Fonts (Below Patient Info)</p>' .
     select_field('Lab Report Font (Below Patient Info)', 'report_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['report_font'] ?? 'times_bold_italic') .
+    select_field('Lab Report Font Size', 'report_font_size', array_combine(array_keys(supported_document_font_sizes()), array_column(supported_document_font_sizes(), 'name')), $s['report_font_size'] ?? 'normal') .
     select_field('Billing / Receipt Font (Below Patient Info)', 'bill_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['bill_font'] ?? 'times_bold_italic') .
+    select_field('Billing / Receipt Font Size', 'bill_font_size', array_combine(array_keys(supported_document_font_sizes()), array_column(supported_document_font_sizes(), 'name')), $s['bill_font_size'] ?? 'normal') .
     '<div class="flex flex-wrap gap-2">' .
     btn_submit('Save branding') .
     btn_secondary('/portals/collection-center/reports/preview.php', 'Preview report') .

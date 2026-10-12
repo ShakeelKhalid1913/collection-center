@@ -56,7 +56,7 @@ function import_tests_from_csv(PDO $pdo, string $csvPath, string $orgId = 'ORG-0
     $logs[] = 'Loaded ' . count($rows) . ' rows from tests.csv';
 
     // Wipe existing catalog for this org
-    $pdo->exec('DELETE tp FROM test_parameters tp INNER JOIN tests t ON t.id = tp.test_id WHERE t.organization_id = ' . $pdo->quote($orgId));
+    $pdo->prepare('DELETE tp FROM test_parameters tp INNER JOIN tests t ON t.id = tp.test_id WHERE t.organization_id = :org')->execute(['org' => $orgId]);
     $pdo->prepare('DELETE FROM tests WHERE organization_id = :org')->execute(['org' => $orgId]);
     $logs[] = 'Cleared existing tests and parameters.';
 

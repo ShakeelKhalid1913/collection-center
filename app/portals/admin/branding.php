@@ -38,7 +38,9 @@ $content .= card(
     form_field('Bill footer', 'bill_footer', 'text', $s['bill_footer'], '', true) .
     form_field('Logo text', 'logo', 'text', $s['logo_text']) .
     select_field('Lab Report Font (Below Patient Info)', 'report_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['report_font'] ?? 'times_bold_italic') .
+    select_field('Lab Report Font Size', 'report_font_size', array_combine(array_keys(supported_document_font_sizes()), array_column(supported_document_font_sizes(), 'name')), $s['report_font_size'] ?? 'normal') .
     select_field('Billing / Receipt Font (Below Patient Info)', 'bill_font', array_combine(array_keys(supported_document_fonts()), array_column(supported_document_fonts(), 'name')), $s['bill_font'] ?? 'times_bold_italic') .
+    select_field('Billing / Receipt Font Size', 'bill_font_size', array_combine(array_keys(supported_document_font_sizes()), array_column(supported_document_font_sizes(), 'name')), $s['bill_font_size'] ?? 'normal') .
     btn_submit('Save client branding') .
     '</form>'
 );

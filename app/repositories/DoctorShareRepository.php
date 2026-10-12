@@ -39,17 +39,19 @@ class DoctorShareRepository
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
 
-    public function getAll(string $orgId = 'ORG-001'): array
+    public function getAll(?string $orgId = null): array
     {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
             'SELECT * FROM doctor_shares WHERE organization_id = ? ORDER BY doctor_name ASC',
             [$orgId]
         );
     }
 
-    public function find(string $id): ?array
+    public function find(string $id, ?string $orgId = null): ?array
     {
-        return $this->db->fetchOne('SELECT * FROM doctor_shares WHERE id = :id LIMIT 1', ['id' => $id]);
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        return $this->db->fetchOne('SELECT * FROM doctor_shares WHERE id = :id AND organization_id = :org_id LIMIT 1', ['id' => $id, 'org_id' => $orgId]);
     }
 
     public function save(array $data): bool
