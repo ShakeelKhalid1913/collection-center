@@ -42,10 +42,15 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Primary', [
-                nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
+            nav_group('Lab Entries', [
+                nav_item("{$base}/lab-entries/new.php", 'New Lab Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
                 nav_item("{$base}/results/entry.php", 'Result Entry', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
                 nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
+            ]),
+            nav_group('Patients', [
+                nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
+                nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
+                nav_item("{$base}/patients/card.php", 'Print Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
             ]),
             nav_group('Operations & Finance', [
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
@@ -70,8 +75,6 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/archive.php", 'All Dates History', $activeKey, 'archive', null, 'fa-solid fa-clock-rotate-left'),
             ]),
             nav_group('More', [
-                nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
-                nav_item("{$base}/patients/card.php", 'Print Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
                 nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/settings/profile.php", 'Lab Profile', $activeKey, 'settings-profile', null, 'fa-solid fa-hospital'),
                 nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users'),
@@ -328,12 +331,17 @@ function render_layout(string $title, string $portal, string $activeKey, string 
         if (modal) modal.classList.add('hidden');
     };
 
+    const activePortal = "{$portal}";
+
     function renderResults(q) {
         const container = document.getElementById('feature-results-container');
         if (!container) return;
         const query = (q || '').trim().toLowerCase();
 
         filtered = features.filter(f => {
+            if (activePortal !== 'admin' && !f.url.startsWith('/portals/' + activePortal + '/')) {
+                return false;
+            }
             if (!query) return true;
             return f.title.toLowerCase().includes(query) ||
                    f.category.toLowerCase().includes(query) ||

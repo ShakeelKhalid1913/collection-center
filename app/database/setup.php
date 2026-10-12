@@ -81,6 +81,7 @@ function runSetup(): array
             "ALTER TABLE samples ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
             "ALTER TABLE results ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
             "ALTER TABLE imaging_scans ADD COLUMN organization_id VARCHAR(64) NOT NULL DEFAULT 'ORG-001'",
+            "ALTER TABLE imaging_scans ADD COLUMN lab_no VARCHAR(64) NULL",
         ] as $alter) {
             try {
                 $pdo->exec($alter);

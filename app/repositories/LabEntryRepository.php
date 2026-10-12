@@ -131,6 +131,66 @@ class LabEntryRepository
                     (string)($data['patient_name'] ?? $data['patient'] ?? ''),
                     (string)($data['organization_id'] ?? 'ORG-001')
                 );
+
+                // Auto-route any Imaging / Radiology tests (X-Ray, Ultrasound, CT, ECG) to imaging_scans
+                $testArr = array_filter(array_map('trim', explode(',', $tests)));
+                $orgIdVal = (string)($data['organization_id'] ?? 'ORG-001');
+                $patientNameVal = (string)($data['patient_name'] ?? $data['patient'] ?? 'Unknown');
+                $patientIdVal = (string)($data['patient_id'] ?? '');
+                $doctorVal = (string)($data['doctor'] ?? 'Walk-in / Self');
+                $notesVal = (string)($data['clinical_notes'] ?? '');
+
+                foreach ($testArr as $singleTest) {
+                    $stUpper = strtoupper($singleTest);
+                    $modality = null;
+                    if (str_contains($stUpper, 'X-RAY') || str_contains($stUpper, 'XRAY')) {
+                        $modality = 'X-Ray';
+                    } elseif (str_contains($stUpper, 'ULTRASOUND') || str_contains($stUpper, 'USG') || str_contains($stUpper, 'DOPPLER') || str_contains($stUpper, 'ANOMALY') || str_contains($stUpper, 'PELVIS') || str_contains($stUpper, 'ABDOMEN')) {
+                        $modality = 'Ultrasound';
+                    } elseif (str_contains($stUpper, 'CT SCAN') || str_contains($stUpper, 'CT ') || str_contains($stUpper, ' CT')) {
+                        $modality = 'CT Scan';
+                    } elseif (str_contains($stUpper, 'ECG') || str_contains($stUpper, 'EKG')) {
+                        $modality = 'ECG';
+                    } else {
+                        $testMeta = \test_repo()->findByCode($singleTest);
+                        if ($testMeta && strcasecmp((string)($testMeta['category'] ?? ''), 'Radiology') === 0) {
+                            $modality = 'Imaging';
+                        }
+                    }
+
+                    if ($modality !== null) {
+                        $scanId = 'IMG-' . bin2hex(random_bytes(5));
+                        $prefix = match ($modality) {
+                            'CT Scan' => 'CT',
+                            'Ultrasound' => 'US',
+                            'ECG' => 'ECG',
+                            default => 'XR',
+                        };
+                        $scanNo = $prefix . '-' . date('Y') . '-' . sprintf('%04d', rand(1000, 9999));
+                        try {
+                            $this->db->execute(
+                                "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, amount, paid)
+                                 VALUES (:id, :org, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, 'pending', :scan_date, :radiologist, :doctor, :notes, :amount, :paid)",
+                                [
+                                    'id' => $scanId,
+                                    'org' => $orgIdVal,
+                                    'scan_no' => $scanNo,
+                                    'lab_no' => $labNo,
+                                    'patient' => $patientNameVal,
+                                    'patient_id' => $patientIdVal,
+                                    'modality' => $modality,
+                                    'study' => $singleTest,
+                                    'scan_date' => date('Y-m-d'),
+                                    'radiologist' => $doctorVal,
+                                    'doctor' => $doctorVal,
+                                    'notes' => $notesVal,
+                                    'amount' => (float)($data['amount'] ?? 0),
+                                    'paid' => (float)($data['paid'] ?? 0),
+                                ]
+                            );
+                        } catch (\Throwable $e) {}
+                    }
+                }
             }
 
             if (($data['sample_status'] ?? '') === 'collected') {

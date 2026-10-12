@@ -105,7 +105,7 @@ function filter_bar(array $fields, string $applyLabel = 'Apply filters'): string
     return $html;
 }
 
-function catalog_picker(string $mode = 'pathology', array $selectedNames = []): string
+function catalog_picker(string $mode = 'all', array $selectedNames = []): string
 {
     $selectedLookup = [];
     foreach ($selectedNames as $n) {
@@ -129,9 +129,6 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
     }
 
     foreach (mock('mock_tests') as $t) {
-        if ($mode === 'pathology' && ($t['category'] ?? '') === 'Radiology') {
-            continue;
-        }
         $cat = (string)($t['category'] ?? 'Other');
         $b2b = (int)($t['b2b_price'] ?? round(((float)$t['price']) * 0.75));
         $items[] = [
@@ -154,9 +151,6 @@ function catalog_picker(string $mode = 'pathology', array $selectedNames = []): 
     $orderedDepts = ['packages' => 'Packages'];
     foreach (TEST_DEPARTMENTS as $key => $label) {
         $dk = strtolower($key);
-        if ($mode === 'pathology' && $dk === 'radiology') {
-            continue;
-        }
         if (!empty($deptCounts[$dk])) {
             $orderedDepts[$dk] = $label;
         }

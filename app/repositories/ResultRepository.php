@@ -655,12 +655,13 @@ class ResultRepository
         $orgId = $data['organization_id'] ?? current_user()['organization_id'] ?? 'ORG-001';
 
         $ok = $this->db->execute(
-            "INSERT INTO imaging_scans (id, organization_id, scan_no, patient, patient_id, modality, study, status, scan_date, radiologist, clinical_notes)
-             VALUES (:id, :org_id, :scan_no, :patient, :patient_id, :modality, :study, :status, :scan_date, :radiologist, :clinical_notes)",
+            "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, amount, paid, discount)
+             VALUES (:id, :org_id, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, :status, :scan_date, :radiologist, :doctor, :clinical_notes, :amount, :paid, :discount)",
             [
                 'id' => $id,
                 'org_id' => $orgId,
                 'scan_no' => $scanNo,
+                'lab_no' => $data['lab_no'] ?? null,
                 'patient' => $data['patient'] ?? '',
                 'patient_id' => $data['patient_id'] ?? null,
                 'modality' => $data['modality'] ?? 'X-Ray',
@@ -668,11 +669,27 @@ class ResultRepository
                 'status' => $data['status'] ?? 'pending',
                 'scan_date' => $data['scan_date'] ?? date('Y-m-d'),
                 'radiologist' => $data['radiologist'] ?? null,
+                'doctor' => $data['doctor'] ?? ($data['radiologist'] ?? null),
                 'clinical_notes' => $data['clinical_notes'] ?? null,
+                'amount' => (float)($data['amount'] ?? 0),
+                'paid' => (float)($data['paid'] ?? 0),
+                'discount' => (float)($data['discount'] ?? 0),
             ]
         );
 
         return ['success' => $ok, 'scan_no' => $scanNo, 'id' => $id];
+    }
+
+    public function updateImagingDoctor(string $scanNo, string $doctor): bool
+    {
+        return $this->db->execute(
+            "UPDATE imaging_scans SET radiologist = :rad, doctor = :doc WHERE scan_no = :scan_no",
+            [
+                'scan_no' => $scanNo,
+                'rad' => $doctor,
+                'doc' => $doctor,
+            ]
+        );
     }
 
     public function saveImagingFindings(string $scanNo, array $data): bool

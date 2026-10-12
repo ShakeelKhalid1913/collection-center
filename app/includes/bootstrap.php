@@ -428,13 +428,8 @@ function mock(string $key): array
             return result_repo()->getCollectionCenters();
 
         case 'mock_doctors':
-            return [
-                ['id' => 'D-01', 'name' => 'Dr. Imran Sheikh', 'specialty' => 'General Physician'],
-                ['id' => 'D-02', 'name' => 'Dr. Fatima Noor', 'specialty' => 'Gynecologist'],
-                ['id' => 'D-03', 'name' => 'Dr. Usman Malik', 'specialty' => 'Cardiologist'],
-                ['id' => 'D-04', 'name' => 'Dr. Nadia Hussain', 'specialty' => 'Endocrinologist'],
-                ['id' => 'D-05', 'name' => 'Walk-in / Self', 'specialty' => '—'],
-            ];
+            $orgId = current_user()['organization_id'] ?? 'ORG-001';
+            return get_all_system_doctors($orgId);
 
         case 'mock_routes':
             return [
@@ -449,17 +444,108 @@ function mock(string $key): array
     return [];
 }
 
+/**
+ * Fetch all available doctors dynamically from signatories, doctor shares, and employee staff.
+ */
+function get_all_system_doctors(string $orgId = 'ORG-001'): array
+{
+    $doctors = [];
+    $seen = [];
+
+    // 1. Report Signatories (Consultant Pathologists, Radiologists, Physicians)
+    try {
+        $sigs = db()->fetchAll(
+            "SELECT id, name, designation, qualifications FROM report_signatories WHERE organization_id = :org AND is_active = 1 ORDER BY sort_order ASC, name ASC",
+            ['org' => $orgId]
+        );
+        foreach ($sigs as $s) {
+            $name = trim((string)($s['name'] ?? ''));
+            if ($name !== '' && !isset($seen[strtolower($name)])) {
+                $seen[strtolower($name)] = true;
+                $doctors[] = [
+                    'id' => $s['id'],
+                    'name' => $name,
+                    'specialty' => $s['designation'] ?: 'Consultant',
+                    'qualifications' => $s['qualifications'] ?? '',
+                ];
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // 2. Doctor Shares (Commission / Referring Doctors)
+    try {
+        $shares = db()->fetchAll(
+            "SELECT id, doctor_name FROM doctor_shares WHERE organization_id = :org AND is_active = 1 ORDER BY doctor_name ASC",
+            ['org' => $orgId]
+        );
+        foreach ($shares as $sh) {
+            $name = trim((string)($sh['doctor_name'] ?? ''));
+            if ($name !== '' && !isset($seen[strtolower($name)])) {
+                $seen[strtolower($name)] = true;
+                $doctors[] = [
+                    'id' => $sh['id'],
+                    'name' => $name,
+                    'specialty' => 'Referring Consultant',
+                    'qualifications' => '',
+                ];
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // 3. Employees (Staff with Doctor / Radiologist / Pathologist roles)
+    try {
+        $emps = db()->fetchAll(
+            "SELECT id, full_name, designation, department FROM employees WHERE organization_id = :org AND is_active = 1 ORDER BY full_name ASC",
+            ['org' => $orgId]
+        );
+        foreach ($emps as $em) {
+            $name = trim((string)($em['full_name'] ?? ''));
+            $desig = trim((string)($em['designation'] ?? ''));
+            $dept = trim((string)($em['department'] ?? ''));
+            if ($name !== '' && !isset($seen[strtolower($name)])) {
+                if (stripos($name, 'Dr') !== false || stripos($desig, 'Doctor') !== false || stripos($desig, 'Consultant') !== false || stripos($desig, 'Pathologist') !== false || stripos($desig, 'Radiologist') !== false || stripos($desig, 'Sonologist') !== false) {
+                    $seen[strtolower($name)] = true;
+                    $doctors[] = [
+                        'id' => $em['id'],
+                        'name' => $name,
+                        'specialty' => $desig ?: ($dept ?: 'Specialist'),
+                        'qualifications' => '',
+                    ];
+                }
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // 4. Default Consultants / Doctors
+    $defaults = [
+        ['id' => 'D-01', 'name' => 'Dr. Imran Sheikh', 'specialty' => 'Consultant Radiologist', 'qualifications' => 'M.B.B.S, F.C.P.S (Radiology)'],
+        ['id' => 'D-02', 'name' => 'Dr. Fatima Noor', 'specialty' => 'Consultant Sonologist / Gynecologist', 'qualifications' => 'M.B.B.S, MCPS'],
+        ['id' => 'D-03', 'name' => 'Dr. Usman Malik', 'specialty' => 'Cardiologist (ECG / Echo)', 'qualifications' => 'M.B.B.S, Dip Card'],
+        ['id' => 'D-04', 'name' => 'Dr. Nadia Hussain', 'specialty' => 'General Physician', 'qualifications' => 'M.B.B.S'],
+        ['id' => 'D-05', 'name' => 'Walk-in / Self', 'specialty' => '—', 'qualifications' => ''],
+    ];
+    foreach ($defaults as $df) {
+        if (!isset($seen[strtolower($df['name'])])) {
+            $seen[strtolower($df['name'])] = true;
+            $doctors[] = $df;
+        }
+    }
+
+    return $doctors;
+}
+
 function resolve_doctor_name(?string $idOrName): string
 {
-    if ($idOrName === null || $idOrName === '') {
+    if ($idOrName === null || trim($idOrName) === '') {
         return 'Walk-in / Self';
     }
+    $trimmed = trim($idOrName);
     foreach (mock('mock_doctors') as $d) {
-        if ($d['id'] === $idOrName) {
+        if ($d['id'] === $trimmed || strcasecmp($d['name'], $trimmed) === 0) {
             return $d['name'];
         }
     }
-    return $idOrName;
+    return $trimmed;
 }
 
 function resolve_route_label(?string $idOrLabel): string

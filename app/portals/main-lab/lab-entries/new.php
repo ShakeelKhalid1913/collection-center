@@ -92,7 +92,7 @@ foreach (mock('mock_routes') as $r) {
 $selectedPatientId = trim((string)($_GET['patient_id'] ?? ''));
 
 $content = page_header(
-    'Book Tests',
+    'New Lab Entry',
     'Patient → pick test type → choose tests → discount & save.',
     btn_primary('/portals/main-lab/patients/register.php', 'Register new patient')
 );
@@ -179,4 +179,4 @@ $content .= '<div class="book-layout__side space-y-3">' .
 
 $content .= '</div></form>';
 
-render_page('Book Tests', 'main-lab', 'records', $content);
+render_page('New Lab Entry', 'main-lab', 'new-entry', $content);

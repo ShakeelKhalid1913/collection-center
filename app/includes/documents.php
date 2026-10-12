@@ -1140,8 +1140,116 @@ function render_report_document(
 }
 
 /**
- * Render graphical visual range gauge for lipid profile and multi-parameter chemistry panels.
- * Matches clinical visual report layout with reference criteria, horizontal axis scale, pinpoint marker, and prominent value.
+ * Determine whether a given test or biomarker is eligible for the vertical ladder graphical report.
+ */
+function is_graph_eligible_test(string $testTitle, string $paramName): bool
+{
+    $combined = strtoupper($testTitle . ' ' . $paramName);
+
+    // 1. Lipid Profile
+    if (str_contains($combined, 'LIPID')
+        || str_contains($combined, 'CHOLESTEROL')
+        || str_contains($combined, 'TRIGLYCERIDE')
+        || str_contains($combined, 'HDL')
+        || str_contains($combined, 'LDL')
+        || str_contains($combined, 'VLDL')
+    ) {
+        return true;
+    }
+
+    // 2. RFTS (Renal / Kidney Function Tests)
+    if (str_contains($combined, 'RFT')
+        || str_contains($combined, 'RENAL')
+        || str_contains($combined, 'KIDNEY')
+        || str_contains($combined, 'CREATININE')
+        || str_contains($combined, 'UREA')
+        || str_contains($combined, 'BUN')
+        || str_contains($combined, 'URIC ACID')
+        || str_contains($combined, 'URATE')
+    ) {
+        return true;
+    }
+
+    // 3. LFTS (Liver Function Tests)
+    if (str_contains($combined, 'LFT')
+        || str_contains($combined, 'LIVER')
+        || str_contains($combined, 'HEPATIC')
+        || str_contains($combined, 'BILIRUBIN')
+        || str_contains($combined, 'SGPT')
+        || str_contains($combined, 'ALT')
+        || str_contains($combined, 'SGOT')
+        || str_contains($combined, 'AST')
+        || str_contains($combined, 'ALKALINE PHOSPHATASE')
+        || str_contains($combined, 'ALP')
+        || str_contains($combined, 'TOTAL PROTEIN')
+        || str_contains($combined, 'ALBUMIN')
+        || str_contains($combined, 'GLOBULIN')
+        || str_contains($combined, 'A/G RATIO')
+    ) {
+        return true;
+    }
+
+    // 4. HbA1c
+    if (str_contains($combined, 'HBA1C')
+        || str_contains($combined, 'GLYCATED')
+        || str_contains($combined, 'A1C')
+        || str_contains($combined, 'AVERAGE GLUCOSE')
+        || str_contains($combined, 'EAG')
+    ) {
+        return true;
+    }
+
+    // 5. Thyroid Profile (TFTs)
+    if (str_contains($combined, 'THYROID')
+        || str_contains($combined, 'TFT')
+        || str_contains($combined, 'TSH')
+        || str_contains($combined, 'FT3')
+        || str_contains($combined, 'FT4')
+        || str_contains($combined, 'FREE T3')
+        || str_contains($combined, 'FREE T4')
+        || str_contains($combined, 'TOTAL T3')
+        || str_contains($combined, 'TOTAL T4')
+        || preg_match('/\bT3\b|\bT4\b/', $combined)
+    ) {
+        return true;
+    }
+
+    // 6. Electrolytes
+    if (str_contains($combined, 'ELECTROLYTE')
+        || str_contains($combined, 'SODIUM')
+        || str_contains($combined, 'POTASSIUM')
+        || str_contains($combined, 'CHLORIDE')
+        || str_contains($combined, 'CALCIUM')
+        || str_contains($combined, 'BICARBONATE')
+        || preg_match('/\bNA\b|\bK\b|\bCL\b|\bCA\b|\bHCO3\b/', $combined)
+    ) {
+        return true;
+    }
+
+    // 7. ELISA (HCV, HBV/HBsAg, HIV, HEV)
+    if (str_contains($combined, 'ELISA')
+        || str_contains($combined, 'HCV')
+        || str_contains($combined, 'HEV')
+        || str_contains($combined, 'HBSAG')
+        || str_contains($combined, 'HBV')
+        || str_contains($combined, 'HIV')
+        || str_contains($combined, 'S/CO')
+        || str_contains($combined, 'INDEX')
+        || str_contains($combined, 'COI')
+        || str_contains($combined, 'CUTOFF')
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Render clinical vertical ladder chart report matching visual layout in reference image.
+ * Features:
+ * - Left column: Parameter title & formatted interpretation ranges
+ * - Middle column: Vertical ladder scale with horizontal grid lines, value marker badge, and normal/high legend
+ * - Right column: Large prominent numeric readout with unit
  */
 function render_parameter_gauge(
     string $paramName,
@@ -1152,106 +1260,427 @@ function render_parameter_gauge(
     string $subText
 ): string {
     $paramLower = strtolower($paramName);
+    $flagLower = strtolower($flag);
+    $rangeStr = trim($rangeRaw);
 
-    if (str_contains($paramLower, 'cholesterol') && !str_contains($paramLower, 'hdl') && !str_contains($paramLower, 'ldl')) {
-        $maxScale = 250.0;
-        $ticks = [0, 50, 100, 150, 200, 250];
+    $minScale = 0.0;
+    $maxScale = 100.0;
+    $ticks = [];
+    $isLow = false;
+    $isHigh = false;
+    $normalText = '';
+    $lowText = '';
+    $highText = '';
+    $defaultSubText = '';
+
+    // 1. Total Cholesterol
+    if (str_contains($paramLower, 'cholesterol') && !str_contains($paramLower, 'hdl') && !str_contains($paramLower, 'ldl') && !str_contains($paramLower, 'ratio')) {
+        $maxScale = max(250.0, ceil($numVal / 50.0) * 50.0);
+        $step = $maxScale / 5.0;
+        $ticks = [$maxScale, $maxScale - $step, $maxScale - ($step * 2), $maxScale - ($step * 3), $maxScale - ($step * 4), 0.0];
         $isHigh = $numVal >= 200.0;
-        $isLow = false;
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal Less Than 200.00</span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 200.00</span>';
-        if ($subText === '') {
-            $subText = "Less than : 200 (Desirable)\n200 - 239 : (Borderline High)\nMore than: 240 (High)";
+        $normalText = 'Less Than 200.00';
+        $highText = '> 200.00';
+        $defaultSubText = "Less than : 200 (Desirable)\n200 - 239 : (Borderline High)\nMore than: 240 (High)";
+    }
+    // 2. Triglycerides
+    elseif (str_contains($paramLower, 'triglyceride')) {
+        $maxScale = max(350.0, ceil($numVal / 50.0) * 50.0);
+        $step = 50.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
         }
-    } elseif (str_contains($paramLower, 'triglyceride')) {
-        $maxScale = 350.0;
-        $ticks = [0, 50, 100, 150, 200, 250, 300, 350];
         $isHigh = $numVal >= 200.0;
-        $isLow = false;
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal Less Than 200.00</span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 200.00</span>';
-        if ($subText === '') {
-            $subText = "Adults < 65 Years : < 200\nAdults > 65 Years : < 365";
-        }
-    } elseif (str_contains($paramLower, 'hdl')) {
-        $maxScale = 60.0;
-        $ticks = [0, 10, 20, 30, 40, 50, 60];
+        $normalText = 'Less Than 200.00';
+        $highText = '> 200.00';
+        $defaultSubText = "Adults < 65 Years : < 200\nAdults > 65 Years : < 365";
+    }
+    // 3. HDL (Cholesterol)
+    elseif (str_contains($paramLower, 'hdl')) {
+        $maxScale = 40.0;
+        $ticks = [40.0, 30.0, 20.0, 10.0, 0.0];
         $isLow = $numVal < 45.0;
         $isHigh = $numVal > 65.0;
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Normal 45.00 - 65.00</span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#d97706;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Low Level &lt; 45.00</span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 65.00</span>';
-        if ($subText === '') {
-            $subText = "Male : 35 - 55\nFemale : 45 - 65\n- Without known CAD >= 55: DESIRABLE\n- With known CAD <= 35: OPTIMAL";
+        $normalText = '45.00 - 65.00';
+        $lowText = '< 45.00';
+        $highText = '> 65.00';
+        $defaultSubText = "Male : 35 - 55\nFemale : 45 - 65\n- Without known Coronary Artery Disease More than\nOr Equal to 55: DESIRABLE\n- With known Coronary Artery Disease Less than\nOr Equal to 35: OPTIMAL";
+    }
+    // 4. LDL (Cholesterol)
+    elseif (str_contains($paramLower, 'ldl') && !str_contains($paramLower, 'vldl')) {
+        $maxScale = max(140.0, ceil($numVal / 20.0) * 20.0);
+        $step = 20.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
         }
-    } elseif (str_contains($paramLower, 'ldl')) {
-        $maxScale = 200.0;
-        $ticks = [0, 50, 100, 150, 200];
-        $isHigh = $numVal >= 130.0;
+        $isHigh = $numVal >= 150.0;
+        $normalText = 'Less Than 150.00';
+        $highText = '> 150.00';
+        $defaultSubText = "Desirable : < 130 (< 99 for patients with CHD)\nBorderline : 130-159\nHigh Risk : = 160";
+    }
+    // 5. VLDL Cholesterol
+    elseif (str_contains($paramLower, 'vldl')) {
+        $maxScale = max(60.0, ceil($numVal / 10.0) * 10.0);
+        $step = 10.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isHigh = $numVal >= 40.0;
+        $normalText = '5.00 - 40.00';
+        $highText = '> 40.00';
+        $defaultSubText = "Normal Range : 5.00 - 40.00 mg/dL\nHigh Level : > 40.00 mg/dL";
+    }
+    // 6. Creatinine (RFT)
+    elseif (str_contains($paramLower, 'creatinine')) {
+        $maxScale = max(3.0, ceil($numVal * 2.0) / 2.0);
+        $ticks = [$maxScale, $maxScale - 0.5, $maxScale - 1.0, $maxScale - 1.5, $maxScale - 2.0, $maxScale - 2.5, 0.0];
+        $isLow = $numVal < 0.6;
+        $isHigh = $numVal > 1.2;
+        $normalText = '0.60 - 1.20';
+        $lowText = '< 0.60';
+        $highText = '> 1.20';
+        $defaultSubText = "Normal Male : 0.70 - 1.30 mg/dL\nNormal Female : 0.50 - 1.10 mg/dL\nImpaired Renal Function : > 1.20 mg/dL";
+    }
+    // 7. Urea / Blood Urea / BUN (RFT)
+    elseif (str_contains($paramLower, 'urea') || str_contains($paramLower, 'bun')) {
+        $isBun = str_contains($paramLower, 'bun');
+        if ($isBun) {
+            $maxScale = max(40.0, ceil($numVal / 10.0) * 10.0);
+            $ticks = [$maxScale, $maxScale - 10, $maxScale - 20, $maxScale - 30, 0.0];
+            $isHigh = $numVal > 20.0;
+            $normalText = '7.00 - 20.00';
+            $highText = '> 20.00';
+            $defaultSubText = "Normal Range : 7.00 - 20.00 mg/dL\nElevated BUN : > 20.00 mg/dL";
+        } else {
+            $maxScale = max(100.0, ceil($numVal / 20.0) * 20.0);
+            $ticks = [$maxScale, $maxScale - 20, $maxScale - 40, $maxScale - 60, $maxScale - 80, 0.0];
+            $isHigh = $numVal > 45.0;
+            $normalText = '15.00 - 45.00';
+            $highText = '> 45.00';
+            $defaultSubText = "Normal Range : 15.00 - 45.00 mg/dL\nElevated Urea (Azotemia) : > 45.00 mg/dL";
+        }
+    }
+    // 8. Uric Acid (RFT)
+    elseif (str_contains($paramLower, 'uric')) {
+        $maxScale = max(12.0, ceil($numVal / 2.0) * 2.0);
+        $ticks = [$maxScale, $maxScale - 2, $maxScale - 4, $maxScale - 6, $maxScale - 8, $maxScale - 10, 0.0];
+        $isHigh = $numVal > 7.2;
+        $normalText = '3.50 - 7.20';
+        $highText = '> 7.20';
+        $defaultSubText = "Male : 3.50 - 7.20 mg/dL\nFemale : 2.60 - 6.00 mg/dL\nHyperuricemia : > 7.20 mg/dL";
+    }
+    // 9. SGPT / ALT (LFT)
+    elseif (str_contains($paramLower, 'sgpt') || str_contains($paramLower, 'alt')) {
+        $maxScale = max(150.0, ceil($numVal / 25.0) * 25.0);
+        $step = 25.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isHigh = $numVal > 45.0;
+        $normalText = 'Less Than 45.00';
+        $highText = '> 45.00';
+        $defaultSubText = "Normal : Up to 45.00 U/L\nBorderline Elevated : 46.00 - 80.00\nMarkedly High : > 80.00 U/L";
+    }
+    // 10. SGOT / AST (LFT)
+    elseif (str_contains($paramLower, 'sgot') || str_contains($paramLower, 'ast')) {
+        $maxScale = max(120.0, ceil($numVal / 20.0) * 20.0);
+        $step = 20.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isHigh = $numVal > 40.0;
+        $normalText = 'Less Than 40.00';
+        $highText = '> 40.00';
+        $defaultSubText = "Normal : Up to 40.00 U/L\nElevated Level : > 40.00 U/L";
+    }
+    // 11. Bilirubin (Total / Direct / Indirect - LFT)
+    elseif (str_contains($paramLower, 'bilirubin')) {
+        $maxScale = max(3.0, ceil($numVal * 2.0) / 2.0);
+        $ticks = [$maxScale, $maxScale - 0.5, $maxScale - 1.0, $maxScale - 1.5, $maxScale - 2.0, $maxScale - 2.5, 0.0];
+        $isHigh = $numVal > 1.2;
+        $normalText = '0.20 - 1.20';
+        $highText = '> 1.20';
+        $defaultSubText = "Normal Range : 0.20 - 1.20 mg/dL\nJaundice / Hyperbilirubinemia : > 1.20 mg/dL";
+    }
+    // 12. Alkaline Phosphatase / ALP (LFT)
+    elseif (str_contains($paramLower, 'alkaline') || str_contains($paramLower, 'alp')) {
+        $maxScale = max(350.0, ceil($numVal / 50.0) * 50.0);
+        $step = 50.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isHigh = $numVal > 306.0;
+        $normalText = '65.00 - 306.00';
+        $highText = '> 306.00';
+        $defaultSubText = "Normal Adults : 65.00 - 306.00 U/L\nElevated (Biliary / Bone) : > 306.00 U/L";
+    }
+    // 13. Total Protein / Albumin / Globulin (LFT)
+    elseif (str_contains($paramLower, 'albumin') || str_contains($paramLower, 'protein') || str_contains($paramLower, 'globulin')) {
+        $maxScale = 10.0;
+        $ticks = [10.0, 8.0, 6.0, 4.0, 2.0, 0.0];
+        $isLow = $numVal < 3.5;
+        $isHigh = $numVal > 8.3;
+        $normalText = '3.50 - 5.50';
+        $lowText = '< 3.50';
+        $highText = '> 5.50';
+        $defaultSubText = "Albumin Normal : 3.50 - 5.50 g/dL\nTotal Protein : 6.00 - 8.30 g/dL";
+    }
+    // 14. HbA1c
+    elseif (str_contains($paramLower, 'hba1c') || str_contains($paramLower, 'glycated') || str_contains($paramLower, 'a1c')) {
+        $maxScale = max(14.0, ceil($numVal / 2.0) * 2.0);
+        $step = 2.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isHigh = $numVal >= 6.5;
         $isLow = false;
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> Optimal &lt; 100.00</span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;"><span style="width:6px;height:6px;background:#fff;border-radius:1px;"></span> High Level &gt; 130.00</span>';
-    } else {
-        $maxScale = max(100.0, $numVal * 1.35);
-        $ticks = [0, round($maxScale * 0.25), round($maxScale * 0.5), round($maxScale * 0.75), round($maxScale)];
-        $isHigh = strtolower($flag) === 'h';
-        $isLow = strtolower($flag) === 'l';
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;">Ref: ' . e($rangeRaw) . '</span>';
+        $normalText = 'Less Than 5.70 %';
+        $highText = 'Diabetes >= 6.50 %';
+        $defaultSubText = "Less than 5.7 % : Normal (Non-diabetic)\n5.7 - 6.4 % : Prediabetes (Borderline)\n6.5 % or More : Diabetes Mellitus";
+    }
+    // 15. TSH (Thyroid)
+    elseif (str_contains($paramLower, 'tsh')) {
+        $maxScale = max(8.0, ceil($numVal / 2.0) * 2.0);
+        $step = 2.0;
+        $ticks = [];
+        for ($t = $maxScale; $t >= 0.0; $t -= $step) {
+            $ticks[] = $t;
+        }
+        $isLow = $numVal < 0.40;
+        $isHigh = $numVal > 4.20;
+        $normalText = '0.40 - 4.20';
+        $lowText = '< 0.40';
+        $highText = '> 4.20';
+        $defaultSubText = "Euthyroid (Normal) : 0.40 - 4.20 uIU/mL\nHyperthyroidism : < 0.40 uIU/mL\nHypothyroidism : > 4.20 uIU/mL";
+    }
+    // 16. Free T4 / Free T3 / Total T3 / Total T4 (Thyroid)
+    elseif (str_contains($paramLower, 't3') || str_contains($paramLower, 't4')) {
+        if (str_contains($paramLower, 'total t3') || (str_contains($paramLower, 't3') && !str_contains($paramLower, 'free') && $numVal > 20)) {
+            $maxScale = max(250.0, ceil($numVal / 50.0) * 50.0);
+            $ticks = [$maxScale, $maxScale - 50, $maxScale - 100, $maxScale - 150, $maxScale - 200, 0.0];
+            $isLow = $numVal < 80.0;
+            $isHigh = $numVal > 200.0;
+            $normalText = '80.00 - 200.00';
+            $lowText = '< 80.00';
+            $highText = '> 200.00';
+            $defaultSubText = "Normal Total T3 : 80.00 - 200.00 ng/dL";
+        } elseif (str_contains($paramLower, 'total t4') || (str_contains($paramLower, 't4') && !str_contains($paramLower, 'free') && $numVal > 3.0)) {
+            $maxScale = max(16.0, ceil($numVal / 4.0) * 4.0);
+            $ticks = [$maxScale, $maxScale - 4, $maxScale - 8, $maxScale - 12, 0.0];
+            $isLow = $numVal < 4.5;
+            $isHigh = $numVal > 12.0;
+            $normalText = '4.50 - 12.00';
+            $lowText = '< 4.50';
+            $highText = '> 12.00';
+            $defaultSubText = "Normal Total T4 : 4.50 - 12.00 ug/dL";
+        } else {
+            $maxScale = max(3.0, ceil($numVal * 2.0) / 2.0);
+            $ticks = [$maxScale, $maxScale - 0.5, $maxScale - 1.0, $maxScale - 1.5, $maxScale - 2.0, $maxScale - 2.5, 0.0];
+            $isLow = $numVal < 0.8;
+            $isHigh = $numVal > 1.8;
+            $normalText = '0.80 - 1.80';
+            $lowText = '< 0.80';
+            $highText = '> 1.80';
+            $defaultSubText = "Normal Euthyroid : 0.80 - 1.80 ng/dL\nLow Level : < 0.80 ng/dL\nHigh Level : > 1.80 ng/dL";
+        }
+    }
+    // 17. Sodium / Na (Electrolytes)
+    elseif (str_contains($paramLower, 'sodium') || preg_match('/\bna\b/', $paramLower)) {
+        $minScale = 110.0;
+        $maxScale = 160.0;
+        $ticks = [160.0, 150.0, 140.0, 130.0, 120.0, 110.0];
+        $isLow = $numVal < 135.0;
+        $isHigh = $numVal > 145.0;
+        $normalText = '135.00 - 145.00';
+        $lowText = '< 135.00';
+        $highText = '> 145.00';
+        $defaultSubText = "Normal Range : 135.00 - 145.00 mEq/L\nHyponatremia : < 135.00 mEq/L\nHypernatremia : > 145.00 mEq/L";
+    }
+    // 18. Potassium / K (Electrolytes)
+    elseif (str_contains($paramLower, 'potassium') || preg_match('/\bk\b/', $paramLower)) {
+        $minScale = 0.0;
+        $maxScale = 7.0;
+        $ticks = [7.00, 6.00, 5.00, 4.00, 3.00, 2.00, 0.00];
+        $isLow = $numVal < 3.5;
+        $isHigh = $numVal > 5.1;
+        $normalText = '3.50 - 5.10';
+        $lowText = '< 3.50';
+        $highText = '> 5.10';
+        $defaultSubText = "Normal Range : 3.50 - 5.10 mEq/L\nHypokalemia : < 3.50 mEq/L\nHyperkalemia : > 5.10 mEq/L";
+    }
+    // 19. Chloride / Cl (Electrolytes)
+    elseif (str_contains($paramLower, 'chloride') || preg_match('/\bcl\b/', $paramLower)) {
+        $minScale = 70.0;
+        $maxScale = 130.0;
+        $ticks = [130.0, 115.0, 100.0, 85.0, 70.0];
+        $isLow = $numVal < 96.0;
+        $isHigh = $numVal > 108.0;
+        $normalText = '96.00 - 108.00';
+        $lowText = '< 96.00';
+        $highText = '> 108.00';
+        $defaultSubText = "Normal Range : 96.00 - 108.00 mEq/L";
+    }
+    // 20. Calcium (Electrolytes)
+    elseif (str_contains($paramLower, 'calcium') || preg_match('/\bca\b/', $paramLower)) {
+        $maxScale = 15.0;
+        $ticks = [15.0, 12.0, 9.0, 6.0, 3.0, 0.0];
+        $isLow = $numVal < 8.5;
+        $isHigh = $numVal > 10.5;
+        $normalText = '8.50 - 10.50';
+        $lowText = '< 8.50';
+        $highText = '> 10.50';
+        $defaultSubText = "Normal Adults : 8.50 - 10.50 mg/dL";
+    }
+    // 21. ELISA Tests (HCV, HBsAg, HIV, HEV)
+    elseif (str_contains($paramLower, 'elisa') || str_contains($paramLower, 'hcv') || str_contains($paramLower, 'hbsag') || str_contains($paramLower, 'hbv') || str_contains($paramLower, 'hiv') || str_contains($paramLower, 'hev') || str_contains($paramLower, 's/co') || str_contains($paramLower, 'coi')) {
+        $maxScale = max(3.0, ceil($numVal * 2.0) / 2.0);
+        $ticks = [$maxScale, $maxScale - 0.5, $maxScale - 1.0, $maxScale - 1.5, $maxScale - 2.0, $maxScale - 2.5, 0.0];
+        $isHigh = $numVal >= 1.0;
+        $normalText = 'Non-Reactive < 1.00';
+        $highText = 'Reactive > 1.00';
+        $defaultSubText = "Non-Reactive (Negative) : < 1.00 S/CO\nGreyzone / Borderline : 0.90 - 1.10\nReactive (Positive) : > 1.00 S/CO";
+    }
+    // 22. Generic Fallback (Dynamic parse from reference range)
+    else {
+        $rangeNumbers = [];
+        if (preg_match_all('/([0-9]+(?:\.[0-9]+)?)/', $rangeStr, $m)) {
+            $rangeNumbers = array_map('floatval', $m[1]);
+        }
+        if (count($rangeNumbers) >= 2) {
+            $refMin = $rangeNumbers[0];
+            $refMax = $rangeNumbers[1];
+            $maxScale = max($refMax * 1.35, $numVal * 1.25);
+            $minScale = 0.0;
+            $ticks = [$maxScale, $maxScale * 0.8, $maxScale * 0.6, $maxScale * 0.4, $maxScale * 0.2, 0.0];
+            $isLow = $numVal < $refMin;
+            $isHigh = $numVal > $refMax;
+            $normalText = number_format($refMin, 2) . ' - ' . number_format($refMax, 2);
+            $lowText = '< ' . number_format($refMin, 2);
+            $highText = '> ' . number_format($refMax, 2);
+            $defaultSubText = "Reference Range : " . $rangeStr;
+        } else {
+            $maxScale = max(100.0, $numVal * 1.35);
+            $minScale = 0.0;
+            $ticks = [$maxScale, $maxScale * 0.75, $maxScale * 0.5, $maxScale * 0.25, 0.0];
+            $isHigh = $flagLower === 'h';
+            $isLow = $flagLower === 'l';
+            $normalText = 'Ref: ' . $rangeStr;
+            $highText = 'Elevated';
+            $defaultSubText = "Reference Interval : " . $rangeStr;
+        }
     }
 
-    if ($isHigh || strtolower($flag) === 'h') {
-        $themeColor = '#dc2626';
-    } elseif ($isLow || strtolower($flag) === 'l') {
-        $themeColor = '#d97706';
-    } else {
-        $themeColor = '#16a34a';
+    // Flag overrides
+    if ($flagLower === 'h' || $flagLower === 'critical') {
+        $isHigh = true;
+        $isLow = false;
+    } elseif ($flagLower === 'l') {
+        $isLow = true;
+        $isHigh = false;
     }
 
-    $pct = min(96.0, max(4.0, ($numVal / max(1.0, $maxScale)) * 100.0));
+    if ($isHigh) {
+        $themeColor = '#dc2626'; // Red
+    } elseif ($isLow) {
+        $themeColor = '#d97706'; // Amber / Orange
+    } else {
+        $themeColor = '#16a34a'; // Green
+    }
 
-    $criteriaLines = array_filter(array_map('trim', explode("\n", html_entity_decode($subText, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+    $span = max(0.001, $maxScale - $minScale);
+    $pct = max(6.0, min(94.0, (($numVal - $minScale) / $span) * 100.0));
+
+    // Criteria html
+    $actualSubText = $subText !== '' ? $subText : $defaultSubText;
+    $criteriaLines = array_filter(array_map('trim', explode("\n", html_entity_decode($actualSubText, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
     $criteriaHtml = '';
     foreach ($criteriaLines as $cl) {
         $criteriaHtml .= '<div>' . e($cl) . '</div>';
     }
 
-    $tickLabelsHtml = '';
-    foreach ($ticks as $t) {
-        $tickLabelsHtml .= '<span>' . number_format((float)$t, 2) . '</span>';
+    // Grid lines html
+    $gridCount = count($ticks);
+    $gridLinesHtml = '';
+    foreach ($ticks as $idx => $t) {
+        $topPct = $gridCount > 1 ? round(($idx / ($gridCount - 1)) * 100, 2) : 0;
+        $tFormatted = number_format((float)$t, 2);
+        $gridLinesHtml .= '<div style="position: absolute; left: 0; right: 0; top: ' . $topPct . '%; display: flex; align-items: center; pointer-events: none;">'
+            . '<span style="width: 52px; text-align: right; font-size: 10px; color: #64748b; font-family: monospace; font-weight: 600; margin-right: 12px; flex-shrink: 0; transform: translateY(-50%);">' . $tFormatted . '</span>'
+            . '<div style="flex: 1; height: 1px; background: #e2e8f0;"></div>'
+            . '</div>';
+    }
+
+    // Legend html matching visual image
+    if ($lowText !== '') {
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#d97706;display:inline-block;"></span> Low Level <i>' . e($lowText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
+    } else {
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
     }
 
     $paramNameEsc = e($paramName);
     $unitEsc = e($unit);
-    $displayVal = (floor($numVal) == $numVal) ? (string)(int)$numVal : number_format($numVal, 1);
+
+    $displayValBadge = (floor($numVal) == $numVal) ? (string)(int)$numVal : number_format($numVal, 1);
+    $displayValRight = (floor($numVal) == $numVal && $numVal >= 10 && !str_contains($paramLower, 'ldl'))
+        ? (string)(int)$numVal
+        : (fmod($numVal, 1.0) == 0.0 && $numVal >= 10 && !str_contains($paramLower, 'ldl') ? (string)(int)$numVal : number_format($numVal, 2));
 
     return <<<HTML
-<tr class="lab-report__gauge-row" style="border-bottom: 2px solid #e2e8f0; page-break-inside: avoid;">
-    <td colspan="4" style="padding: 14px 6px 16px 6px !important;">
-        <div style="display: grid; grid-template-columns: 30% 44% 26%; align-items: center; gap: 14px;">
+<tr class="lab-report__gauge-row" style="border-bottom: 2px solid #cbd5e1; page-break-inside: avoid;">
+    <td colspan="4" style="padding: 14px 4px 18px 4px !important;">
+        <div style="display: grid; grid-template-columns: 28% 44% 28%; align-items: center; gap: 14px;">
+            <!-- Column 1: Test Title & Clinical Interpretation -->
             <div>
-                <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">{$paramNameEsc}</div>
-                <div style="font-size: 10.5px; color: #475569; line-height: 1.45; font-family: inherit;">
+                <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+                    {$paramNameEsc}
+                </div>
+                <div style="font-size: 11px; color: #334155; line-height: 1.45;">
                     {$criteriaHtml}
                 </div>
             </div>
-            <div style="position: relative; padding: 22px 4px 6px 4px;">
-                <div style="position: absolute; left: {$pct}%; top: 0px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 3;">
-                    <span style="background: {$themeColor}; color: #ffffff; font-size: 11px; font-weight: 800; padding: 1.5px 7px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.25); white-space: nowrap;">{$displayVal}</span>
-                    <span style="width: 2px; height: 12px; background: {$themeColor};"></span>
+
+            <!-- Column 2: Vertical Ladder Chart & Reference Legend -->
+            <div>
+                <div style="position: relative; height: 130px; width: 100%; margin: 0 auto;">
+                    <!-- Identifier on left (■ 2302) -->
+                    <div style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 6px; height: 6px; background: #000;"></span> 2302
+                    </div>
+
+                    <!-- Chart Grid (Ticks + Horizontal Gridlines) -->
+                    <div style="margin-left: 65px; position: relative; height: 130px;">
+                        {$gridLinesHtml}
+
+                        <!-- Value Badge & Green Square Marker -->
+                        <div style="position: absolute; left: 45%; bottom: {$pct}%; transform: translate(-50%, 50%); display: flex; flex-direction: column; align-items: center; z-index: 5;">
+                            <span style="background: {$themeColor}; color: #ffffff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.25); white-space: nowrap; font-family: sans-serif;">
+                                {$displayValBadge}
+                            </span>
+                            <span style="width: 7px; height: 7px; background: #16a34a; margin-top: 2px; display: block;"></span>
+                        </div>
+                    </div>
                 </div>
-                <div style="position: relative; height: 9px; background: #e2e8f0; border-radius: 5px; margin-top: 10px; border: 1px solid #cbd5e1;">
-                    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {$pct}%; background: {$themeColor}; opacity: 0.35; border-radius: 4px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; font-family: monospace; margin-top: 5px; font-weight: 600;">
-                    {$tickLabelsHtml}
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 7px;">
+
+                <!-- Bottom Legend matching image -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: #1e293b; margin-top: 10px; padding-top: 4px;">
                     {$legendHtml}
                 </div>
             </div>
-            <div style="text-align: right; padding-right: 8px;">
-                <div style="font-size: 32px; font-weight: 900; color: {$themeColor}; line-height: 1; letter-spacing: -0.5px;">
-                    {$displayVal} <span style="font-size: 13px; font-weight: 700; color: #64748b; margin-left: 2px;">{$unitEsc}</span>
+
+            <!-- Column 3: Large Prominent Value Display -->
+            <div style="text-align: right; padding-right: 12px;">
+                <div style="font-size: 40px; font-weight: 800; color: {$themeColor}; line-height: 1; letter-spacing: -0.5px;">
+                    {$displayValRight} <span style="font-size: 14px; font-weight: 600; color: {$themeColor}; margin-left: 2px;">{$unitEsc}</span>
                 </div>
             </div>
         </div>
@@ -1402,18 +1831,16 @@ function build_report_result_rows(array $resultLines): string
             $resNoteHtml = '<div class="lab-report__result-note">' . nl2br(e($resNote)) . '</div>';
         }
 
-        $isLipidPanel = (str_contains(strtoupper($testTitle), 'LIPID')
-            || str_contains(strtoupper($paramRaw), 'CHOLESTEROL')
-            || str_contains(strtoupper($paramRaw), 'TRIGLYCERIDE')
-            || str_contains(strtoupper($paramRaw), 'HDL')
-            || str_contains(strtoupper($paramRaw), 'LDL'));
+        $isGraphEligible = is_graph_eligible_test($testTitle, $paramRaw);
+        $hasNumericVal = is_numeric($resultRaw) || (preg_match('/^([0-9]+(?:\.[0-9]+)?)/', $resultRaw, $nm) && (float)$nm[1] > 0);
 
-        if ($isLipidPanel && is_numeric($resultRaw)) {
+        if ($isGraphEligible && $hasNumericVal) {
+            $parsedNum = is_numeric($resultRaw) ? (float)$resultRaw : (float)$nm[1];
             $subText = (string)($line['sub_table'] ?? '');
             $rows .= render_parameter_gauge(
                 $paramRaw,
-                (float)$resultRaw,
-                (string)($line['unit'] ?? 'mg/dL'),
+                $parsedNum,
+                (string)($line['unit'] ?? ''),
                 (string)($line['range'] ?? ''),
                 $flagRaw,
                 $subText
