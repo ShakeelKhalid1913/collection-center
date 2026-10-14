@@ -39,6 +39,7 @@ class TemplateRepository
         try {
             $this->db->execute($sql);
             $this->seedInitialTemplates('ORG-001');
+            $this->seedStandardUltrasoundTemplates('ORG-001');
         } catch (\Throwable $e) {}
     }
 
@@ -89,6 +90,106 @@ class TemplateRepository
 
         foreach ($templates as $tpl) {
             $this->create(array_merge($tpl, ['organization_id' => $orgId, 'created_by' => 'admin']));
+        }
+    }
+
+    public function seedStandardUltrasoundTemplates(string $orgId): void
+    {
+        $usTemplates = [
+            [
+                'id' => 'TPL-US-ABD-01',
+                'title' => 'Ultrasound Whole Abdomen & Pelvis (Normal)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND WHOLE ABDOMEN & PELVIS\n\nLIVER:\nNormal in size, smooth contour and uniform parenchymal echotexture. No focal solid or cystic mass lesion seen. Intrahepatic biliary tree and portal vein are normal in caliber.\n\nGALLBLADDER:\nNormal in size and shape. Wall thickness is normal (< 3 mm). Acoustic lumen is completely clear; no calculus, sludge or mass lesion seen. Common bile duct (CBD) is normal.\n\nPANCREAS:\nVisualized head, body and tail appear normal in size and echogenicity. Main pancreatic duct is not dilated.\n\nSPLEEN:\nNormal in size and parenchymal echotexture. No splenomegaly or focal lesion noted.\n\nKIDNEYS:\nBoth kidneys are normal in size, shape and cortical thickness. Corticomedullary differentiation is well preserved. No calculus or hydronephrosis seen bilaterally.\n\nURINARY BLADDER:\nWell distended with thin, smooth walls and clear lumen. No intraluminal calculus or mass.\n\nPELVIS / PROSTATE:\nVisualized pelvic structures are unremarkable. No free fluid in abdomen or pelvis.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF WHOLE ABDOMEN & PELVIS.",
+            ],
+            [
+                'id' => 'TPL-US-KUB-01',
+                'title' => 'Ultrasound KUB & Prostate (Urinary System)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND KUB & PROSTATE\n\nRIGHT KIDNEY:\nMeasures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nLEFT KIDNEY:\nMeasures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nURETERS:\nBoth ureters are not dilated; no obstructive ureteric calculus visualized.\n\nURINARY BLADDER:\nAdequately distended with clear acoustic lumen. Bladder wall thickness is smooth and uniform (< 3 mm). No intraluminal calculus, mass, or diverticulum seen.\n- Pre-void volume: Adequate.\n- Post-void residual (PVR): Insignificant (< 20 ml).\n\nPROSTATE:\nNormal in size, shape, and echotexture with smooth capsule. Estimated volume is within normal age-related limits. Median lobe is not enlarged.\n\nIMPRESSION:\nNORMAL ULTRASOUND KUB & PROSTATE. NO EVIDENCE OF NEPHROLITHIASIS OR URINARY TRACT OBSTRUCTION.",
+            ],
+            [
+                'id' => 'TPL-US-PELV-01',
+                'title' => 'Ultrasound Pelvis (Female / Gynaecological)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND PELVIS (FEMALE / GYNAECOLOGICAL)\n\nURINARY BLADDER:\nWell distended with clear lumen and smooth walls.\n\nUTERUS:\n- Position: Anteverted.\n- Size & Contour: Normal in size and regular in contour.\n- Myometrium: Homogeneous echotexture. No focal leiomyoma (fibroid), adenomyosis, or localized mass lesion seen.\n- Endometrium: Central, regular, and well-defined endometrial stripe measuring within normal physiological limits for cycle phase.\n\nCERVIX:\nNormal in appearance. No Nabothian cyst or mass identified.\n\nRIGHT OVARY:\nVisualized and measures normal in size with normal follicular pattern. No cystic or solid mass lesion seen.\n\nLEFT OVARY:\nVisualized and measures normal in size with normal follicular pattern. No cystic or solid mass lesion seen.\n\nADNEXAE & POUCH OF DOUGLAS (POD):\nBoth adnexal regions are free. No adnexal mass, localized collection, or free fluid in the Pouch of Douglas.\n\nIMPRESSION:\nNORMAL PELVIC ULTRASOUND EXAMINATION. NORMAL APPEARANCE OF UTERUS AND BOTH OVARIES.",
+            ],
+            [
+                'id' => 'TPL-US-OBS-01',
+                'title' => 'Ultrasound Obstetric / Antenatal (Routine Pregnancy)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: OBSTETRIC ULTRASOUND SCAN (ANTENATAL)\n\nFETAL VIABILITY & NUMBER:\n- Number of fetuses: Single live intrauterine fetus.\n- Cardiac Activity: Present and regular (Fetal Heart Rate: ~144 bpm).\n- Fetal Movements: Active somatic and limb movements noted.\n- Presentation: Cephalic / Vertex.\n\nFETAL BIOMETRY:\n- Biparietal Diameter (BPD): Normal for gestational age.\n- Femur Length (FL): Normal for gestational age.\n- Abdominal Circumference (AC): Normal for gestational age.\n- Head Circumference (HC): Normal for gestational age.\n- Average Gestational Age (EGA): Consistent with dates.\n- Expected Date of Delivery (EDD): Consistent with biometry.\n\nAMNIOTIC FLUID (LIQUOR):\nAdequate in quantity. Amniotic fluid index (AFI) is within normal limits.\n\nPLACENTA:\n- Position: Anterior / Fundal, Grade I maturity.\n- Relation to Os: Lower margin is well clear of the internal cervical os. No retroplacental hematoma seen.\n\nIMPRESSION:\nSINGLE LIVE INTRAUTERINE PREGNANCY CORRESPONDING TO GESTATIONAL AGE WITH ACTIVE FETAL MOVEMENTS AND NORMAL LIQUOR / PLACENTAL POSITION.",
+            ],
+            [
+                'id' => 'TPL-US-ANOM-01',
+                'title' => 'Ultrasound 2nd Trimester Fetal Anomaly Scan',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: TARGETED FETAL ANOMALY SCAN (2ND TRIMESTER)\n\nFETAL BIOMETRY & VIABILITY:\n- Single live fetus in cephalic presentation.\n- Normal regular fetal cardiac activity and somatic movements.\n- Fetal biometry (BPD, HC, AC, FL) corresponds to clinical gestational age.\n\nANATOMICAL SURVEY:\n- Head & Brain: Intact skull contour, symmetrical lateral ventricles, cavum septum pellucidum visualized, normal posterior fossa & cerebellum.\n- Face: Both orbits, lens, nasal bone, and intact upper lip visualized.\n- Spine: Complete and intact vertebrae from cervical to sacral region in sagittal and transverse planes.\n- Thorax & Heart: Intact diaphragm, normal 4-chamber cardiac view, normal outflow tracts (LVOT/RVOT), and normal cardiac rhythm.\n- Abdomen: Intact anterior abdominal wall, normal stomach bubble, intact cord insertion. Both kidneys and bladder visualized.\n- Limbs: Bilateral upper and lower long bones, hands, and feet visualized and appear normal.\n- Amniotic Fluid: Adequate in volume.\n- Placenta: Normal position and echotexture, clear of internal os. 3-vessel umbilical cord identified.\n\nIMPRESSION:\nTARGETED ANOMALY SCAN REVEALS NO GROSS CONGENITAL OR STRUCTURAL ANOMALY DETECTED AT PRESENT GESTATIONAL AGE.",
+            ],
+            [
+                'id' => 'TPL-US-UPPER-01',
+                'title' => 'Ultrasound Upper Abdomen (Hepatobiliary)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND UPPER ABDOMEN\n\nLIVER:\nNormal in size, shape and parenchymal echotexture. No focal mass, abscess, or nodule seen. Intrahepatic ducts are not dilated. Portal vein is normal in caliber.\n\nGALLBLADDER:\nNormal lumen without gallstones, sludge, or wall thickening. Common bile duct (CBD) measures within normal limits.\n\nPANCREAS:\nVisualized portions appear normal in size and echogenicity without mass or calcification.\n\nSPLEEN:\nNormal in size with homogenous parenchymal echotexture. No focal lesion or splenomegaly.\n\nKIDNEYS:\nBoth kidneys are normal in size, shape, and cortical thickness. No calculus or hydronephrosis seen.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF UPPER ABDOMEN.",
+            ],
+            [
+                'id' => 'TPL-US-TVS-01',
+                'title' => 'Ultrasound TVS (Transvaginal Sonography)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: TRANSVAGINAL ULTRASOUND SCAN (TVS)\n\nUTERUS:\n- Position: Anteverted.\n- Myometrium: Homogeneous echotexture throughout. No focal intramural, subserosal, or submucosal fibroid.\n- Endometrium: Distinct trilaminar / secretory endometrial stripe measuring normal in thickness. Cavity is empty with regular margins.\n- Cervix: Normal length and internal os closed.\n\nRIGHT OVARY:\nNormal in volume and location. Follicles are peripheral and physiological in size. No complex ovarian mass.\n\nLEFT OVARY:\nNormal in volume and location. Follicles are peripheral and physiological in size. No complex ovarian mass.\n\nPOUCH OF DOUGLAS:\nFree of fluid, localized collection, or endometriotic deposits.\n\nIMPRESSION:\nNORMAL TRANSVAGINAL ULTRASOUND STUDY (TVS). UNREMARKABLE PELVIC ORGANS.",
+            ],
+            [
+                'id' => 'TPL-US-SCROT-01',
+                'title' => 'Ultrasound Scrotum & Testicular Color Doppler',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND SCROTUM & COLOR DOPPLER\n\nRIGHT TESTIS:\nNormal in size, shape, and homogenous echotexture. Normal intratesticular vascular flow demonstrated on Color and Spectral Doppler. No focal intratesticular mass or calcification.\n- Right Epididymis: Normal size and echogenicity.\n- Tunica Vaginalis: No hydrocele.\n\nLEFT TESTIS:\nNormal in size, shape, and homogenous echotexture. Normal intratesticular vascular flow demonstrated on Color and Spectral Doppler. No focal intratesticular mass or calcification.\n- Left Epididymis: Normal size and echogenicity.\n- Tunica Vaginalis: No hydrocele.\n\nPAMPINIFORM PLEXUS:\nVenous channels demonstrate normal diameter bilaterally (< 2.0 mm). No retrograde venous reflux elicited during Valsalva maneuver. No evidence of varicocele bilaterally.\n\nIMPRESSION:\nNORMAL SCROTAL AND TESTICULAR COLOR DOPPLER STUDY. NO EVIDENCE OF EPIDIDYMO-ORCHITIS, HYDROCELE, OR VARICOCELE.",
+            ],
+            [
+                'id' => 'TPL-US-THYR-01',
+                'title' => 'Ultrasound Thyroid & Neck',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND THYROID & NECK\n\nRIGHT THYROID LOBE:\nNormal in dimensions and parenchymal echogenicity. No focal solid nodule, cystic lesion, or calcification identified. Normal vascularity on color Doppler.\n\nLEFT THYROID LOBE:\nNormal in dimensions and parenchymal echogenicity. No focal solid nodule, cystic lesion, or calcification identified. Normal vascularity on color Doppler.\n\nISTHMUS:\nNormal in thickness (< 3 mm) and uniform in texture.\n\nCERVICAL LYMPH NODES:\nNo pathologically enlarged or suspicious cervical lymph nodes identified bilaterally.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF THYROID GLAND. NO EVIDENCE OF GOITRE, NODULE, OR CYSTIC LESION.",
+            ],
+            [
+                'id' => 'TPL-US-BRST-01',
+                'title' => 'Ultrasound Breast (Bilateral / Sonomammography)',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: BILATERAL BREAST ULTRASOUND (SONOMAMMOGRAPHY)\n\nRIGHT BREAST:\nNormal fibroglandular parenchyma with normal ductal pattern. No focal solid mass lesion, cyst, or architectural distortion seen. Retroareolar ducts are not dilated.\n\nLEFT BREAST:\nNormal fibroglandular parenchyma with normal ductal pattern. No focal solid mass lesion, cyst, or architectural distortion seen. Retroareolar ducts are not dilated.\n\nAXILLARY REGIONS:\nVisualized bilateral axillary lymph nodes show normal preserved fatty hilum with benign sonographic morphology. No suspicious lymphadenopathy.\n\nACR BI-RADS ASSESSMENT: CATEGORY 1 (NEGATIVE / NORMAL STUDY).\n\nIMPRESSION:\nNORMAL BILATERAL BREAST ULTRASOUND (BI-RADS CATEGORY 1). NO SONOGRAPHIC EVIDENCE OF SOLID OR CYSTIC LESION.",
+            ],
+            [
+                'id' => 'TPL-US-FOLL-01',
+                'title' => 'Ultrasound Follicular Tracking / Study',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND FOLLICULAR STUDY (FOLLICULOMETRY)\n\nDAY OF CYCLE: Day _____\n\nENDOMETRIUM:\n- Thickness: _____ mm.\n- Echopattern: Triple-line pattern (Trilaminar) / Secretory.\n\nRIGHT OVARY:\n- Dominant Follicle: _____ x _____ mm.\n- Secondary Follicles: Multiple small developing follicles.\n\nLEFT OVARY:\n- Dominant Follicle: _____ x _____ mm.\n- Secondary Follicles: Multiple small developing follicles.\n\nFREE FLUID IN POUCH OF DOUGLAS:\nNone / Minimal physiological fluid.\n\nIMPRESSION:\nFOLLICULAR STUDY SHOWING MATURING DOMINANT FOLLICLE AS NOTED ABOVE.",
+            ],
+            [
+                'id' => 'TPL-US-SOFT-01',
+                'title' => 'Ultrasound Soft Tissue / Musculoskeletal Swelling',
+                'department' => 'Ultrasound',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ULTRASOUND SOFT TISSUE / SWELLING\n\nSITE OF EXAMINATION: ____________________\n\nFINDINGS:\n- High-frequency sonographic examination of the region demonstrates normal subcutaneous tissue and muscular planes.\n- No localized cystic lesion, solid mass, abscess, or hematoma identified.\n- Overlying skin and deep fascia appear intact.\n- Color Doppler shows normal physiological vascularity without hypervascularity.\n\nIMPRESSION:\nNORMAL ULTRASOUND EVALUATION OF SOFT TISSUES. NO FOCAL MASS LESION OR FLUID COLLECTION NOTED.",
+            ],
+        ];
+
+        foreach ($usTemplates as $tpl) {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM report_templates WHERE id = :id AND organization_id = :org_id",
+                ['id' => $tpl['id'], 'org_id' => $orgId]
+            );
+            if (!$existing) {
+                $this->create(array_merge($tpl, ['organization_id' => $orgId, 'created_by' => 'admin']));
+            }
         }
     }
 

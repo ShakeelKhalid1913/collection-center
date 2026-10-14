@@ -15,7 +15,6 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
             nav_group('Patients', [
-                nav_item("{$base}/patients/quick-register.php", 'Quick Registration', $activeKey, 'quick-register', null, 'fa-solid fa-bolt'),
                 nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
                 nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
                 nav_item("{$base}/patients/card.php", 'Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
@@ -42,20 +41,22 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Lab Entries', [
-                nav_item("{$base}/lab-entries/new.php", 'New Lab Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
-                nav_item("{$base}/results/entry.php", 'Result Entry', $activeKey, 'results-entry', null, 'fa-solid fa-keyboard'),
+            nav_group('Lab Entries & Reports', [
+                nav_item("{$base}/lab-entries/new.php", 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/lab-entries/edit.php", 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
+                nav_item("{$base}/results/entry.php", 'Report Edit', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
                 nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
+                nav_item("{$base}/tests/estimate.php", 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
             ]),
             nav_group('Patients', [
-                nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
                 nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
                 nav_item("{$base}/patients/card.php", 'Print Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
             ]),
             nav_group('Operations & Finance', [
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
                 nav_item("{$base}/collection-centers.php", 'Collection Centers', $activeKey, 'collection-centers', null, 'fa-solid fa-code-branch'),
-                nav_item("{$base}/staff/index.php", 'Staff & Documents', $activeKey, 'staff', null, 'fa-solid fa-id-badge'),
+                nav_item("{$base}/staff/index.php", 'Staff Directory', $activeKey, 'staff-docs', null, 'fa-solid fa-id-badge'),
+                nav_item("{$base}/staff/attendance.php", 'Staff Attendance', $activeKey, 'staff-attendance', null, 'fa-solid fa-camera'),
                 nav_item("{$base}/patient-dues.php", 'Patient Dues', $activeKey, 'patient-dues', null, 'fa-solid fa-hand-holding-dollar'),
                 nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-file-invoice-dollar'),
                 nav_item("{$base}/stock-management.php", 'Stock & Returns', $activeKey, 'stock', null, 'fa-solid fa-boxes-stacked'),
@@ -84,22 +85,35 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Overview', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Modalities', [
-                nav_item("{$base}/new-scan.php?modality=xray", 'X-Ray', $activeKey, 'modality-xray', null, 'fa-solid fa-x-ray'),
-                nav_item("{$base}/new-scan.php?modality=ct", 'CT Scan', $activeKey, 'modality-ct', null, 'fa-solid fa-laptop-medical'),
-                nav_item("{$base}/new-scan.php?modality=us", 'Ultrasound', $activeKey, 'modality-us', null, 'fa-solid fa-wave-square'),
-                nav_item("{$base}/new-scan.php?modality=ecg", 'ECG', $activeKey, 'modality-ecg', null, 'fa-solid fa-heart-pulse'),
+            nav_group('Laboratory Entries', [
+                nav_item('/portals/main-lab/lab-entries/new.php', 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
+                nav_item('/portals/main-lab/lab-entries/edit.php', 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
+                nav_item('/portals/main-lab/results/entry.php', 'Report Edit', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
+                nav_item('/portals/main-lab/reports/history.php', 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
+                nav_item('/portals/main-lab/tests/estimate.php', 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
             ]),
-            nav_group('Workflow', [
+            nav_group('Diagnostic Imaging', [
+                nav_item("{$base}/new-scan.php?modality=us", 'Ultrasound', $activeKey, 'modality-us', null, 'fa-solid fa-wave-square'),
+                nav_item("{$base}/new-scan.php?modality=xray", 'X-Ray', $activeKey, 'modality-xray', null, 'fa-solid fa-x-ray'),
+                nav_item("{$base}/new-scan.php?modality=ecg", 'ECG', $activeKey, 'modality-ecg', null, 'fa-solid fa-heart-pulse'),
+                nav_item("{$base}/new-scan.php?modality=ct", 'CT Scan', $activeKey, 'modality-ct', null, 'fa-solid fa-laptop-medical'),
+            ]),
+            nav_group('Imaging Workflow', [
                 nav_item("{$base}/patients.php", 'Patients', $activeKey, 'patients', null, 'fa-solid fa-users'),
                 nav_item("{$base}/new-scan.php", 'New Study', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
                 nav_item("{$base}/pending-scans.php", 'Pending Studies', $activeKey, 'pending-scans', $badges['imaging_pending'] ?: null, 'fa-solid fa-clock'),
                 nav_item("{$base}/results.php", 'Findings / Results', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
+                nav_item("{$base}/reports.php", 'Imaging Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
+                nav_item("{$base}/report-history.php", 'Imaging History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
-            nav_group('Reports & Finance', [
+            nav_group('Finance & Receipts', [
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
-                nav_item("{$base}/reports.php", 'Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
-                nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
+                nav_item('/portals/main-lab/receipts.php', 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
+            ]),
+            nav_group('Catalog & Prices', [
+                nav_item('/portals/main-lab/tests/index.php', 'Tests Catalog', $activeKey, 'tests', null, 'fa-solid fa-flask'),
+                nav_item('/portals/main-lab/tests/prices.php', 'Add / Update Price', $activeKey, 'prices', null, 'fa-solid fa-tags'),
+                nav_item('/portals/main-lab/templates.php', 'Report Templates', $activeKey, 'templates', null, 'fa-solid fa-bookmark'),
             ]),
             nav_group('', [nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear')]),
         ],
@@ -270,9 +284,11 @@ function render_layout(string $title, string $portal, string $activeKey, string 
         { title: "Print Patient Card", category: "Patients", icon: "fa-id-card", url: "/portals/main-lab/patients/card.php", keywords: "mr card barcode plastic badge" },
 
         // Clinical Lab Entries & Results
-        { title: "Result Entry & Verification", category: "Laboratory", icon: "fa-keyboard", url: "/portals/main-lab/results/entry.php", keywords: "results enter values verify cbc lft rft chemistry print" },
+        { title: "Report Edit (Findings & Results)", category: "Laboratory", icon: "fa-file-pen", url: "/portals/main-lab/results/entry.php", keywords: "report edit results enter values verify cbc lft ultrasound xray ecg findings" },
+        { title: "Edit Entry & Bill Slip", category: "Laboratory", icon: "fa-user-pen", url: "/portals/main-lab/lab-entries/edit.php", keywords: "edit age slip bill patient details name change demographics doctor" },
         { title: "Report History & Archive", category: "Laboratory", icon: "fa-folder-open", url: "/portals/main-lab/reports/history.php", keywords: "previous reports print pdf completed" },
-        { title: "New Lab Entry / Booking", category: "Laboratory", icon: "fa-file-circle-plus", url: "/portals/collection-center/lab-entries/new.php", keywords: "book test billing walkin entry" },
+        { title: "New Lab Entry / Booking", category: "Laboratory", icon: "fa-file-circle-plus", url: "/portals/main-lab/lab-entries/new.php", keywords: "book test billing walkin entry" },
+        { title: "Test Estimate & Cost Calculator", category: "Laboratory", icon: "fa-calculator", url: "/portals/main-lab/tests/estimate.php", keywords: "estimate quotation price calculator test rates estimate slip inquiry discount" },
         { title: "Sample Transit & Barcode Tracking", category: "Logistics", icon: "fa-barcode", url: "/portals/main-lab/sample-tracking.php", keywords: "courier dispatch receive vials tubes transit status" },
         { title: "Delete / Cancel Lab Entry", category: "Laboratory", icon: "fa-user-xmark", url: "/portals/main-lab/delete-entry.php", keywords: "void remove mistake refund cancel" },
 

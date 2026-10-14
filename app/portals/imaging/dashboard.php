@@ -51,9 +51,17 @@ ob_start();
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <a href="/portals/imaging/new-scan.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
+            <a href="/portals/main-lab/lab-entries/new.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-teal-600 text-white font-bold text-xs sm:text-sm hover:bg-teal-700 transition-all shadow-sm">
                 <i class="fa-solid fa-file-circle-plus"></i>
-                <span>New Study</span>
+                <span>New Lab Entry</span>
+            </a>
+            <a href="/portals/imaging/new-scan.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
+                <i class="fa-solid fa-radiation"></i>
+                <span>New Imaging Study</span>
+            </a>
+            <a href="/portals/main-lab/tests/estimate.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 text-slate-950 font-bold text-xs sm:text-sm hover:bg-amber-400 transition-all shadow-sm">
+                <i class="fa-solid fa-calculator"></i>
+                <span>Test Estimate</span>
             </a>
             <a href="/portals/imaging/pending-scans.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
                 <i class="fa-solid fa-clock"></i>

@@ -58,16 +58,34 @@ try {
     }
 } catch (\Throwable $e) {}
 
+$defaultImagingStudies = [
+    'Ultrasound Whole Abdomen & Pelvis' => 'Ultrasound Whole Abdomen & Pelvis (Rs. 2,000)',
+    'Ultrasound KUB & Prostate' => 'Ultrasound KUB & Prostate (Rs. 1,800)',
+    'Ultrasound Pelvis (Female)' => 'Ultrasound Pelvis (Female) (Rs. 1,800)',
+    'Ultrasound Obstetric / Pregnancy' => 'Ultrasound Obstetric / Pregnancy (Rs. 2,000)',
+    'Ultrasound 2nd Trimester Anomaly Scan' => 'Ultrasound 2nd Trimester Anomaly Scan (Rs. 3,000)',
+    'Ultrasound Upper Abdomen' => 'Ultrasound Upper Abdomen (Rs. 1,800)',
+    'Ultrasound Scrotum & Doppler' => 'Ultrasound Scrotum & Doppler (Rs. 2,500)',
+    'Ultrasound Thyroid & Neck' => 'Ultrasound Thyroid & Neck (Rs. 2,000)',
+    'Ultrasound Breast (Bilateral)' => 'Ultrasound Breast (Bilateral) (Rs. 2,500)',
+    'Ultrasound TVS (Transvaginal)' => 'Ultrasound TVS (Transvaginal) (Rs. 2,500)',
+    'Ultrasound Follicular Tracking' => 'Ultrasound Follicular Tracking (Rs. 1,500)',
+    'Ultrasound Soft Tissue / Swelling' => 'Ultrasound Soft Tissue / Swelling (Rs. 1,500)',
+    'Chest X-Ray PA View' => 'Chest X-Ray PA View (Rs. 1,000)',
+    '12-Lead ECG' => '12-Lead ECG (Rs. 800)',
+    'Brain Plain CT Scan' => 'Brain Plain CT Scan (Rs. 6,500)',
+    'Cervical Spine X-Ray AP/LAT' => 'Cervical Spine X-Ray AP/LAT (Rs. 1,500)',
+];
+
 if (empty($studies)) {
-    $studies = [
-        'Chest X-Ray PA' => 'Chest X-Ray PA (Rs. 1,000)',
-        'Abdomen + Pelvis Ultrasound' => 'Abdomen + Pelvis Ultrasound (Rs. 2,000)',
-        'Obstetric / Anomaly Ultrasound' => 'Obstetric / Anomaly Ultrasound (Rs. 2,500)',
-        '12-Lead ECG' => '12-Lead ECG (Rs. 800)',
-        'Brain Plain CT Scan' => 'Brain Plain CT Scan (Rs. 6,500)',
-        'Cervical Spine X-Ray AP/LAT' => 'Cervical Spine X-Ray AP/LAT (Rs. 1,500)',
-        'KUB Ultrasound' => 'KUB Ultrasound (Rs. 1,800)',
-    ];
+    $studies = $defaultImagingStudies;
+} else {
+    // Ensure all standard ultrasound types are available
+    foreach ($defaultImagingStudies as $dName => $dLabel) {
+        if (!isset($studies[$dName])) {
+            $studies[$dName] = $dLabel;
+        }
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

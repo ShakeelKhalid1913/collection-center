@@ -14,7 +14,10 @@ $portal = current_portal();
 $message = '';
 $tab = trim((string)($_GET['tab'] ?? 'staff'));
 
-// Handle actions
+if ($tab === 'attendance') {
+    header('Location: /portals/main-lab/staff/attendance.php');
+    exit;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -130,8 +133,8 @@ $content .= <<<HTML
     <a href="?tab=staff" class="pb-3 px-1 transition-all {$staffActive}">
         <i class="fa-solid fa-users mr-1.5"></i> Employees &amp; ID Cards ({$empCount})
     </a>
-    <a href="?tab=attendance" class="pb-3 px-1 transition-all {$attendanceActive}">
-        <i class="fa-solid fa-calendar-check mr-1.5"></i> Worker Attendance
+    <a href="/portals/main-lab/staff/attendance.php" class="pb-3 px-1 transition-all text-slate-500 hover:text-slate-800 font-medium">
+        <i class="fa-solid fa-camera mr-1.5 text-teal-600"></i> Worker Photo Attendance Terminal
     </a>
     <a href="?tab=license" class="pb-3 px-1 transition-all {$licenseActive}">
         <i class="fa-solid fa-award mr-1.5"></i> Lab Registration Certificate in Frame
@@ -449,4 +452,7 @@ if ($tab === 'license') {
     $content .= card(data_table(['Worker Profile', 'Worker ID', 'Department', 'Phone', 'Degree Document', 'Actions'], $empRows), 'overflow-hidden');
 }
 
-render_page('Staff & Documents', $portal, 'staff-docs', $content);
+$pageTitle = $tab === 'attendance' ? 'Employee Attendance' : ($tab === 'license' ? 'Registration Certificate' : 'Staff & Workers');
+$activeKey = $tab === 'attendance' ? 'staff-attendance' : 'staff-docs';
+
+render_page($pageTitle, $portal, $activeKey, $content);

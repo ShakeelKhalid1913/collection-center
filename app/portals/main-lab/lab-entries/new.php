@@ -177,6 +177,41 @@ $content .= '<div class="book-layout__side space-y-3">' .
     ) .
     '</div>';
 
+$preTestsRaw = trim((string)($_GET['pre_tests'] ?? ''));
+$preTestsArray = $preTestsRaw !== '' ? array_filter(array_map('trim', explode(',', $preTestsRaw))) : [];
+$preTestsJson = json_encode(array_values($preTestsArray));
+$preDiscount = (float)($_GET['pre_discount'] ?? 0);
+
+if (!empty($preTestsArray) || $preDiscount > 0) {
+    $content .= <<<SCRIPT
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const preTests = {$preTestsJson};
+        const preDiscount = {$preDiscount};
+        if (preTests && preTests.length > 0) {
+            preTests.forEach(function(tName) {
+                const trimmed = tName.trim().toLowerCase();
+                const inputs = document.querySelectorAll('input[type="checkbox"][name*="tests"]');
+                inputs.forEach(function(inp) {
+                    if (inp.value.trim().toLowerCase() === trimmed) {
+                        inp.checked = true;
+                        inp.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+            });
+        }
+        if (preDiscount > 0) {
+            const discInput = document.querySelector('input[name*="discount"]');
+            if (discInput) {
+                discInput.value = preDiscount;
+                discInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    </script>
+    SCRIPT;
+}
+
 $content .= '</div></form>';
 
 render_page('New Lab Entry', 'main-lab', 'new-entry', $content);

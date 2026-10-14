@@ -54,7 +54,8 @@ $templates = template_repo()->getAll($orgId, $userId, $deptFilter);
 
 $departments = [
     '' => 'All Departments',
-    'Radiology' => 'Radiology (Ultrasound & X-Ray)',
+    'Ultrasound' => 'Ultrasound / Ultrasonography',
+    'Radiology' => 'Radiology (X-Ray & Imaging)',
     'Histopathology' => 'Histopathology & Biopsy',
     'Cardiology' => 'Cardiology & ECG',
     'Microbiology' => 'Microbiology & Culture',

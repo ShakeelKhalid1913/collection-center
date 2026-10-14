@@ -292,18 +292,25 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     $waText = rawurlencode('Your lab report is ready. Download: ' . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] : '') . $reportUrl);
     $waLink = 'https://wa.me/' . $waPhone . '?text=' . $waText;
     $barcodeBtn = '';
+    $editReportBtn = '';
+    $editEntryBtn = '';
     if (preg_match('/lab_no=([^&]+)/', $reportUrl, $m)) {
         $bLabNo = urldecode($m[1]);
-        $barcodeBtn = '<a href="/portals/collection-center/barcode-label.php?lab_no=' . urlencode($bLabNo) . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
+        $encLab = urlencode($bLabNo);
+        $barcodeBtn = '<a href="/portals/collection-center/barcode-label.php?lab_no=' . $encLab . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
+        $editReportBtn = '<a href="/portals/main-lab/results/entry.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300" title="Edit Test Results & Findings"><i class="fa-solid fa-file-pen text-amber-600 mr-1"></i> Edit Report</a>';
+        $editEntryBtn = '<a href="/portals/main-lab/lab-entries/edit.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300" title="Edit Patient Info, Age & Billing Slip"><i class="fa-solid fa-user-pen text-indigo-600 mr-1"></i> Edit Entry &amp; Bill</a>';
     }
     $file = e($pdfFilename !== '' ? $pdfFilename : 'lab-report');
 
     return <<<HTML
-    <div class="no-print flex flex-wrap gap-3 items-center" data-print-toolbar>
+    <div class="no-print flex flex-wrap gap-2.5 items-center" data-print-toolbar>
         <button type="button" onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print" aria-hidden="true"></i> Print</button>
         <button type="button" class="btn btn-secondary" data-download-pdf data-pdf-name="{$file}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF</button>
         {$barcodeBtn}
         <a href="{$waLink}" target="_blank" rel="noopener" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+        {$editReportBtn}
+        {$editEntryBtn}
         <span class="text-xs text-slate-500" data-pdf-status></span>
         <div class="flex flex-wrap items-center gap-3 ml-auto text-sm text-slate-700 border border-slate-200 bg-white rounded-lg px-3 py-2">
             <span class="text-[10px] uppercase font-bold tracking-wide text-slate-400">Print options</span>

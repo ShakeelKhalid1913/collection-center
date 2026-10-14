@@ -840,18 +840,29 @@ function load_document_context(?string $labNo): array
                 $paramName = $tObj['name'] ?: $tTitle;
             }
 
+            $deptInfo = get_test_department_info($tTitle, $tObj['category'] ?? null);
+            $isImaging = $deptInfo['is_imaging'];
+            $isMicro = $deptInfo['is_microbiology'];
+            $hasRef = $deptInfo['has_reference_ranges'];
+
             $lines[] = [
                 'test_title' => $tTitle,
+                'department_code' => $deptInfo['department_code'],
+                'department_name' => $deptInfo['department_name'],
+                'department_title' => $deptInfo['department_title'],
+                'has_ref_range' => $hasRef,
                 'section' => ($pCount === 0) ? '' : ($r['section'] ?? ''),
                 'test' => $paramName,
                 'result' => ($r['value'] !== null && $r['value'] !== '') ? $r['value'] : 'Pending',
-                'unit' => ($r['unit'] !== '' && $r['unit'] !== '—') ? $r['unit'] : ($tObj['unit'] ?? '—'),
-                'range' => ($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—'),
+                'unit' => ($hasRef && ($r['unit'] !== '' && $r['unit'] !== '—')) ? $r['unit'] : ($hasRef ? ($tObj['unit'] ?? '—') : ''),
+                'range' => $hasRef ? (($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—')) : '',
                 'sub_table' => ($pCount === 0) ? '' : ($r['sub_table'] ?? ''),
                 'result_note' => ($pCount === 0) ? '' : ($r['result_note'] ?? ''),
                 'methodology' => $testMethodologies[$tTitle] ?? '',
                 'flag' => $r['flag'] ?? '',
                 'print_page' => max(1, (int)($r['print_page'] ?? 1)),
+                'is_imaging' => $isImaging,
+                'is_microbiology' => $isMicro,
             ];
         }
 
@@ -868,16 +879,27 @@ function load_document_context(?string $labNo): array
                 if ($meta && $deptHint === '' && isset(TEST_DEPARTMENTS[$meta['category'] ?? ''])) {
                     $deptHint = $meta['category'];
                 }
+                $deptInfo = get_test_department_info($tName, $meta['category'] ?? null);
+                $isImaging = $deptInfo['is_imaging'];
+                $isMicro = $deptInfo['is_microbiology'];
+                $hasRef = $deptInfo['has_reference_ranges'];
+
                 $lines[] = [
                     'test_title' => $tName,
+                    'department_code' => $deptInfo['department_code'],
+                    'department_name' => $deptInfo['department_name'],
+                    'department_title' => $deptInfo['department_title'],
+                    'has_ref_range' => $hasRef,
                     'section' => '',
                     'test' => $tName,
                     'result' => 'Pending',
-                    'unit' => $meta['unit'] ?? '—',
-                    'range' => $meta['range'] ?? '—',
+                    'unit' => $hasRef ? ($meta['unit'] ?? '—') : '',
+                    'range' => $hasRef ? ($meta['range'] ?? '—') : '',
                     'sub_table' => '',
                     'flag' => '',
                     'print_page' => 1,
+                    'is_imaging' => $isImaging,
+                    'is_microbiology' => $isMicro,
                 ];
             }
         }
@@ -1107,15 +1129,38 @@ function render_report_document(
     string $specimen = 'Serum',
     array $options = []
 ): string {
-    $pages = [];
+    $rawPages = [];
     foreach ($resultLines as $line) {
         $pageNo = max(1, (int)($line['print_page'] ?? 1));
-        $pages[$pageNo][] = $line;
+        $rawPages[$pageNo][] = $line;
     }
-    if ($pages === []) {
-        $pages[1] = [];
+    if ($rawPages === []) {
+        $rawPages[1] = [];
     }
-    ksort($pages, SORT_NUMERIC);
+    ksort($rawPages, SORT_NUMERIC);
+
+    // Department-wise separation: Radiology imaging studies (Ultrasound, X-Ray, ECG) must NEVER be mixed on the same sheet as Pathology lab tables
+    $pages = [];
+    $sheetNum = 1;
+    foreach ($rawPages as $pNo => $pLines) {
+        $labLines = [];
+        $imagingLines = [];
+        foreach ($pLines as $l) {
+            if (!empty($l['is_imaging'])) {
+                $imagingLines[] = $l;
+            } else {
+                $labLines[] = $l;
+            }
+        }
+        if (!empty($labLines) && !empty($imagingLines)) {
+            $pages[$sheetNum++] = $labLines;
+            foreach ($imagingLines as $imgL) {
+                $pages[$sheetNum++] = [$imgL];
+            }
+        } else {
+            $pages[$sheetNum++] = $pLines;
+        }
+    }
     $totalPages = count($pages);
 
     $sheets = '';
@@ -1137,6 +1182,145 @@ function render_report_document(
     }
 
     return '<div class="print-stack" data-print-stack>' . $sheets . '</div>';
+}
+
+/**
+ * Department classification and reference value requirements:
+ * - Radiology (Ultrasound, X-Ray, ECG, CT scan): Reference range/normal values DO NOT apply.
+ * - Microbiology: Reference range/normal values DO NOT apply.
+ * - Histopathology: Reference range/normal values DO NOT apply.
+ * - Chemistry, Hematology, Special Chemistry, etc.: Reference ranges/normal values DO apply.
+ */
+function get_test_department_info(string $testTitle, ?string $category = null): array
+{
+    $title = trim($testTitle);
+    $cat = $category !== null ? trim($category) : '';
+
+    // 1. Radiology / Imaging / Ultrasound / ECG / X-Ray / CT
+    if (in_array(strtolower($cat), ['radiology', 'imaging', 'cardiology'], true)
+        || preg_match('/(ultrasound|x-ray|xray|ecg|ekg|ct scan|computed tomography|doppler|mri|radiology|sonograph|echocardiogra|mammograph)/i', $title)
+    ) {
+        $deptTitle = 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
+        if (preg_match('/(ultrasound|sonograph|doppler)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF RADIOLOGY & ULTRASONOGRAPHY';
+        } elseif (preg_match('/(ecg|ekg|echocardiogra)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF CARDIOLOGY & ECG';
+        } elseif (preg_match('/(x-ray|xray|radiography)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF RADIOLOGY (X-RAY)';
+        }
+        return [
+            'department_code' => 'radiology',
+            'department_name' => 'Radiology & Imaging',
+            'department_title' => $deptTitle,
+            'has_reference_ranges' => false,
+            'is_imaging' => true,
+            'is_microbiology' => false,
+        ];
+    }
+
+    // 2. Microbiology & Parasitology
+    if (in_array(strtolower($cat), ['microbiology', 'parasitology'], true)
+        || preg_match('/(microbiology|culture|sensitivity|c\/s|c & s|gram stain|afb|zn stain|fungal|swab|urine c\/s|blood c\/s|stool c\/s|pus c\/s|sputum c\/s)/i', $title)
+    ) {
+        return [
+            'department_code' => 'microbiology',
+            'department_name' => 'Microbiology',
+            'department_title' => 'DEPARTMENT OF MICROBIOLOGY',
+            'has_reference_ranges' => false,
+            'is_imaging' => false,
+            'is_microbiology' => true,
+        ];
+    }
+
+    // 3. Histopathology & Cytopathology
+    if (in_array(strtolower($cat), ['histopathology', 'cytopathology'], true)
+        || preg_match('/(histopath|biopsy|cytology|pap smear|fnac)/i', $title)
+    ) {
+        return [
+            'department_code' => 'histopathology',
+            'department_name' => 'Histopathology',
+            'department_title' => 'DEPARTMENT OF HISTOPATHOLOGY',
+            'has_reference_ranges' => false,
+            'is_imaging' => false,
+            'is_microbiology' => false,
+        ];
+    }
+
+    // 4. Hematology
+    if (in_array(strtolower($cat), ['hematology'], true)
+        || preg_match('/(hematology|haematology|cbc|complete blood|haemoglobin|hemoglobin|esr|platelet|pt|inr|aptt|blood group|coagulation|peripheral film)/i', $title)
+    ) {
+        return [
+            'department_code' => 'hematology',
+            'department_name' => 'Hematology',
+            'department_title' => 'DEPARTMENT OF HAEMATOLOGY',
+            'has_reference_ranges' => true,
+            'is_imaging' => false,
+            'is_microbiology' => false,
+        ];
+    }
+
+    // 5. Special Chemistry & Endocrinology & Immunology
+    if (in_array(strtolower($cat), ['special chemistry', 'endocrinology', 'immunology', 'molecular'], true)
+        || preg_match('/(special chemistry|tft|thyroid|tsh|ft3|ft4|hba1c|troponin|vitamin|ferritin|hormone|psa|beta hcg|prolactin|cortisol|insulin)/i', $title)
+    ) {
+        return [
+            'department_code' => 'special_chemistry',
+            'department_name' => 'Special Chemistry',
+            'department_title' => 'DEPARTMENT OF SPECIAL CHEMISTRY',
+            'has_reference_ranges' => true,
+            'is_imaging' => false,
+            'is_microbiology' => false,
+        ];
+    }
+
+    // 6. Chemical Pathology / Biochemistry / Chemistry
+    if (in_array(strtolower($cat), ['biochemistry', 'chemistry', 'chemical pathology', 'clinical pathology'], true)
+        || preg_match('/(chemistry|biochemistry|lft|rft|lipid|glucose|sugar|urea|creatinine|bilirubin|electrolytes|uric acid|alt|ast|alp)/i', $title)
+    ) {
+        return [
+            'department_code' => 'chemistry',
+            'department_name' => 'Chemical Pathology',
+            'department_title' => 'DEPARTMENT OF CHEMICAL PATHOLOGY',
+            'has_reference_ranges' => true,
+            'is_imaging' => false,
+            'is_microbiology' => false,
+        ];
+    }
+
+    // 7. Serology
+    if (in_array(strtolower($cat), ['serology'], true)
+        || preg_match('/(serology|elisa|hcv|hbsag|hiv|vdrl|widal|typhidot|ra factor|crp|aso)/i', $title)
+    ) {
+        return [
+            'department_code' => 'serology',
+            'department_name' => 'Serology',
+            'department_title' => 'DEPARTMENT OF SEROLOGY & IMMUNOLOGY',
+            'has_reference_ranges' => true,
+            'is_imaging' => false,
+            'is_microbiology' => false,
+        ];
+    }
+
+    $rawCat = $cat !== '' ? $cat : 'Pathology';
+    return [
+        'department_code' => 'pathology',
+        'department_name' => $rawCat,
+        'department_title' => department_report_heading($rawCat),
+        'has_reference_ranges' => true,
+        'is_imaging' => false,
+        'is_microbiology' => false,
+    ];
+}
+
+/**
+ * Determine whether a test belongs to Radiology/Imaging (Ultrasound, X-Ray, ECG, CT Scan)
+ * that should be rendered as a full-page narrative report without lab reference columns.
+ */
+function is_narrative_imaging_test(string $testName, ?string $category = null): bool
+{
+    $info = get_test_department_info($testName, $category);
+    return !empty($info['is_imaging']);
 }
 
 /**
@@ -1692,12 +1876,13 @@ HTML;
 /**
  * Build result table rows for one report page.
  */
-function build_report_result_rows(array $resultLines): string
+function build_report_result_rows(array $resultLines, bool $isTwoColumn = false): string
 {
     $rows = '';
     $currentTestTitle = null;
     $currentSection = null;
     $showSirLegend = false;
+    $colspan = $isTwoColumn ? 2 : 4;
 
     // Cache or collect test-level methodologies
     $testMethodologies = [];
@@ -1721,7 +1906,7 @@ function build_report_result_rows(array $resultLines): string
         return $m;
     };
 
-    $renderMethodology = static function (string $text): string {
+    $renderMethodology = static function (string $text) use ($colspan): string {
         $text = trim($text);
         if ($text === '') {
             return '';
@@ -1746,7 +1931,7 @@ function build_report_result_rows(array $resultLines): string
             return '';
         }
         return '<tr class="lab-report__methodology-row">
-            <td colspan="4">
+            <td colspan="' . $colspan . '">
                 <div class="lab-report__methodology-box">
                     ' . $methodologyHtml . '
                 </div>
@@ -1781,7 +1966,7 @@ function build_report_result_rows(array $resultLines): string
             $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
                 || strcasecmp($testTitle, $paramRaw) !== 0;
             if ($needsHeading) {
-                $rows .= '<tr class="lab-report__test-head"><td colspan="4">'
+                $rows .= '<tr class="lab-report__test-head"><td colspan="' . $colspan . '">'
                     . '<div class="lab-report__panel-banner"><strong>' . e($testTitle) . '</strong></div>'
                     . '</td></tr>';
             }
@@ -1789,7 +1974,7 @@ function build_report_result_rows(array $resultLines): string
 
         if ($section !== '' && $section !== $currentSection) {
             $currentSection = $section;
-            $rows .= '<tr class="lab-report__section-head"><td colspan="4"><span>' . e($section) . '</span></td></tr>';
+            $rows .= '<tr class="lab-report__section-head"><td colspan="' . $colspan . '"><span>' . e($section) . '</span></td></tr>';
             if (preg_match('/antibiotic|sensitivity|culture/i', $section)) {
                 $showSirLegend = true;
             }
@@ -1831,10 +2016,26 @@ function build_report_result_rows(array $resultLines): string
             $resNoteHtml = '<div class="lab-report__result-note">' . nl2br(e($resNote)) . '</div>';
         }
 
+        if (!empty($line['is_imaging'])) {
+            $studyTitle = $testTitle !== '' ? $testTitle : $paramRaw;
+            $deptBanner = !empty($line['department_title']) ? $line['department_title'] : 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
+            $imagingText = ($resultRaw !== '' && $resultRaw !== '-' && $resultRaw !== '—') ? $resultRaw : 'Clinical imaging study recorded. Interpretation / report pending.';
+            $rows .= '<tr class="lab-report__imaging-row">
+                <td colspan="' . $colspan . '" style="padding: 16px 8px; border-bottom: none;">
+                    <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 16px;">
+                        <strong style="font-size: 18px; text-transform: uppercase; letter-spacing: 1.2px; color: #0f172a;">' . e($studyTitle) . '</strong>
+                        <div style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px;">' . e($deptBanner) . '</div>
+                    </div>
+                    <div style="font-size: 13.5px; line-height: 1.85; white-space: pre-wrap; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px;">' . nl2br(e($imagingText)) . '</div>
+                </td>
+            </tr>';
+            continue;
+        }
+
         $isGraphEligible = is_graph_eligible_test($testTitle, $paramRaw);
         $hasNumericVal = is_numeric($resultRaw) || (preg_match('/^([0-9]+(?:\.[0-9]+)?)/', $resultRaw, $nm) && (float)$nm[1] > 0);
 
-        if ($isGraphEligible && $hasNumericVal) {
+        if ($isGraphEligible && $hasNumericVal && !$isTwoColumn) {
             $parsedNum = is_numeric($resultRaw) ? (float)$resultRaw : (float)$nm[1];
             $subText = (string)($line['sub_table'] ?? '');
             $rows .= render_parameter_gauge(
@@ -1848,12 +2049,29 @@ function build_report_result_rows(array $resultLines): string
             continue;
         }
 
-        $rows .= '<tr>
-            <td class="lab-report__param-cell">' . $paramName . '</td>
-            <td class="lab-report__range-cell">' . $rangeVal . '</td>
-            <td class="lab-report__unit-cell">' . $unitVal . '</td>
-            <td class="' . $resClass . '">' . $resVal . $arrow . $resNoteHtml . '</td>
-        </tr>';
+        if ($isTwoColumn) {
+            // Microbiology / Narrative Pathology without Reference Ranges or Units
+            $rows .= '<tr>
+                <td class="lab-report__param-cell" style="width: 48%; font-weight: 700;">' . $paramName . '</td>
+                <td class="' . $resClass . '" style="width: 52%; text-align: left;">' . $resVal . $arrow . $resNoteHtml . '</td>
+            </tr>';
+        } else {
+            // Multi-column pathology table
+            if (empty($line['has_ref_range'])) {
+                // If a test without reference ranges (e.g. Microbiology) is in a general lab table, span result over range/unit
+                $rows .= '<tr>
+                    <td class="lab-report__param-cell">' . $paramName . '</td>
+                    <td colspan="3" class="' . $resClass . '" style="text-align: left;">' . $resVal . $arrow . $resNoteHtml . '</td>
+                </tr>';
+            } else {
+                $rows .= '<tr>
+                    <td class="lab-report__param-cell">' . $paramName . '</td>
+                    <td class="lab-report__range-cell">' . $rangeVal . '</td>
+                    <td class="lab-report__unit-cell">' . $unitVal . '</td>
+                    <td class="' . $resClass . '">' . $resVal . $arrow . $resNoteHtml . '</td>
+                </tr>';
+            }
+        }
 
         if (!empty($line['sub_table'])) {
             $subText = trim((string)$line['sub_table']);
@@ -1880,12 +2098,15 @@ function build_report_result_rows(array $resultLines): string
                         }
                     }
                     if ($subRowsHtml !== '') {
+                        $subTitle = $isTwoColumn ? 'Antibiotic Sensitivity / Antimicrobial Susceptibility' : 'Reference Criteria';
+                        $subHead1 = $isTwoColumn ? 'Antimicrobial Agent' : 'Criteria / Parameter';
+                        $subHead2 = $isTwoColumn ? 'Susceptibility' : 'Reference Range';
                         $rows .= '<tr class="lab-report__subtable-row">
-                            <td colspan="4">
+                            <td colspan="' . $colspan . '">
                                 <div class="lab-report__subtable-wrap">
-                                    <span class="lab-report__subtable-title">Reference Criteria</span>
+                                    <span class="lab-report__subtable-title">' . e($subTitle) . '</span>
                                     <table class="lab-report__subtable">
-                                        <thead><tr><th>Criteria / Parameter</th><th>Reference Range</th></tr></thead>
+                                        <thead><tr><th>' . e($subHead1) . '</th><th>' . e($subHead2) . '</th></tr></thead>
                                         <tbody>' . $subRowsHtml . '</tbody>
                                     </table>
                                 </div>
@@ -1906,13 +2127,13 @@ function build_report_result_rows(array $resultLines): string
     }
 
     if ($showSirLegend) {
-        $rows .= '<tr class="lab-report__legend-row"><td colspan="4">'
+        $rows .= '<tr class="lab-report__legend-row"><td colspan="' . $colspan . '">'
             . '<div class="lab-report__sir-legend">S = Sensitive &nbsp;|&nbsp; I = Intermediate &nbsp;|&nbsp; R = Resistant</div>'
             . '</td></tr>';
     }
 
     if ($rows === '') {
-        $rows = '<tr><td colspan="4" class="lab-report__empty">No tests on this entry yet.</td></tr>';
+        $rows = '<tr><td colspan="' . $colspan . '" class="lab-report__empty">No tests on this entry yet.</td></tr>';
     }
 
     return $rows;
@@ -1939,9 +2160,38 @@ function render_report_sheet(
     $labPhone = e($settings['phone'] ?? '');
     $labEmail = e($settings['email'] ?? '');
     $labNoRaw = (string)($entry['lab_no'] ?? '');
-    $title = e(strtoupper($reportTitle));
+
+    $isAllImaging = !empty($resultLines) && array_reduce($resultLines, static function($carry, $l) {
+        return $carry && !empty($l['is_imaging']);
+    }, true);
+
+    $isAllMicrobiology = !empty($resultLines) && array_reduce($resultLines, static function($carry, $l) {
+        return $carry && !empty($l['is_microbiology']);
+    }, true);
+
+    $allNoRefRange = !empty($resultLines) && array_reduce($resultLines, static function($carry, $l) {
+        return $carry && empty($l['has_ref_range']);
+    }, true);
+
+    $isTwoColumn = !$isAllImaging && ($isAllMicrobiology || $allNoRefRange);
+
+    // Dynamic Sheet Department Title
+    $deptTitles = array_unique(array_filter(array_column($resultLines, 'department_title')));
+    if (count($deptTitles) === 1) {
+        $sheetTitle = reset($deptTitles);
+    } elseif ($isAllImaging) {
+        $sheetTitle = 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
+    } elseif ($isAllMicrobiology) {
+        $sheetTitle = 'DEPARTMENT OF MICROBIOLOGY';
+    } elseif (!empty($deptTitles)) {
+        $sheetTitle = 'DEPARTMENT OF LABORATORY MEDICINE';
+    } else {
+        $sheetTitle = $reportTitle;
+    }
+    $title = e(strtoupper($sheetTitle));
+
     $resultDate = e(format_date_report(null));
-    $rows = build_report_result_rows($resultLines);
+    $rows = build_report_result_rows($resultLines, $isTwoColumn);
     $pageLabel = 'Page ' . $pageIndex . ' of ' . max(1, $totalPages);
     $breakClass = $forceBreakAfter ? ' lab-report--page-break' : '';
     $isFirstPage = $pageIndex <= 1;
@@ -2102,13 +2352,19 @@ function render_report_sheet(
 </style>
 CSS;
 
-    return <<<HTML
-    <div class="print-area lab-report{$breakClass}" style="{$styleAttr}">
-        {$reportFontStyle}
-        {$headerHtml}
-
-        <section class="lab-report__body">
-            <table class="lab-report__table">
+    $tableHeadHtml = '';
+    if (!$isAllImaging) {
+        if ($isTwoColumn) {
+            $tableHeadHtml = <<<THEAD
+                <thead>
+                    <tr>
+                        <th class="lab-report__th-test" style="width: 48%;">TEST / INVESTIGATION</th>
+                        <th class="lab-report__th-result" style="width: 52%; text-align: left;">OBSERVATION / RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
+                    </tr>
+                </thead>
+THEAD;
+        } else {
+            $tableHeadHtml = <<<THEAD
                 <thead>
                     <tr>
                         <th class="lab-report__th-test">TEST</th>
@@ -2117,6 +2373,18 @@ CSS;
                         <th class="lab-report__th-result">RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
                     </tr>
                 </thead>
+THEAD;
+        }
+    }
+
+    return <<<HTML
+    <div class="print-area lab-report{$breakClass}" style="{$styleAttr}">
+        {$reportFontStyle}
+        {$headerHtml}
+
+        <section class="lab-report__body">
+            <table class="lab-report__table">
+                {$tableHeadHtml}
                 <tbody>{$rows}</tbody>
             </table>
             {$noteHtml}
@@ -2135,7 +2403,6 @@ CSS;
     </div>
     HTML;
 }
-
 
 function receipt_line_items(array $entry, string $orgId = 'ORG-001'): array
 {

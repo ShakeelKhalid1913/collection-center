@@ -123,12 +123,20 @@ class EmployeeRepository
             }
         } catch (\Throwable $e) {}
 
-        // Add font size columns to lab_settings if missing
+        // Add photo columns to employee_attendance if missing
         try {
-            $cols = $this->db->fetchAll("SHOW COLUMNS FROM lab_settings LIKE 'report_font_size'");
-            if (empty($cols)) {
-                $this->db->execute("ALTER TABLE lab_settings ADD COLUMN report_font_size VARCHAR(32) NOT NULL DEFAULT '13px'");
-                $this->db->execute("ALTER TABLE lab_settings ADD COLUMN bill_font_size VARCHAR(32) NOT NULL DEFAULT '12px'");
+            $attCols = $this->db->fetchAll("SHOW COLUMNS FROM employee_attendance");
+            $attColNames = array_column($attCols, 'Field');
+            if (!in_array('in_photo_blob', $attColNames, true)) {
+                $this->db->execute("ALTER TABLE employee_attendance ADD COLUMN in_photo_blob LONGBLOB NULL");
+                $this->db->execute("ALTER TABLE employee_attendance ADD COLUMN in_photo_mime VARCHAR(64) NULL");
+            }
+            if (!in_array('out_photo_blob', $attColNames, true)) {
+                $this->db->execute("ALTER TABLE employee_attendance ADD COLUMN out_photo_blob LONGBLOB NULL");
+                $this->db->execute("ALTER TABLE employee_attendance ADD COLUMN out_photo_mime VARCHAR(64) NULL");
+            }
+            if (!in_array('total_hours', $attColNames, true)) {
+                $this->db->execute("ALTER TABLE employee_attendance ADD COLUMN total_hours VARCHAR(32) NULL");
             }
         } catch (\Throwable $e) {}
     }
@@ -393,7 +401,164 @@ class EmployeeRepository
         return true;
     }
 
-    // License / Registration Certificate
+    public function recordClockPunch(
+        string $empId,
+        string $type,
+        ?string $time = null,
+        ?string $photoBase64 = null,
+        ?array $photoFile = null,
+        string $orgId = 'ORG-001',
+        string $date = ''
+    ): array {
+        if ($date === '') {
+            $date = date('Y-m-d');
+        }
+        if ($time === null || $time === '') {
+            $time = date('H:i:s');
+        }
+
+        $emp = $this->findById($empId, $orgId);
+        if (!$emp) {
+            return ['ok' => false, 'error' => 'Employee not found.'];
+        }
+
+        $blob = null;
+        $mime = null;
+
+        if ($photoBase64 !== null && $photoBase64 !== '') {
+            if (preg_match('/^data:([^;]+);base64,(.+)$/', $photoBase64, $m)) {
+                $mime = $m[1];
+                $blob = base64_decode($m[2]);
+            }
+        } elseif ($photoFile && !empty($photoFile['tmp_name']) && is_uploaded_file($photoFile['tmp_name'])) {
+            $mime = $this->detectUploadMime($photoFile);
+            $blob = file_get_contents($photoFile['tmp_name']);
+        }
+
+        $existing = $this->db->fetchOne(
+            "SELECT * FROM employee_attendance WHERE employee_id = :emp AND attendance_date = :date AND organization_id = :org LIMIT 1",
+            ['emp' => $empId, 'date' => $date, 'org' => $orgId]
+        );
+
+        $nowTimeStr = date('H:i:s', strtotime($time));
+
+        if ($type === 'in') {
+            if ($existing) {
+                $updateSql = "UPDATE employee_attendance SET check_in = :cin, status = 'present'";
+                $params = ['cin' => $nowTimeStr, 'id' => $existing['id']];
+                if ($blob !== null && $blob !== false) {
+                    $updateSql .= ", in_photo_blob = :blob, in_photo_mime = :mime";
+                    $params['blob'] = $blob;
+                    $params['mime'] = $mime;
+                }
+                $updateSql .= " WHERE id = :id";
+                $this->db->execute($updateSql, $params);
+            } else {
+                $id = 'ATT-' . bin2hex(random_bytes(4));
+                $this->db->execute(
+                    "INSERT INTO employee_attendance 
+                     (id, organization_id, employee_id, attendance_date, check_in, in_photo_blob, in_photo_mime, status)
+                     VALUES (:id, :org, :emp, :date, :cin, :blob, :mime, 'present')",
+                    [
+                        'id' => $id,
+                        'org' => $orgId,
+                        'emp' => $empId,
+                        'date' => $date,
+                        'cin' => $nowTimeStr,
+                        'blob' => $blob,
+                        'mime' => $mime,
+                    ]
+                );
+            }
+            return [
+                'ok' => true,
+                'message' => "Arrival clock-in recorded for {$emp['full_name']} at " . date('g:i A', strtotime($nowTimeStr)) . '.',
+                'time' => $nowTimeStr,
+            ];
+        }
+
+        // type === 'out'
+        if (!$existing) {
+            $id = 'ATT-' . bin2hex(random_bytes(4));
+            $this->db->execute(
+                "INSERT INTO employee_attendance 
+                 (id, organization_id, employee_id, attendance_date, check_out, out_photo_blob, out_photo_mime, status)
+                 VALUES (:id, :org, :emp, :date, :cout, :blob, :mime, 'present')",
+                [
+                    'id' => $id,
+                    'org' => $orgId,
+                    'emp' => $empId,
+                    'date' => $date,
+                    'cout' => $nowTimeStr,
+                    'blob' => $blob,
+                    'mime' => $mime,
+                ]
+            );
+        } else {
+            $totalHours = null;
+            if (!empty($existing['check_in'])) {
+                $inTs = strtotime($date . ' ' . $existing['check_in']);
+                $outTs = strtotime($date . ' ' . $nowTimeStr);
+                if ($outTs > $inTs) {
+                    $diffMins = (int)round(($outTs - $inTs) / 60);
+                    $hrs = intdiv($diffMins, 60);
+                    $remMins = $diffMins % 60;
+                    $totalHours = ($hrs > 0 ? "{$hrs}h " : '') . "{$remMins}m";
+                }
+            }
+
+            $updateSql = "UPDATE employee_attendance SET check_out = :cout";
+            $params = ['cout' => $nowTimeStr, 'id' => $existing['id']];
+            if ($totalHours !== null) {
+                $updateSql .= ", total_hours = :th";
+                $params['th'] = $totalHours;
+            }
+            if ($blob !== null && $blob !== false) {
+                $updateSql .= ", out_photo_blob = :blob, out_photo_mime = :mime";
+                $params['blob'] = $blob;
+                $params['mime'] = $mime;
+            }
+            $updateSql .= " WHERE id = :id";
+            $this->db->execute($updateSql, $params);
+        }
+
+        return [
+            'ok' => true,
+            'message' => "Departure clock-out recorded for {$emp['full_name']} at " . date('g:i A', strtotime($nowTimeStr)) . '.',
+            'time' => $nowTimeStr,
+        ];
+    }
+
+    public function getMonthlyAttendance(string $orgId, string $yearMonth, ?string $empId = null): array
+    {
+        $sql = "SELECT a.id, a.attendance_date, a.check_in, a.check_out, a.status, a.notes, a.total_hours,
+                       e.id AS employee_id, e.emp_no, e.full_name, e.designation, e.department,
+                       CASE WHEN a.in_photo_blob IS NOT NULL AND LENGTH(a.in_photo_blob) > 0 THEN 1 ELSE 0 END AS has_in_photo,
+                       CASE WHEN a.out_photo_blob IS NOT NULL AND LENGTH(a.out_photo_blob) > 0 THEN 1 ELSE 0 END AS has_out_photo,
+                       CASE WHEN e.photo_blob IS NOT NULL AND LENGTH(e.photo_blob) > 0 THEN 1 ELSE 0 END AS has_profile_photo
+                FROM employee_attendance a
+                INNER JOIN employees e ON e.id = a.employee_id
+                WHERE a.organization_id = :org AND a.attendance_date LIKE :ym";
+        $params = ['org' => $orgId, 'ym' => $yearMonth . '%'];
+
+        if ($empId !== null && $empId !== '') {
+            $sql .= " AND a.employee_id = :emp";
+            $params['emp'] = $empId;
+        }
+
+        $sql .= " ORDER BY a.attendance_date DESC, a.check_in DESC";
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    public function getAttendancePhoto(string $attId, string $type = 'in', string $orgId = 'ORG-001'): ?array
+    {
+        $blobCol = $type === 'out' ? 'out_photo_blob' : 'in_photo_blob';
+        $mimeCol = $type === 'out' ? 'out_photo_mime' : 'in_photo_mime';
+        return $this->db->fetchOne(
+            "SELECT {$mimeCol} AS mime, {$blobCol} AS blob_data FROM employee_attendance WHERE id = :id AND organization_id = :org LIMIT 1",
+            ['id' => $attId, 'org' => $orgId]
+        );
+    }
     public function getLicenseDetails(string $orgId = 'ORG-001'): array
     {
         $row = $this->db->fetchOne(

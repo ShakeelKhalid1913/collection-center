@@ -221,7 +221,7 @@ class LabEntryRepository
     {
         $fields = [];
         $params = ['lab_no' => $labNo];
-        $allowed = ['tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes', 'created_at'];
+        $allowed = ['patient_name', 'tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes', 'created_at'];
         foreach ($allowed as $f) {
             if (array_key_exists($f, $data)) {
                 $fields[] = "{$f} = :{$f}";

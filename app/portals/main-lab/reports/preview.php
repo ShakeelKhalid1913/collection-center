@@ -15,11 +15,8 @@ $ctx = load_document_context($labNo !== '' ? $labNo : null);
 $previewUrl = '/portals/main-lab/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 
 $content = '<div class="no-print">' . page_header('Report Preview', 'High-contrast layout for print and PDF export.') . '</div>';
-$content .= '<div class="no-print mb-4 flex flex-wrap gap-2 items-center justify-between">';
+$content .= '<div class="no-print mb-4">';
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
-if ($labNo !== '') {
-    $content .= '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($labNo) . '" class="btn btn-primary"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Test Results for this Patient</a>';
-}
 $content .= '</div>';
 $content .= render_report_document(
     $ctx['settings'],

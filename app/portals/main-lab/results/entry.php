@@ -226,6 +226,26 @@ if ($testResultOptions === null && $testResultType === 'options') {
     $testResultOptions = parse_result_options((string)($activeTestMeta['normal_range'] ?? $activeTestMeta['reference_value'] ?? ''));
 }
 
+$isImagingActive = is_narrative_imaging_test($activeTest, $activeTestMeta['category'] ?? null);
+$imagingTemplates = template_repo()->getAll($orgId);
+$tplSelectOpts = '';
+$tplJsonMap = [];
+foreach ($imagingTemplates as $tpl) {
+    $tId = (string)$tpl['id'];
+    $tTitle = (string)$tpl['title'];
+    $tplSelectOpts .= '<option value="' . e($tId) . '">' . e($tTitle) . '</option>';
+    $tplJsonMap[$tId] = (string)$tpl['content'];
+}
+$tplJsonMapEncoded = json_encode($tplJsonMap, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
+$imagingRow = $activeRows[0] ?? null;
+$imagingResId = (string)($imagingRow['id'] ?? 'RES-IMG-' . bin2hex(random_bytes(4)));
+$currentImagingVal = (string)($imagingRow['value'] ?? '');
+if ($currentImagingVal === 'Pending' || $currentImagingVal === '-' || $currentImagingVal === '—') {
+    $currentImagingVal = '';
+}
+$currentImagingValSafe = e($currentImagingVal);
+
 // Page grouping state (per test)
 $pageAssignments = [];
 $maxPage = 1;
@@ -449,13 +469,16 @@ $content .= <<<HTML
             </div>
         </div>
 
-        <!-- Quick Switcher Dropdown & Patient History Link -->
-        <div class="flex items-center gap-2 text-xs shrink-0">
+        <!-- Quick Switcher Dropdown & Patient Links -->
+        <div class="flex items-center gap-2 text-xs shrink-0 flex-wrap">
             <span class="text-slate-400 hidden xl:inline font-bold">or visit:</span>
             <select class="field text-xs py-2 max-w-[200px] text-slate-700 font-semibold" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
                 {$switcherOpts}
             </select>
-            <a href="{$historyLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Patient History</a>
+            <a href="{$addTestLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs border border-indigo-200 whitespace-nowrap"><i class="fa-solid fa-user-pen mr-1 text-indigo-600"></i> Edit Entry &amp; Bill</a>
+            <a href="/portals/main-lab/receipts.php?lab_no={$labNoSafe}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-receipt mr-1"></i> Patient Slip</a>
+            <a href="{$previewLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-eye mr-1"></i> Preview Report</a>
+            <a href="{$historyLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>
         </div>
     </div>
 </div>
@@ -503,20 +526,140 @@ $content .= <<<HTML
             <div><span class="font-bold text-slate-800">All tests:</span> {$testsOrdered}</div>
         </div>
     </aside>
+HTML;
 
-    <div class="bg-white border border-slate-200/90 rounded-3xl shadow-card overflow-hidden">
-        <div class="border-b border-slate-100 bg-slate-50/70 p-5">
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs font-medium">
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Lab No</span><strong class="font-mono text-base font-black text-slate-900">{$labNoSafe}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">MR No</span><strong class="font-mono text-sm font-bold text-slate-800">{$mrNo}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Patient</span><strong class="text-sm font-bold text-slate-900">{$patientName}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Age / Sex</span><strong class="text-slate-800">{$age} yrs / {$gender}</strong></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Phone</span><span class="text-slate-700">{$phone}</span></div>
-                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Registered</span><span class="text-slate-700">{$regAt}</span></div>
-                <div class="sm:col-span-2"><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Referring doctor</span><span class="text-slate-800 font-semibold">{$doctor}</span></div>
+    $testContentHtml = '';
+    if ($isImagingActive) {
+        $testContentHtml = <<<HTML
+        <!-- Dedicated Ultrasound & Radiology Report Type Section -->
+        <div class="px-5 py-4 bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-50 border-b border-teal-200">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-teal-600 text-white shadow-sm">
+                        <i class="fa-solid fa-shapes text-sm"></i>
+                    </span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <strong class="text-teal-950 text-base font-extrabold tracking-wide">{$activeTestLabel}</strong>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-100 text-teal-800 border border-teal-200">
+                                Ultrasound Report Type Section
+                            </span>
+                        </div>
+                        <p class="text-xs text-teal-800 font-medium mt-0.5">
+                            Select ultrasound study type below to auto-load clinical anatomical headings and normal findings
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex items-center gap-1.5 bg-white border border-teal-300 rounded-xl px-2.5 py-1 shadow-2xs">
+                        <label for="us-report-type-select" class="text-[11px] font-bold text-teal-900 uppercase tracking-wide">Report Type:</label>
+                        <select id="us-report-type-select" onchange="if(this.value) applyUltrasoundReportType(this.value)" class="text-xs font-semibold text-slate-800 bg-transparent border-none focus:ring-0 py-0.5 pl-1 pr-6 cursor-pointer">
+                            <option value="">— Select Ultrasound Report Type —</option>
+                            <optgroup label="🩺 Abdomen &amp; Urinary Tract">
+                                <option value="us_whole_abd">Ultrasound Whole Abdomen &amp; Pelvis</option>
+                                <option value="us_upper_abd">Ultrasound Upper Abdomen (Hepatobiliary)</option>
+                                <option value="us_kub">Ultrasound KUB &amp; Prostate (Kidneys, Bladder, Prostate)</option>
+                            </optgroup>
+                            <optgroup label="🌸 Gynaecological &amp; Pelvic">
+                                <option value="us_pelvis">Ultrasound Pelvis (Female / Gynaecological)</option>
+                                <option value="us_tvs">Ultrasound TVS (Transvaginal Sonography)</option>
+                                <option value="us_follicular">Ultrasound Follicular Tracking / Study</option>
+                                <option value="us_breast">Ultrasound Breast (Bilateral / Sonomammography)</option>
+                            </optgroup>
+                            <optgroup label="👶 Obstetrics &amp; Pregnancy">
+                                <option value="us_obstetric">Ultrasound Obstetric / Antenatal (Routine Pregnancy)</option>
+                                <option value="us_anomaly">Ultrasound 2nd Trimester Fetal Anomaly Scan</option>
+                            </optgroup>
+                            <optgroup label="🔬 Doppler &amp; Superficial Parts">
+                                <option value="us_scrotal">Ultrasound Scrotum &amp; Testicular Color Doppler</option>
+                                <option value="us_thyroid">Ultrasound Thyroid &amp; Neck</option>
+                                <option value="us_soft_tissue">Ultrasound Soft Tissue / Musculoskeletal Swelling</option>
+                            </optgroup>
+                            <optgroup label="🩻 Other Radiology Modalities">
+                                <option value="xray_chest">Chest X-Ray PA View</option>
+                                <option value="ecg_12">12-Lead Electrocardiogram (ECG)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <select id="tpl-picker" class="field text-xs py-1.5 px-3 bg-white font-semibold">
+                        <option value="">— Saved Custom Templates —</option>
+                        {$tplSelectOpts}
+                    </select>
+                    <button type="button" onclick="insertTplFromSelect()" class="btn btn-secondary text-xs font-bold py-1.5 px-3 bg-white text-teal-800 border-teal-300 hover:bg-teal-50">
+                        <i class="fa-solid fa-paste text-teal-600 mr-1"></i> Paste Saved
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick-Pick Ultrasound Report Type Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-teal-200/70 text-xs">
+                <span class="font-bold text-teal-900 uppercase tracking-wide text-[10px] mr-1">Quick Select:</span>
+                <button type="button" onclick="applyUltrasoundReportType('us_whole_abd')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Liver, Gallbladder, Spleen, Pancreas, Kidneys, Bladder, Pelvis">
+                    <i class="fa-solid fa-lungs text-teal-600"></i> Whole Abdomen &amp; Pelvis
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_kub')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Kidneys, Ureters, Bladder & Prostate (Pre/Post-void)">
+                    <i class="fa-solid fa-droplet text-blue-600"></i> KUB &amp; Prostate
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_pelvis')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Uterus, Endometrium, Ovaries, Adnexa, Pouch of Douglas">
+                    <i class="fa-solid fa-venus text-pink-600"></i> Female Pelvis
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_obstetric')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Single live fetus, BPD, FL, AC, Liquor, Placenta, EDD">
+                    <i class="fa-solid fa-baby text-amber-600"></i> Pregnancy (Obs)
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_anomaly')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="2nd Trimester complete fetal anatomical survey">
+                    <i class="fa-solid fa-magnifying-glass-chart text-indigo-600"></i> Anomaly Scan
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_scrotal')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Testes, Epididymides, Pampiniform plexus, Color Doppler">
+                    <i class="fa-solid fa-heart-pulse text-rose-600"></i> Scrotal Doppler
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_thyroid')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Bilateral thyroid lobes, Isthmus, Cervical nodes">
+                    <i class="fa-solid fa-shield-halved text-cyan-700"></i> Thyroid &amp; Neck
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_breast')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Bilateral breast parenchyma & BI-RADS Category">
+                    <i class="fa-solid fa-ribbon text-pink-500"></i> Breast (BI-RADS)
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('us_tvs')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5" title="Transvaginal Sonography (TVS)">
+                    <i class="fa-solid fa-microscope text-purple-600"></i> TVS Scan
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('xray_chest')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-x-ray text-slate-600"></i> Chest X-Ray
+                </button>
+                <button type="button" onclick="applyUltrasoundReportType('ecg_12')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-wave-square text-emerald-600"></i> 12-Lead ECG
+                </button>
+                <button type="button" onclick="clearImagingBox()" class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 text-xs font-semibold transition-colors ml-auto">
+                    <i class="fa-solid fa-eraser mr-1"></i> Clear Text
+                </button>
             </div>
         </div>
 
+        <div class="p-5 bg-white space-y-3">
+            <input type="hidden" name="results[{$imagingResId}][id]" value="{$imagingResId}">
+            <input type="hidden" name="results[{$imagingResId}][show]" value="1">
+            <input type="hidden" name="results[{$imagingResId}][unit]" value="">
+            <input type="hidden" name="results[{$imagingResId}][range]" value="">
+            <input type="hidden" name="results[{$imagingResId}][flag]" value="">
+
+            <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-feather text-teal-600"></i> Report Body &amp; Clinical Findings (Full Page Narrative):
+                </span>
+                <span id="active-study-indicator" class="text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    Ultrasound Narrative Mode
+                </span>
+            </div>
+
+            <textarea id="imaging-narrative-textarea" name="results[{$imagingResId}][value]" rows="20" class="field w-full font-mono text-sm leading-relaxed p-4 border-2 border-teal-300 rounded-2xl shadow-inner focus:border-teal-500 focus:ring-2 focus:ring-teal-200" placeholder="Type or paste the full clinical narrative report here...&#10;&#10;e.g.&#10;LIVER: Normal in size and echotexture...&#10;GALLBLADDER: Normal lumen, no calculus...&#10;&#10;IMPRESSION: Normal study.">{$currentImagingValSafe}</textarea>
+            <p class="text-[11px] text-slate-500 flex items-center justify-between">
+                <span><i class="fa-solid fa-circle-info text-teal-600 mr-1"></i> This narrative prints directly as a full-page clean report under <strong>{$activeTestLabel}</strong> without reference columns.</span>
+                <span class="text-slate-400">Doctors can edit organs, dimensions, and conclusion before saving.</span>
+            </p>
+        </div>
+HTML;
+    } else {
+        $testContentHtml = <<<HTML
         <div class="px-5 py-3 bg-blue-50/60 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2">
             <strong class="text-blue-950 text-sm tracking-wide font-extrabold">{$activeTestLabel}</strong>
             <span class="text-xs text-blue-800 font-semibold">Untick <em>Show</em> to hide a line · Flag is auto-calculated</span>
@@ -557,6 +700,24 @@ $content .= <<<HTML
             <textarea name="test_methodology" rows="5" class="field w-full font-mono text-xs leading-relaxed" placeholder="Enter methodology paragraphs, kit details, principle, interpretation, comments... (e.g. Methodologies: ..., Comments: ..., Interpretation: ...)">{$activeTestMethodologySafe}</textarea>
             <input type="hidden" name="active_test_id" value="{$activeTestIdSafe}">
         </div>
+HTML;
+    }
+
+    $content .= <<<HTML
+    <div class="bg-white border border-slate-200/90 rounded-3xl shadow-card overflow-hidden">
+        <div class="border-b border-slate-100 bg-slate-50/70 p-5">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs font-medium">
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Lab No</span><strong class="font-mono text-base font-black text-slate-900">{$labNoSafe}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">MR No</span><strong class="font-mono text-sm font-bold text-slate-800">{$mrNo}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Patient</span><strong class="text-sm font-bold text-slate-900">{$patientName}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Age / Sex</span><strong class="text-slate-800">{$age} yrs / {$gender}</strong></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Phone</span><span class="text-slate-700">{$phone}</span></div>
+                <div><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Registered</span><span class="text-slate-700">{$regAt}</span></div>
+                <div class="sm:col-span-2"><span class="block text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">Referring doctor</span><span class="text-slate-800 font-semibold">{$doctor}</span></div>
+            </div>
+        </div>
+
+        {$testContentHtml}
 
         <div class="border-t border-slate-200 p-4 space-y-2">
             <label class="block text-xs font-bold uppercase tracking-wide text-rose-700">Notes for report</label>
@@ -815,5 +976,95 @@ $content .= <<<'SCRIPT'
 })();
 </script>
 SCRIPT;
+
+$content .= '<script>';
+$content .= 'window.__IMAGING_TEMPLATES_MAP__ = ' . $tplJsonMapEncoded . ';';
+$content .= <<<'JSSCRIPT'
+window.__IMAGING_PRESETS__ = {
+    us_whole_abd: "EXAMINATION: ULTRASOUND WHOLE ABDOMEN & PELVIS\n\nLIVER:\nNormal in size, smooth contour and uniform parenchymal echotexture. No focal solid or cystic mass lesion seen. Intrahepatic biliary tree and portal vein are normal in caliber.\n\nGALLBLADDER:\nNormal in size and shape. Wall thickness is normal (< 3 mm). Acoustic lumen is completely clear; no calculus, sludge or mass lesion seen. Common bile duct (CBD) is normal.\n\nPANCREAS:\nVisualized head, body and tail appear normal in size and echogenicity. Main pancreatic duct is not dilated.\n\nSPLEEN:\nNormal in size and parenchymal echotexture. No splenomegaly or focal lesion noted.\n\nKIDNEYS:\nBoth kidneys are normal in size, shape and cortical thickness. Corticomedullary differentiation is well preserved. No calculus or hydronephrosis seen bilaterally.\n\nURINARY BLADDER:\nWell distended with thin, smooth walls and clear lumen. No intraluminal calculus or mass.\n\nPELVIS / PROSTATE:\nVisualized pelvic structures are unremarkable. No free fluid in abdomen or pelvis.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF WHOLE ABDOMEN & PELVIS.",
+
+    us_upper_abd: "EXAMINATION: ULTRASOUND UPPER ABDOMEN\n\nLIVER:\nNormal in size, shape and parenchymal echotexture. No focal mass, abscess, or nodule seen. Intrahepatic ducts are not dilated. Portal vein is normal in caliber.\n\nGALLBLADDER:\nNormal lumen without gallstones, sludge, or wall thickening. Common bile duct (CBD) measures within normal limits.\n\nPANCREAS:\nVisualized portions appear normal in size and echogenicity without mass or calcification.\n\nSPLEEN:\nNormal in size with homogenous parenchymal echotexture. No focal lesion or splenomegaly.\n\nKIDNEYS:\nBoth kidneys are normal in size, shape, and cortical thickness. No calculus or hydronephrosis seen.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF UPPER ABDOMEN.",
+
+    us_kub: "EXAMINATION: ULTRASOUND KUB & PROSTATE\n\nRIGHT KIDNEY:\nMeasures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nLEFT KIDNEY:\nMeasures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nURETERS:\nBoth ureters are not dilated; no obstructive ureteric calculus visualized.\n\nURINARY BLADDER:\nAdequately distended with clear acoustic lumen. Bladder wall thickness is smooth and uniform (< 3 mm). No intraluminal calculus, mass, or diverticulum seen.\n- Pre-void volume: Adequate.\n- Post-void residual (PVR): Insignificant (< 20 ml).\n\nPROSTATE:\nNormal in size, shape, and echotexture with smooth capsule. Estimated volume is within normal age-related limits. Median lobe is not enlarged.\n\nIMPRESSION:\nNORMAL ULTRASOUND KUB & PROSTATE. NO EVIDENCE OF NEPHROLITHIASIS OR URINARY TRACT OBSTRUCTION.",
+
+    us_pelvis: "EXAMINATION: ULTRASOUND PELVIS (FEMALE / GYNAECOLOGICAL)\n\nURINARY BLADDER:\nWell distended with clear lumen and smooth walls.\n\nUTERUS:\n- Position: Anteverted.\n- Size & Contour: Normal in size and regular in contour.\n- Myometrium: Homogeneous echotexture. No focal leiomyoma (fibroid), adenomyosis, or localized mass lesion seen.\n- Endometrium: Central, regular, and well-defined endometrial stripe measuring within normal physiological limits for cycle phase.\n\nCERVIX:\nNormal in appearance. No Nabothian cyst or mass identified.\n\nRIGHT OVARY:\nVisualized and measures normal in size with normal follicular pattern. No cystic or solid mass lesion seen.\n\nLEFT OVARY:\nVisualized and measures normal in size with normal follicular pattern. No cystic or solid mass lesion seen.\n\nADNEXAE & POUCH OF DOUGLAS (POD):\nBoth adnexal regions are free. No adnexal mass, localized collection, or free fluid in the Pouch of Douglas.\n\nIMPRESSION:\nNORMAL PELVIC ULTRASOUND EXAMINATION. NORMAL APPEARANCE OF UTERUS AND BOTH OVARIES.",
+
+    us_obstetric: "EXAMINATION: OBSTETRIC ULTRASOUND SCAN (ANTENATAL)\n\nFETAL VIABILITY & NUMBER:\n- Number of fetuses: Single live intrauterine fetus.\n- Cardiac Activity: Present and regular (Fetal Heart Rate: ~144 bpm).\n- Fetal Movements: Active somatic and limb movements noted.\n- Presentation: Cephalic / Vertex.\n\nFETAL BIOMETRY:\n- Biparietal Diameter (BPD): Normal for gestational age.\n- Femur Length (FL): Normal for gestational age.\n- Abdominal Circumference (AC): Normal for gestational age.\n- Head Circumference (HC): Normal for gestational age.\n- Average Gestational Age (EGA): Consistent with dates.\n- Expected Date of Delivery (EDD): Consistent with biometry.\n\nAMNIOTIC FLUID (LIQUOR):\nAdequate in quantity. Amniotic fluid index (AFI) is within normal limits.\n\nPLACENTA:\n- Position: Anterior / Fundal, Grade I maturity.\n- Relation to Os: Lower margin is well clear of the internal cervical os. No retroplacental hematoma seen.\n\nIMPRESSION:\nSINGLE LIVE INTRAUTERINE PREGNANCY CORRESPONDING TO GESTATIONAL AGE WITH ACTIVE FETAL MOVEMENTS AND NORMAL LIQUOR / PLACENTAL POSITION.",
+
+    us_anomaly: "EXAMINATION: TARGETED FETAL ANOMALY SCAN (2ND TRIMESTER)\n\nFETAL BIOMETRY & VIABILITY:\n- Single live fetus in cephalic presentation.\n- Normal regular fetal cardiac activity and somatic movements.\n- Fetal biometry (BPD, HC, AC, FL) corresponds to clinical gestational age.\n\nANATOMICAL SURVEY:\n- Head & Brain: Intact skull contour, symmetrical lateral ventricles, cavum septum pellucidum visualized, normal posterior fossa & cerebellum.\n- Face: Both orbits, lens, nasal bone, and intact upper lip visualized.\n- Spine: Complete and intact vertebrae from cervical to sacral region in sagittal and transverse planes.\n- Thorax & Heart: Intact diaphragm, normal 4-chamber cardiac view, normal outflow tracts (LVOT/RVOT), and normal cardiac rhythm.\n- Abdomen: Intact anterior abdominal wall, normal stomach bubble, intact cord insertion. Both kidneys and bladder visualized.\n- Limbs: Bilateral upper and lower long bones, hands, and feet visualized and appear normal.\n- Amniotic Fluid: Adequate in volume.\n- Placenta: Normal position and echotexture, clear of internal os. 3-vessel umbilical cord identified.\n\nIMPRESSION:\nTARGETED ANOMALY SCAN REVEALS NO GROSS CONGENITAL OR STRUCTURAL ANOMALY DETECTED AT PRESENT GESTATIONAL AGE.",
+
+    us_tvs: "EXAMINATION: TRANSVAGINAL ULTRASOUND SCAN (TVS)\n\nUTERUS:\n- Position: Anteverted.\n- Myometrium: Homogeneous echotexture throughout. No focal intramural, subserosal, or submucosal fibroid.\n- Endometrium: Distinct trilaminar / secretory endometrial stripe measuring normal in thickness. Cavity is empty with regular margins.\n- Cervix: Normal length and internal os closed.\n\nRIGHT OVARY:\nNormal in volume and location. Follicles are peripheral and physiological in size. No complex ovarian mass.\n\nLEFT OVARY:\nNormal in volume and location. Follicles are peripheral and physiological in size. No complex ovarian mass.\n\nPOUCH OF DOUGLAS:\nFree of fluid, localized collection, or endometriotic deposits.\n\nIMPRESSION:\nNORMAL TRANSVAGINAL ULTRASOUND STUDY (TVS). UNREMARKABLE PELVIC ORGANS.",
+
+    us_scrotal: "EXAMINATION: ULTRASOUND SCROTUM & COLOR DOPPLER\n\nRIGHT TESTIS:\nNormal in size, shape, and homogenous echotexture. Normal intratesticular vascular flow demonstrated on Color and Spectral Doppler. No focal intratesticular mass or calcification.\n- Right Epididymis: Normal size and echogenicity.\n- Tunica Vaginalis: No hydrocele.\n\nLEFT TESTIS:\nNormal in size, shape, and homogenous echotexture. Normal intratesticular vascular flow demonstrated on Color and Spectral Doppler. No focal intratesticular mass or calcification.\n- Left Epididymis: Normal size and echogenicity.\n- Tunica Vaginalis: No hydrocele.\n\nPAMPINIFORM PLEXUS:\nVenous channels demonstrate normal diameter bilaterally (< 2.0 mm). No retrograde venous reflux elicited during Valsalva maneuver. No evidence of varicocele bilaterally.\n\nIMPRESSION:\nNORMAL SCROTAL AND TESTICULAR COLOR DOPPLER STUDY. NO EVIDENCE OF EPIDIDYMO-ORCHITIS, HYDROCELE, OR VARICOCELE.",
+
+    us_thyroid: "EXAMINATION: ULTRASOUND THYROID & NECK\n\nRIGHT THYROID LOBE:\nNormal in dimensions and parenchymal echogenicity. No focal solid nodule, cystic lesion, or calcification identified. Normal vascularity on color Doppler.\n\nLEFT THYROID LOBE:\nNormal in dimensions and parenchymal echogenicity. No focal solid nodule, cystic lesion, or calcification identified. Normal vascularity on color Doppler.\n\nISTHMUS:\nNormal in thickness (< 3 mm) and uniform in texture.\n\nCERVICAL LYMPH NODES:\nNo pathologically enlarged or suspicious cervical lymph nodes identified bilaterally.\n\nIMPRESSION:\nNORMAL ULTRASOUND EXAMINATION OF THYROID GLAND. NO EVIDENCE OF GOITRE, NODULE, OR CYSTIC LESION.",
+
+    us_breast: "EXAMINATION: BILATERAL BREAST ULTRASOUND (SONOMAMMOGRAPHY)\n\nRIGHT BREAST:\nNormal fibroglandular parenchyma with normal ductal pattern. No focal solid mass lesion, cyst, or architectural distortion seen. Retroareolar ducts are not dilated.\n\nLEFT BREAST:\nNormal fibroglandular parenchyma with normal ductal pattern. No focal solid mass lesion, cyst, or architectural distortion seen. Retroareolar ducts are not dilated.\n\nAXILLARY REGIONS:\nVisualized bilateral axillary lymph nodes show normal preserved fatty hilum with benign sonographic morphology. No suspicious lymphadenopathy.\n\nACR BI-RADS ASSESSMENT: CATEGORY 1 (NEGATIVE / NORMAL STUDY).\n\nIMPRESSION:\nNORMAL BILATERAL BREAST ULTRASOUND (BI-RADS CATEGORY 1). NO SONOGRAPHIC EVIDENCE OF SOLID OR CYSTIC LESION.",
+
+    us_follicular: "EXAMINATION: ULTRASOUND FOLLICULAR STUDY (FOLLICULOMETRY)\n\nDAY OF CYCLE: Day _____\n\nENDOMETRIUM:\n- Thickness: _____ mm.\n- Echopattern: Triple-line pattern (Trilaminar) / Secretory.\n\nRIGHT OVARY:\n- Dominant Follicle: _____ x _____ mm.\n- Secondary Follicles: Multiple small developing follicles.\n\nLEFT OVARY:\n- Dominant Follicle: _____ x _____ mm.\n- Secondary Follicles: Multiple small developing follicles.\n\nFREE FLUID IN POUCH OF DOUGLAS:\nNone / Minimal physiological fluid.\n\nIMPRESSION:\nFOLLICULAR STUDY SHOWING MATURING DOMINANT FOLLICLE AS NOTED ABOVE.",
+
+    us_soft_tissue: "EXAMINATION: ULTRASOUND SOFT TISSUE / SWELLING\n\nSITE OF EXAMINATION: ____________________\n\nFINDINGS:\n- High-frequency sonographic examination of the region demonstrates normal subcutaneous tissue and muscular planes.\n- No localized cystic lesion, solid mass, abscess, or hematoma identified.\n- Overlying skin and deep fascia appear intact.\n- Color Doppler shows normal physiological vascularity without hypervascularity.\n\nIMPRESSION:\nNORMAL ULTRASOUND EVALUATION OF SOFT TISSUES. NO FOCAL MASS LESION OR FLUID COLLECTION NOTED.",
+
+    xray_chest: "EXAMINATION: CHEST X-RAY PA VIEW\n\nCHEST PA VIEW FINDINGS:\n- Lung fields: Clear with normal bronchovascular markings. No focal airspace consolidation, mass, or cavity noted.\n- Costophrenic & cardiophrenic angles: Sharp and clear bilaterally.\n- Cardiac silhouette: Normal in size and contour. Cardiothoracic ratio is within normal limits (< 50%).\n- Hilar structures & mediastinum: Normal appearance.\n- Bony cage & soft tissues: Intact.\n\nIMPRESSION: Normal radiological study of chest.",
+
+    ecg_12: "EXAMINATION: 12-LEAD ELECTROCARDIOGRAM (ECG)\n\n12-LEAD ECG FINDINGS:\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 72 bpm\n- PR Interval: 0.16 sec (Normal: 0.12 - 0.20s)\n- QRS Duration: 0.08 sec (Normal: < 0.10s)\n- QTc: 410 ms\n- Axis: Normal cardiac axis (+45°)\n- ST-T wave changes: No significant ST elevation/depression or T wave inversion.\n\nIMPRESSION: Normal 12-lead Electrocardiogram (ECG)."
+};
+
+// Aliases for backwards compatibility
+window.__IMAGING_PRESETS__.us_abd = window.__IMAGING_PRESETS__.us_whole_abd;
+
+function applyUltrasoundReportType(key) {
+    const ta = document.getElementById('imaging-narrative-textarea');
+    const select = document.getElementById('us-report-type-select');
+    const indicator = document.getElementById('active-study-indicator');
+    if (!ta) return;
+
+    if (select && select.value !== key) {
+        select.value = key;
+    }
+
+    const text = window.__IMAGING_PRESETS__[key];
+    if (!text) return;
+
+    if (ta.value.trim() && !confirm('Replace current report content with the selected Ultrasound Report Type template?')) {
+        return;
+    }
+
+    ta.value = text;
+    if (indicator) {
+        const selectedOpt = select ? select.options[select.selectedIndex] : null;
+        const label = selectedOpt ? selectedOpt.text : 'Ultrasound';
+        indicator.textContent = label + ' Loaded';
+    }
+    ta.focus();
+}
+
+function insertTplFromSelect() {
+    const picker = document.getElementById('tpl-picker');
+    const ta = document.getElementById('imaging-narrative-textarea');
+    if (!picker || !ta) return;
+    const val = picker.value;
+    if (!val || !window.__IMAGING_TEMPLATES_MAP__ || !window.__IMAGING_TEMPLATES_MAP__[val]) return;
+    if (ta.value.trim() && !confirm('Replace current report content with the selected template?')) {
+        return;
+    }
+    ta.value = window.__IMAGING_TEMPLATES_MAP__[val];
+    ta.focus();
+}
+
+function loadImagingPreset(key) {
+    applyUltrasoundReportType(key);
+}
+
+function clearImagingBox() {
+    const ta = document.getElementById('imaging-narrative-textarea');
+    if (!ta) return;
+    if (confirm('Clear report narrative text?')) {
+        ta.value = '';
+        ta.focus();
+    }
+}
+JSSCRIPT;
+$content .= '</script>';
 
 render_page('Enter Results', 'main-lab', 'results-entry', $content);
