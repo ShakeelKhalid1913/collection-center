@@ -89,6 +89,7 @@ foreach ($allLabEntries as $e) {
         'modality_label' => $modalityLabel,
         'modality_icon' => $modalityIcon,
         'modality_badge_class' => $modalityBadgeClass,
+        'source' => 'lab',
     ];
 }
 
@@ -153,13 +154,17 @@ foreach ($dedicatedScans as $sc) {
         'modality_label' => $modalityLabel,
         'modality_icon' => $modalityIcon,
         'modality_badge_class' => $modalityBadgeClass,
+        'source' => 'imaging',
     ];
 }
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
+    <a href="/portals/main-lab/lab-entries/new.php" class="btn btn-primary text-xs py-2 px-3">
+        <i class="fa-solid fa-plus mr-1"></i> New Entry
+    </a>
     <a href="/portals/imaging/new-scan.php" class="btn btn-secondary text-xs py-2 px-3">
-        <i class="fa-solid fa-plus mr-1"></i> New Scan Booking
+        <i class="fa-solid fa-x-ray mr-1"></i> Imaging Study
     </a>
     <a href="/portals/main-lab/tests/estimate.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-calculator mr-1"></i> Test Estimate
@@ -271,11 +276,15 @@ if (empty($imagingEntries)) {
             : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending Findings</span>';
 
         $qLab = urlencode($row['lab_no']);
+        $isScan = ($row['source'] ?? '') === 'imaging';
+        $viewUrl = $isScan ? "/portals/imaging/reports.php?scan_no={$qLab}" : "/portals/main-lab/reports/preview.php?lab_no={$qLab}";
+        $editUrl = $isScan ? "/portals/imaging/results.php?scan_no={$qLab}" : "/portals/main-lab/results/entry.php?lab_no={$qLab}";
+        $slipUrl = $isScan ? "/portals/imaging/receipt.php?scan_no={$qLab}" : "/portals/main-lab/lab-entries/edit.php?lab_no={$qLab}";
 
         $content .= <<<TR
         <tr class="hover:bg-slate-50/80 transition-colors imaging-row" data-modality="{$modKey}" data-search="{$lNo} {$pName} {$study} {$doc}">
             <td class="py-3 px-3 font-mono font-bold text-teal-800 whitespace-nowrap">
-                <a href="/portals/main-lab/reports/preview.php?lab_no={$qLab}" class="hover:underline">{$lNo}</a>
+                <a href="{$viewUrl}" class="hover:underline">{$lNo}</a>
             </td>
             <td class="py-3 px-3">
                 <div class="font-extrabold text-slate-900 text-sm">{$pName}</div>
@@ -292,13 +301,13 @@ if (empty($imagingEntries)) {
             <td class="py-3 px-3 whitespace-nowrap">{$statusBadge}</td>
             <td class="py-3 px-3 text-right whitespace-nowrap">
                 <div class="inline-flex items-center gap-1.5">
-                    <a href="/portals/main-lab/reports/preview.php?lab_no={$qLab}" class="btn btn-primary text-xs px-2.5 py-1 font-bold shadow-2xs" title="View & Print Full Report">
+                    <a href="{$viewUrl}" class="btn btn-primary text-xs px-2.5 py-1 font-bold shadow-2xs" title="View & Print Full Report">
                         <i class="fa-solid fa-file-waveform mr-1"></i> View Report
                     </a>
-                    <a href="/portals/main-lab/results/entry.php?lab_no={$qLab}" class="btn btn-secondary text-xs px-2.5 py-1 font-bold" title="Edit Narrative Findings & Presets">
+                    <a href="{$editUrl}" class="btn btn-secondary text-xs px-2.5 py-1 font-bold" title="Edit Narrative Findings & Presets">
                         <i class="fa-solid fa-pen-to-square text-teal-600 mr-1"></i> Edit Findings
                     </a>
-                    <a href="/portals/main-lab/lab-entries/edit.php?lab_no={$qLab}" class="btn btn-secondary text-xs px-2 py-1" title="Edit Patient Info or Bill">
+                    <a href="{$slipUrl}" class="btn btn-secondary text-xs px-2 py-1" title="Edit Patient Info or Bill">
                         <i class="fa-solid fa-user-pen text-slate-600"></i>
                     </a>
                 </div>

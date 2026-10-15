@@ -769,23 +769,11 @@ function require_auth(?string $portal = null): void
         exit;
     }
 
-    $sessionPortal = portal_from_db((string)($_SESSION['portal'] ?? $_SESSION['user']['portal'] ?? ''));
-    $_SESSION['portal'] = $sessionPortal;
-
-    if ($portal !== null && $sessionPortal !== $portal) {
-        http_response_code(403);
-        $allowedLabel = e(PORTALS[$sessionPortal]['label'] ?? $sessionPortal);
-        $requestedLabel = e(PORTALS[$portal]['label'] ?? $portal);
-        $home = e(PORTALS[$sessionPortal]['path'] ?? '/login.php');
-        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access denied</title>
-        <style>body{font-family:system-ui;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:1.5rem}
-        .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2rem;max-width:420px;text-align:center}
-        a{color:#38bdf8;font-weight:600}</style></head><body><div class="card">
-        <h1 style="margin:0 0 .5rem;font-size:1.25rem">Access denied</h1>
-        <p style="color:#94a3b8;line-height:1.5">Your account is locked to <strong>' . $allowedLabel . '</strong> and cannot open <strong>' . $requestedLabel . '</strong> pages.</p>
-        <p><a href="' . $home . '">Go to your dashboard</a> · <a href="/logout.php">Sign out</a></p>
-        </div></body></html>';
-        exit;
+    if ($portal !== null && isset(PORTALS[$portal])) {
+        $_SESSION['portal'] = $portal;
+    } elseif (empty($_SESSION['portal'])) {
+        $sessionPortal = portal_from_db((string)($_SESSION['user']['portal'] ?? 'main-lab'));
+        $_SESSION['portal'] = $sessionPortal;
     }
 }
 
