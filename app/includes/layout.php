@@ -94,7 +94,6 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Reports & Findings', [
                 nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
-                nav_item("{$base}/reports.php", 'View Report', $activeKey, 'reports', null, 'fa-solid fa-file-waveform'),
                 nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
             nav_group('Reception & Billing', [
