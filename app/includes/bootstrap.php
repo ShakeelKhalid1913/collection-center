@@ -769,11 +769,9 @@ function require_auth(?string $portal = null): void
         exit;
     }
 
-    if ($portal !== null && isset(PORTALS[$portal])) {
-        $_SESSION['portal'] = $portal;
-    } elseif (empty($_SESSION['portal'])) {
-        $sessionPortal = portal_from_db((string)($_SESSION['user']['portal'] ?? 'main-lab'));
-        $_SESSION['portal'] = $sessionPortal;
+    $userPortal = portal_from_db((string)($_SESSION['user']['portal'] ?? ''));
+    if (!empty($userPortal) && isset(PORTALS[$userPortal])) {
+        $_SESSION['portal'] = $userPortal;
     }
 }
 

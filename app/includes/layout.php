@@ -86,30 +86,24 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Overview', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Ultrasound & Radiology', [
-                nav_item('/portals/main-lab/reports/radiology.php', 'Ultrasound & Radiology Hub', $activeKey, 'radiology-reports', null, 'fa-solid fa-file-waveform'),
-                nav_item('/portals/main-lab/results/entry.php', 'Report Edit (Findings)', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
-                nav_item('/portals/main-lab/lab-entries/new.php', 'New Scan / Lab Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
-                nav_item('/portals/main-lab/lab-entries/edit.php', 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
-                nav_item('/portals/main-lab/reports/history.php', 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
-                nav_item('/portals/main-lab/tests/estimate.php', 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
+            nav_group('Department Workstations', [
+                nav_item("{$base}/ultrasound.php", 'Ultrasound Station', $activeKey, 'station-us', null, 'fa-solid fa-wave-square'),
+                nav_item("{$base}/xray.php", 'X-Ray Station', $activeKey, 'station-xray', null, 'fa-solid fa-x-ray'),
+                nav_item("{$base}/ecg.php", 'ECG Station', $activeKey, 'station-ecg', null, 'fa-solid fa-heart-pulse'),
+                nav_item("{$base}/ct.php", 'CT Scan Station', $activeKey, 'station-ct', null, 'fa-solid fa-laptop-medical'),
             ]),
-            nav_group('Quick Study Booking', [
-                nav_item("{$base}/new-scan.php?modality=us", 'Ultrasound', $activeKey, 'modality-us', null, 'fa-solid fa-wave-square'),
-                nav_item("{$base}/new-scan.php?modality=xray", 'X-Ray', $activeKey, 'modality-xray', null, 'fa-solid fa-x-ray'),
-                nav_item("{$base}/new-scan.php?modality=ecg", 'ECG', $activeKey, 'modality-ecg', null, 'fa-solid fa-heart-pulse'),
-                nav_item("{$base}/new-scan.php?modality=ct", 'CT Scan', $activeKey, 'modality-ct', null, 'fa-solid fa-laptop-medical'),
-                nav_item("{$base}/pending-scans.php", 'Pending Studies', $activeKey, 'pending-scans', $badges['imaging_pending'] ?: null, 'fa-solid fa-clock'),
+            nav_group('Reports & Findings', [
+                nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
+                nav_item("{$base}/reports.php", 'View Report', $activeKey, 'reports', null, 'fa-solid fa-file-waveform'),
+                nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
-            nav_group('Finance & Receipts', [
-                nav_item('/portals/main-lab/receipts.php', 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
+            nav_group('Reception & Billing', [
+                nav_item("{$base}/new-scan.php", 'Book New Scan', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/patients.php", 'Patients', $activeKey, 'patients', null, 'fa-solid fa-users'),
+                nav_item("{$base}/receipt.php", 'Patient Bill / Slip', $activeKey, 'receipt', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
             ]),
-            nav_group('Catalog & Settings', [
-                nav_item('/portals/main-lab/tests/index.php', 'Tests Catalog', $activeKey, 'tests', null, 'fa-solid fa-flask'),
-                nav_item('/portals/main-lab/tests/prices.php', 'Add / Update Price', $activeKey, 'prices', null, 'fa-solid fa-tags'),
-                nav_item('/portals/main-lab/templates.php', 'Report Templates', $activeKey, 'templates', null, 'fa-solid fa-bookmark'),
-                nav_item('/portals/main-lab/settings/report-template.php', 'Header & Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
+            nav_group('Settings', [
                 nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
             ]),
         ],

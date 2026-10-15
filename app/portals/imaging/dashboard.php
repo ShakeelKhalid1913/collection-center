@@ -6,12 +6,25 @@ require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
-$studiesToday = result_repo()->countImagingToday();
-$pendingStudies = result_repo()->countImagingPending();
-$reportedStudies = result_repo()->countImagingReported();
-
-$imagingScans = mock('mock_imaging');
+$orgId = current_user()['organization_id'] ?? 'ORG-001';
+$liveScans = result_repo()->getImagingScans($orgId);
+$imagingScans = !empty($liveScans) ? $liveScans : mock('mock_imaging');
 $totalScans = count($imagingScans);
+
+$studiesToday = count(array_filter($imagingScans, fn($s) => (!empty($s['scan_date']) && $s['scan_date'] === date('Y-m-d')) || (!empty($s['created_at']) && str_starts_with((string)$s['created_at'], date('Y-m-d')))));
+if ($studiesToday === 0) {
+    $studiesToday = result_repo()->countImagingToday();
+}
+
+$pendingStudies = count(array_filter($imagingScans, fn($s) => in_array(strtolower((string)($s['status'] ?? '')), ['pending', 'in_progress', 'scanned'], true)));
+if ($pendingStudies === 0) {
+    $pendingStudies = result_repo()->countImagingPending();
+}
+
+$reportedStudies = count(array_filter($imagingScans, fn($s) => in_array(strtolower((string)($s['status'] ?? '')), ['reported', 'completed', 'verified'], true)));
+if ($reportedStudies === 0) {
+    $reportedStudies = result_repo()->countImagingReported();
+}
 
 // Spectrum Donut
 $total = max(10, $totalScans);
@@ -50,26 +63,30 @@ ob_start();
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5">
-            <a href="/portals/main-lab/lab-entries/new.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-teal-600 text-white font-bold text-xs sm:text-sm hover:bg-teal-700 transition-all shadow-sm">
-                <i class="fa-solid fa-file-circle-plus"></i>
-                <span>New Lab Entry</span>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/portals/imaging/new-scan.php" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs hover:bg-[#b2e62a] transition-all shadow-sm">
+                <i class="fa-solid fa-plus"></i>
+                <span>Book New Scan</span>
             </a>
-            <a href="/portals/imaging/new-scan.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
-                <i class="fa-solid fa-radiation"></i>
-                <span>New Imaging Study</span>
+            <a href="/portals/imaging/ultrasound.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-teal-50 text-teal-800 border border-teal-200 font-bold text-xs hover:bg-teal-100 transition-all">
+                <i class="fa-solid fa-wave-square"></i>
+                <span>Ultrasound</span>
             </a>
-            <a href="/portals/main-lab/tests/estimate.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 text-slate-950 font-bold text-xs sm:text-sm hover:bg-amber-400 transition-all shadow-sm">
-                <i class="fa-solid fa-calculator"></i>
-                <span>Test Estimate</span>
+            <a href="/portals/imaging/xray.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs hover:bg-blue-100 transition-all">
+                <i class="fa-solid fa-x-ray"></i>
+                <span>X-Ray</span>
             </a>
-            <a href="/portals/imaging/pending-scans.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
-                <i class="fa-solid fa-clock"></i>
-                <span>Pending Studies (<?= $pendingStudies ?>)</span>
+            <a href="/portals/imaging/ecg.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-rose-50 text-rose-800 border border-rose-200 font-bold text-xs hover:bg-rose-100 transition-all">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>ECG</span>
             </a>
-            <a href="/portals/imaging/reports.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
-                <i class="fa-solid fa-file-medical"></i>
-                <span>Radiology Reports</span>
+            <a href="/portals/imaging/ct.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 text-purple-800 border border-purple-200 font-bold text-xs hover:bg-purple-100 transition-all">
+                <i class="fa-solid fa-laptop-medical"></i>
+                <span>CT Scan</span>
+            </a>
+            <a href="/portals/imaging/report-history.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-all border border-slate-200">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Report History</span>
             </a>
         </div>
     </div>
@@ -145,28 +162,28 @@ ob_start();
                 <p class="text-xs text-slate-500 mb-5">Quick initiation for scheduled imaging studies.</p>
 
                 <div class="grid grid-cols-2 gap-2.5">
-                    <a href="/portals/imaging/new-scan.php?modality=xray" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center group">
+                    <a href="/portals/imaging/ultrasound.php" class="p-3.5 rounded-2xl bg-teal-50/60 hover:bg-teal-100/80 border border-teal-200 transition-all text-center group">
+                        <i class="fa-solid fa-wave-square text-2xl text-teal-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-bold text-slate-900 block">Ultrasound</span>
+                        <span class="text-[10px] text-teal-700 font-semibold">Open Station &rarr;</span>
+                    </a>
+
+                    <a href="/portals/imaging/xray.php" class="p-3.5 rounded-2xl bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-all text-center group">
                         <i class="fa-solid fa-x-ray text-2xl text-blue-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">Digital X-Ray</span>
-                        <span class="text-[10px] text-slate-500">Chest, Bones, Spine</span>
+                        <span class="text-[10px] text-blue-700 font-semibold">Open Station &rarr;</span>
                     </a>
 
-                    <a href="/portals/imaging/new-scan.php?modality=ct" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center group">
-                        <i class="fa-solid fa-laptop-medical text-2xl text-purple-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">CT Scan</span>
-                        <span class="text-[10px] text-slate-500">Brain, Abdomen, Chest</span>
-                    </a>
-
-                    <a href="/portals/imaging/new-scan.php?modality=us" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center group">
-                        <i class="fa-solid fa-wave-square text-2xl text-emerald-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">Ultrasound</span>
-                        <span class="text-[10px] text-slate-500">Abdomen, Pelvis, Doppler</span>
-                    </a>
-
-                    <a href="/portals/imaging/new-scan.php?modality=ecg" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center group">
+                    <a href="/portals/imaging/ecg.php" class="p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200 transition-all text-center group">
                         <i class="fa-solid fa-heart-pulse text-2xl text-rose-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">12-Lead ECG</span>
-                        <span class="text-[10px] text-slate-500">Cardiac rhythm</span>
+                        <span class="text-[10px] text-rose-700 font-semibold">Open Station &rarr;</span>
+                    </a>
+
+                    <a href="/portals/imaging/ct.php" class="p-3.5 rounded-2xl bg-purple-50/60 hover:bg-purple-100/80 border border-purple-200 transition-all text-center group">
+                        <i class="fa-solid fa-laptop-medical text-2xl text-purple-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-bold text-slate-900 block">CT Scan</span>
+                        <span class="text-[10px] text-purple-700 font-semibold">Open Station &rarr;</span>
                     </a>
                 </div>
             </div>
