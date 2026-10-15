@@ -470,9 +470,11 @@ $content .= <<<HTML
         </div>
     </div>
 </div>
+HTML;
 
-<script>
-const EMP_MAP = {$empMapJson};
+$content .= '<script>';
+$content .= 'const EMP_MAP = ' . $empMapJson . ';' . "\n";
+$content .= <<<'SCRIPT'
 let webcamStream = null;
 let capturedDataUri = null;
 
@@ -688,7 +690,7 @@ function printMonthlyAttendance() {
     win.document.write('<!DOCTYPE html><html><head><title>Monthly Attendance Summary</title><style>@media print { body { margin: 0; padding: 15px; font-family: Arial, sans-serif; } @page { size: A4; margin: 12mm; } }</style></head><body onload="window.print(); window.close();">' + printContent + '</body></html>');
     win.document.close();
 }
-</script>
-HTML;
+SCRIPT;
+$content .= '</script>';
 
 render_page('Employee Attendance', 'main-lab', 'staff-attendance', $content);

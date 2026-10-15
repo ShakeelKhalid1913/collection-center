@@ -46,6 +46,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/lab-entries/edit.php", 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
                 nav_item("{$base}/results/entry.php", 'Report Edit', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
                 nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
+                nav_item("{$base}/reports/radiology.php", 'Ultrasound & Radiology', $activeKey, 'radiology-reports', null, 'fa-solid fa-file-waveform'),
                 nav_item("{$base}/tests/estimate.php", 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
             ]),
             nav_group('Patients', [
@@ -90,6 +91,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item('/portals/main-lab/lab-entries/edit.php', 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
                 nav_item('/portals/main-lab/results/entry.php', 'Report Edit', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
                 nav_item('/portals/main-lab/reports/history.php', 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
+                nav_item('/portals/main-lab/reports/radiology.php', 'Ultrasound & Radiology Reports', $activeKey, 'radiology-reports', null, 'fa-solid fa-file-waveform'),
                 nav_item('/portals/main-lab/tests/estimate.php', 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
             ]),
             nav_group('Diagnostic Imaging', [
@@ -103,7 +105,8 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/new-scan.php", 'New Study', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
                 nav_item("{$base}/pending-scans.php", 'Pending Studies', $activeKey, 'pending-scans', $badges['imaging_pending'] ?: null, 'fa-solid fa-clock'),
                 nav_item("{$base}/results.php", 'Findings / Results', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
-                nav_item("{$base}/reports.php", 'Imaging Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
+                nav_item('/portals/main-lab/reports/radiology.php', 'Radiology Reports Hub', $activeKey, 'radiology-reports', null, 'fa-solid fa-file-waveform'),
+                nav_item("{$base}/reports.php", 'Single Report View', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
                 nav_item("{$base}/report-history.php", 'Imaging History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
             nav_group('Finance & Receipts', [
