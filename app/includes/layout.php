@@ -87,17 +87,19 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
             nav_group('Department Workstations', [
+                nav_item("{$base}/laboratory.php", 'Laboratory Station', $activeKey, 'station-lab', null, 'fa-solid fa-flask'),
                 nav_item("{$base}/ultrasound.php", 'Ultrasound Station', $activeKey, 'station-us', null, 'fa-solid fa-wave-square'),
                 nav_item("{$base}/xray.php", 'X-Ray Station', $activeKey, 'station-xray', null, 'fa-solid fa-x-ray'),
                 nav_item("{$base}/ecg.php", 'ECG Station', $activeKey, 'station-ecg', null, 'fa-solid fa-heart-pulse'),
                 nav_item("{$base}/ct.php", 'CT Scan Station', $activeKey, 'station-ct', null, 'fa-solid fa-laptop-medical'),
+                nav_item("{$base}/mri.php", 'MRI Station', $activeKey, 'station-mri', null, 'fa-solid fa-magnet'),
             ]),
             nav_group('Reports & Findings', [
                 nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
                 nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
             nav_group('Reception & Billing', [
-                nav_item("{$base}/new-scan.php", 'Book New Scan', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/new-scan.php", 'New Booking (Unified Slip)', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
                 nav_item("{$base}/patients.php", 'Patients', $activeKey, 'patients', null, 'fa-solid fa-users'),
                 nav_item("{$base}/receipt.php", 'Patient Bill / Slip', $activeKey, 'receipt', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),

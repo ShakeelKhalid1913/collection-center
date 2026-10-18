@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../includes/components.php';
 $message = '';
 $settings = mock('mock_lab_settings');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $ok = setting_repo()->save([
         'name' => $_POST['dept'] ?? 'Diagnostic Center',
         'footer' => $_POST['footer'] ?? '',

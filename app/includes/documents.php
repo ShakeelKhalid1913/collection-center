@@ -1205,6 +1205,10 @@ function get_test_department_info(string $testTitle, ?string $category = null): 
             $deptTitle = 'DEPARTMENT OF RADIOLOGY & ULTRASONOGRAPHY';
         } elseif (preg_match('/(ecg|ekg|echocardiogra)/i', $title)) {
             $deptTitle = 'DEPARTMENT OF CARDIOLOGY & ECG';
+        } elseif (preg_match('/(mri|magnetic resonance)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF MRI & ADVANCED IMAGING';
+        } elseif (preg_match('/(ct scan|computed tomography)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF COMPUTED TOMOGRAPHY (CT SCAN)';
         } elseif (preg_match('/(x-ray|xray|radiography)/i', $title)) {
             $deptTitle = 'DEPARTMENT OF RADIOLOGY (X-RAY)';
         }
@@ -2026,7 +2030,7 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false)
                         <strong style="font-size: 18px; text-transform: uppercase; letter-spacing: 1.2px; color: #0f172a;">' . e($studyTitle) . '</strong>
                         <div style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px;">' . e($deptBanner) . '</div>
                     </div>
-                    <div style="font-size: 13.5px; line-height: 1.85; white-space: pre-wrap; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px;">' . nl2br(e($imagingText)) . '</div>
+                    <div style="font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px;">' . e($imagingText) . '</div>
                 </td>
             </tr>';
             continue;
@@ -2429,12 +2433,20 @@ function receipt_line_items(array $entry, string $orgId = 'ORG-001'): array
                 }
             }
         }
+        $deptMeta = get_department_meta($label, (string)($test['category'] ?? ''));
+        $vialText = $deptMeta['name'];
+        if ($deptMeta['id'] === 'lab') {
+            $sampleType = trim((string)($test['sample_type'] ?? ''));
+            $vialText = $sampleType !== '' ? $sampleType : 'Lab';
+        }
 
         $subtotal += $price;
         $items[] = [
             'name' => $label,
             'price' => $price,
-            'vial' => '—',
+            'vial' => $vialText,
+            'department' => $deptMeta['name'],
+            'dept_id' => $deptMeta['id'],
             'expected' => '—',
         ];
     }
@@ -2530,8 +2542,8 @@ CSS;
         <table class="lab-bill__table">
             <thead>
                 <tr>
-                    <th class="lab-bill__c-vial">Vial No.</th>
-                    <th class="lab-bill__c-test">Test Name</th>
+                    <th class="lab-bill__c-vial">Dept / Vial</th>
+                    <th class="lab-bill__c-test">Test / Investigation</th>
                     <th class="lab-bill__c-exp">Expected Report</th>
                     <th class="lab-bill__c-price">Price (Rs)</th>
                 </tr>

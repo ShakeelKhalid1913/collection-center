@@ -66,7 +66,11 @@ ob_start();
         <div class="flex flex-wrap items-center gap-2">
             <a href="/portals/imaging/new-scan.php" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs hover:bg-[#b2e62a] transition-all shadow-sm">
                 <i class="fa-solid fa-plus"></i>
-                <span>Book New Scan</span>
+                <span>Book Diagnostic Order</span>
+            </a>
+            <a href="/portals/imaging/laboratory.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs hover:bg-emerald-100 transition-all">
+                <i class="fa-solid fa-flask-vial"></i>
+                <span>Laboratory</span>
             </a>
             <a href="/portals/imaging/ultrasound.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-teal-50 text-teal-800 border border-teal-200 font-bold text-xs hover:bg-teal-100 transition-all">
                 <i class="fa-solid fa-wave-square"></i>
@@ -83,6 +87,10 @@ ob_start();
             <a href="/portals/imaging/ct.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 text-purple-800 border border-purple-200 font-bold text-xs hover:bg-purple-100 transition-all">
                 <i class="fa-solid fa-laptop-medical"></i>
                 <span>CT Scan</span>
+            </a>
+            <a href="/portals/imaging/mri.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold text-xs hover:bg-indigo-100 transition-all">
+                <i class="fa-solid fa-magnet"></i>
+                <span>MRI</span>
             </a>
             <a href="/portals/imaging/report-history.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-all border border-slate-200">
                 <i class="fa-solid fa-folder-open"></i>
@@ -161,29 +169,41 @@ ob_start();
                 <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Diagnostic Modalities</h3>
                 <p class="text-xs text-slate-500 mb-5">Quick initiation for scheduled imaging studies.</p>
 
-                <div class="grid grid-cols-2 gap-2.5">
-                    <a href="/portals/imaging/ultrasound.php" class="p-3.5 rounded-2xl bg-teal-50/60 hover:bg-teal-100/80 border border-teal-200 transition-all text-center group">
-                        <i class="fa-solid fa-wave-square text-2xl text-teal-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <a href="/portals/imaging/laboratory.php" class="p-3 rounded-2xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 transition-all text-center group">
+                        <i class="fa-solid fa-flask-vial text-xl text-emerald-600 mb-1 block group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-bold text-slate-900 block">Laboratory</span>
+                        <span class="text-[10px] text-emerald-700 font-semibold">Open Station &rarr;</span>
+                    </a>
+
+                    <a href="/portals/imaging/ultrasound.php" class="p-3 rounded-2xl bg-teal-50/60 hover:bg-teal-100/80 border border-teal-200 transition-all text-center group">
+                        <i class="fa-solid fa-wave-square text-xl text-teal-600 mb-1 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">Ultrasound</span>
                         <span class="text-[10px] text-teal-700 font-semibold">Open Station &rarr;</span>
                     </a>
 
-                    <a href="/portals/imaging/xray.php" class="p-3.5 rounded-2xl bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-all text-center group">
-                        <i class="fa-solid fa-x-ray text-2xl text-blue-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                    <a href="/portals/imaging/xray.php" class="p-3 rounded-2xl bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-all text-center group">
+                        <i class="fa-solid fa-x-ray text-xl text-blue-600 mb-1 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">Digital X-Ray</span>
                         <span class="text-[10px] text-blue-700 font-semibold">Open Station &rarr;</span>
                     </a>
 
-                    <a href="/portals/imaging/ecg.php" class="p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200 transition-all text-center group">
-                        <i class="fa-solid fa-heart-pulse text-2xl text-rose-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                    <a href="/portals/imaging/ecg.php" class="p-3 rounded-2xl bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200 transition-all text-center group">
+                        <i class="fa-solid fa-heart-pulse text-xl text-rose-600 mb-1 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">12-Lead ECG</span>
                         <span class="text-[10px] text-rose-700 font-semibold">Open Station &rarr;</span>
                     </a>
 
-                    <a href="/portals/imaging/ct.php" class="p-3.5 rounded-2xl bg-purple-50/60 hover:bg-purple-100/80 border border-purple-200 transition-all text-center group">
-                        <i class="fa-solid fa-laptop-medical text-2xl text-purple-600 mb-1.5 block group-hover:scale-110 transition-transform"></i>
+                    <a href="/portals/imaging/ct.php" class="p-3 rounded-2xl bg-purple-50/60 hover:bg-purple-100/80 border border-purple-200 transition-all text-center group">
+                        <i class="fa-solid fa-laptop-medical text-xl text-purple-600 mb-1 block group-hover:scale-110 transition-transform"></i>
                         <span class="text-xs font-bold text-slate-900 block">CT Scan</span>
                         <span class="text-[10px] text-purple-700 font-semibold">Open Station &rarr;</span>
+                    </a>
+
+                    <a href="/portals/imaging/mri.php" class="p-3 rounded-2xl bg-indigo-50/60 hover:bg-indigo-100/80 border border-indigo-200 transition-all text-center group">
+                        <i class="fa-solid fa-magnet text-xl text-indigo-600 mb-1 block group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-bold text-slate-900 block">MRI Scan</span>
+                        <span class="text-[10px] text-indigo-700 font-semibold">Open Station &rarr;</span>
                     </a>
                 </div>
             </div>

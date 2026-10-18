@@ -29,7 +29,10 @@ foreach ($sourceEntries as $e) {
     $rows[] = [
         '<span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($labNo) . '</span>',
         '<span class="font-bold text-slate-800">' . e($pName) . '</span>',
-        '<span class="text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($e['tests'] ?? ''))) . '</span>',
+        '<div class="space-y-1.5 max-w-md">' .
+            '<div class="text-xs text-slate-800 font-semibold">' . e(normalize_tests_list((string)($e['tests'] ?? ''))) . '</div>' .
+            render_department_badges_html((string)($e['tests'] ?? ''), $labNo) .
+        '</div>',
         status_badge($st),
         '<span class="text-xs text-slate-500 whitespace-nowrap">' . e(format_date($dateVal)) . '</span>',
         $actions,

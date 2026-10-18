@@ -274,4 +274,6 @@ if ($currentLab !== '' && $entry) {
     $content .= card('<p class="p-6 text-slate-600">Use <strong>Search</strong> or the <strong>visit dropdown</strong> above to open a patient bill.</p>');
 }
 
-render_page('Patient Bill', 'main-lab', 'receipts', $content, true);
+$portal = current_portal();
+$activeKey = ($portal === 'imaging') ? 'receipt' : 'receipts';
+render_page('Patient Bill', $portal, $activeKey, $content, true);

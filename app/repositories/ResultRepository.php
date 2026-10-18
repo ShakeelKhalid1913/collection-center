@@ -694,16 +694,44 @@ class ResultRepository
 
     public function saveImagingFindings(string $scanNo, array $data): bool
     {
-        return $this->db->execute(
+        $status = $data['status'] ?? 'reported';
+        $rad = $data['radiologist'] ?? null;
+        $findings = $data['findings'] ?? null;
+        $impression = $data['impression'] ?? null;
+
+        $ok = $this->db->execute(
             "UPDATE imaging_scans SET radiologist = :rad, findings = :findings, impression = :impression, status = :status WHERE scan_no = :scan_no",
             [
                 'scan_no' => $scanNo,
-                'rad' => $data['radiologist'] ?? null,
-                'findings' => $data['findings'] ?? null,
-                'impression' => $data['impression'] ?? null,
-                'status' => $data['status'] ?? 'reported',
+                'rad' => $rad,
+                'findings' => $findings,
+                'impression' => $impression,
+                'status' => $status,
             ]
         );
+
+        if ($ok) {
+            $scan = $this->findImagingScan($scanNo);
+            if ($scan && !empty($scan['lab_no'])) {
+                $labNo = (string)$scan['lab_no'];
+                $study = (string)($scan['study'] ?? '');
+                $fullNarrative = trim(($findings ?? '') . "\n\nIMPRESSION:\n" . ($impression ?? ''));
+                try {
+                    $this->db->execute(
+                        "UPDATE results SET value = :val, verified_at = NOW(), verified_by = :rad WHERE lab_no = :lab_no AND (test = :t OR test LIKE :t_like)",
+                        [
+                            'val' => $fullNarrative,
+                            'rad' => $rad ?: 'Consultant Radiologist',
+                            'lab_no' => $labNo,
+                            't' => $study,
+                            't_like' => '%' . $study . '%',
+                        ]
+                    );
+                } catch (\Throwable) {}
+            }
+        }
+
+        return $ok;
     }
 
     public function getCollectionCenters(): array

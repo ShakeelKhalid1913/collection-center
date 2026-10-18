@@ -135,7 +135,9 @@ if (!$entry) {
         '<p class="p-6 text-slate-600">Register a patient and book tests first, then open this screen to type results.</p>' .
         '<div class="px-6 pb-6"><a class="btn btn-primary" href="/portals/main-lab/patients/records.php">Open patient list</a></div>'
     );
-    render_page('Enter Results', 'main-lab', 'results-entry', $content);
+    $portal = current_portal();
+    $activeKey = ($portal === 'imaging') ? 'station-lab' : 'results-entry';
+    render_page('Enter Results', $portal, $activeKey, $content);
     exit;
 }
 
@@ -1067,4 +1069,6 @@ function clearImagingBox() {
 JSSCRIPT;
 $content .= '</script>';
 
-render_page('Enter Results', 'main-lab', 'results-entry', $content);
+$portal = current_portal();
+$activeKey = ($portal === 'imaging') ? 'station-lab' : 'results-entry';
+render_page('Enter Results', $portal, $activeKey, $content);

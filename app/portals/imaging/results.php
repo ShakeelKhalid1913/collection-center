@@ -8,7 +8,12 @@ require_once __DIR__ . '/../../includes/components.php';
 
 $message = '';
 $scanNo = trim((string)($_GET['scan_no'] ?? $_POST['scan_no'] ?? ''));
+$labNo = trim((string)($_GET['lab_no'] ?? $_POST['lab_no'] ?? ''));
 $scan = $scanNo !== '' ? result_repo()->findImagingScan($scanNo) : null;
+
+if (!$scan && $labNo !== '') {
+    $scan = db()->fetchOne("SELECT * FROM imaging_scans WHERE lab_no = :lab_no ORDER BY id DESC LIMIT 1", ['lab_no' => $labNo]);
+}
 
 $orgId = current_user()['organization_id'] ?? 'ORG-001';
 $allScans = result_repo()->getImagingScans($orgId);
@@ -28,7 +33,7 @@ foreach (mock('mock_doctors') as $d) {
     $doctorOpts[$d['name']] = $d['name'] . $spec;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['scan_no'])) {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($_POST['scan_no'])) {
     $radCustom = trim((string)($_POST['rad_custom'] ?? ''));
     $radSelected = trim((string)($_POST['rad'] ?? ''));
     $finalRad = $radCustom !== '' ? $radCustom : ($radSelected !== '' ? resolve_doctor_name($radSelected) : 'Dr. Imran Sheikh');
@@ -51,23 +56,25 @@ $titleHint = $scan
     ? (($scan['scan_no'] ?? '') . ' · ' . ($scan['patient'] ?? '') . ' · ' . ($scan['study'] ?? ''))
     : 'No studies yet';
 
-$content = page_header('Results / Findings', $titleHint);
+$content = page_header('Results & Clinical Findings', $titleHint, null, 'fa-solid fa-notes-medical');
 $content .= $message;
 
 if (!$scan) {
     $content .= card(
         '<p class="p-6 text-sm text-slate-600">No imaging studies found. Book a study from New Study first.</p>' .
-        '<div class="p-6 pt-0">' . btn_primary('/portals/imaging/new-scan.php', 'New study') . '</div>'
+        '<div class="p-6 pt-0">' . btn_primary('/portals/main-lab/lab-entries/new.php', 'New study') . '</div>'
     );
 } else {
     $currentRad = $scan['radiologist'] ?? ($scan['doctor'] ?? 'Dr. Imran Sheikh');
+    $deptMeta = get_department_meta((string)($scan['study'] ?? ''), (string)($scan['modality'] ?? ''));
 
     // Scan picker dropdown for switching between scans
     $scanPickerOpts = '';
     foreach ($allScans as $sc) {
         $sel = ($sc['scan_no'] === $scan['scan_no']) ? ' selected' : '';
+        $scDept = get_department_meta((string)($sc['study'] ?? ''), (string)($sc['modality'] ?? ''));
         $scanPickerOpts .= '<option value="' . e($sc['scan_no']) . '"' . $sel . '>'
-            . e($sc['scan_no']) . ' — ' . e($sc['patient']) . ' (' . e($sc['study']) . ') [' . e(ucfirst($sc['status'])) . ']</option>';
+            . e($sc['scan_no']) . ' — ' . e($sc['patient']) . ' [' . e($scDept['short']) . ': ' . e($sc['study']) . '] (' . e(ucfirst($sc['status'])) . ')</option>';
     }
 
     $radSelectHtml = '<option value="">— Select Doctor —</option>';
@@ -76,15 +83,59 @@ if (!$scan) {
         $radSelectHtml .= '<option value="' . e($docName) . '"' . $sel . '>' . e($docLabel) . '</option>';
     }
 
+    $allTemplates = get_all_imaging_templates();
+    $templatesJson = json_encode($allTemplates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+    // Group templates into optgroups
+    $groupedTemplates = [
+        'ultrasound' => ['label' => '🌊 Ultrasound Examinations', 'items' => []],
+        'xray' => ['label' => '🩻 Digital X-Ray Examinations', 'items' => []],
+        'ecg' => ['label' => '💓 12-Lead ECG Examinations', 'items' => []],
+        'ct' => ['label' => '🖥️ CT Scan Examinations', 'items' => []],
+        'mri' => ['label' => '🧲 MRI Scan Examinations', 'items' => []],
+    ];
+    foreach ($allTemplates as $k => $t) {
+        $deptKey = $t['dept'] ?? 'ultrasound';
+        if (isset($groupedTemplates[$deptKey])) {
+            $groupedTemplates[$deptKey]['items'][$k] = $t['title'];
+        }
+    }
+
+    $templateSelectHtml = '<option value="">— Select Pre-loaded Normal Template —</option>';
+    foreach ($groupedTemplates as $grp) {
+        if (!empty($grp['items'])) {
+            $templateSelectHtml .= '<optgroup label="' . e($grp['label']) . '">';
+            foreach ($grp['items'] as $tplKey => $tplTitle) {
+                $templateSelectHtml .= '<option value="' . e($tplKey) . '">' . e($tplTitle) . '</option>';
+            }
+            $templateSelectHtml .= '</optgroup>';
+        }
+    }
+
+    // Auto-detect default template if findings are currently empty
+    $defTemplate = get_default_imaging_template((string)($scan['study'] ?? ''), $deptMeta['id']);
+    $initialFindings = (string)($scan['findings'] ?? '');
+    $initialImpression = (string)($scan['impression'] ?? '');
+    $isAutoLoaded = false;
+    if ($initialFindings === '' && $initialImpression === '') {
+        $initialFindings = $defTemplate['findings'];
+        $initialImpression = $defTemplate['impression'];
+        $isAutoLoaded = true;
+    }
+
     $content .= <<<HTML
 <div class="mb-5 no-print p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
     <div class="flex-1 min-w-[16rem]">
-        <label class="field-label text-xs">Switch Study / Patient</label>
+        <label class="field-label text-xs">Switch Study / Patient Worklist</label>
         <select class="field text-sm font-semibold" onchange="if(this.value) location.href='/portals/imaging/results.php?scan_no='+encodeURIComponent(this.value)">
             {$scanPickerOpts}
         </select>
     </div>
     <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border {$deptMeta['badge_class']}">
+            <i class="{$deptMeta['icon']} {$deptMeta['icon_color']}"></i>
+            <span>Department: {$deptMeta['name']}</span>
+        </span>
         <a href="/portals/imaging/receipt.php?scan_no={$scan['scan_no']}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-receipt mr-1"></i> Print Slip
         </a>
@@ -95,159 +146,104 @@ if (!$scan) {
 </div>
 HTML;
 
-    $usSectionHtml = <<<HTML
-<div class="p-4 bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-50 rounded-2xl border border-teal-200 space-y-3">
+    $templateBarHtml = <<<HTML
+<div class="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-2xl border border-slate-700 shadow-md space-y-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs">
-                <i class="fa-solid fa-shapes"></i>
+        <div class="flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-xl bg-[#c2f13c] text-slate-950 flex items-center justify-center text-sm font-black shadow-sm">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
             </span>
-            <strong class="text-teal-950 text-xs sm:text-sm font-extrabold uppercase tracking-wide">
-                Ultrasound Report Type Section
-            </strong>
+            <div>
+                <strong class="text-white text-xs sm:text-sm font-extrabold uppercase tracking-wide block">
+                    Diagnostic Report Normal Template Library
+                </strong>
+                <span class="text-[11px] text-slate-300">Shared clinical format across Ultrasound, X-Ray, ECG, CT &amp; MRI. Select template to populate or edit.</span>
+            </div>
         </div>
         <div class="flex items-center gap-2">
-            <label for="img-us-report-type" class="text-[11px] font-bold text-teal-900 uppercase">Report Type:</label>
-            <select id="img-us-report-type" onchange="if(this.value) applyImagingUsType(this.value)" class="field text-xs font-semibold py-1 px-2.5 bg-white border-teal-300">
-                <option value="">— Choose Ultrasound Report Type —</option>
-                <optgroup label="🩺 Abdomen &amp; Urinary Tract">
-                    <option value="us_whole_abd">Ultrasound Whole Abdomen &amp; Pelvis</option>
-                    <option value="us_upper_abd">Ultrasound Upper Abdomen (Hepatobiliary)</option>
-                    <option value="us_kub">Ultrasound KUB &amp; Prostate (Kidneys, Bladder, Prostate)</option>
-                </optgroup>
-                <optgroup label="🌸 Gynaecological &amp; Pelvic">
-                    <option value="us_pelvis">Ultrasound Pelvis (Female / Gynaecological)</option>
-                    <option value="us_tvs">Ultrasound TVS (Transvaginal Sonography)</option>
-                    <option value="us_follicular">Ultrasound Follicular Tracking / Study</option>
-                    <option value="us_breast">Ultrasound Breast (Bilateral / Sonomammography)</option>
-                </optgroup>
-                <optgroup label="👶 Obstetrics &amp; Pregnancy">
-                    <option value="us_obstetric">Ultrasound Obstetric / Antenatal (Routine Pregnancy)</option>
-                    <option value="us_anomaly">Ultrasound 2nd Trimester Fetal Anomaly Scan</option>
-                </optgroup>
-                <optgroup label="🔬 Doppler &amp; Superficial Parts">
-                    <option value="us_scrotal">Ultrasound Scrotum &amp; Testicular Color Doppler</option>
-                    <option value="us_thyroid">Ultrasound Thyroid &amp; Neck</option>
-                    <option value="us_soft_tissue">Ultrasound Soft Tissue / Musculoskeletal Swelling</option>
-                </optgroup>
-                <optgroup label="🩻 Other Radiology Modalities">
-                    <option value="xray_chest">Chest X-Ray PA View</option>
-                    <option value="ecg_12">12-Lead Electrocardiogram (ECG)</option>
-                </optgroup>
+            <label for="img-universal-report-type" class="text-[11px] font-bold text-[#c2f13c] uppercase">Load Template:</label>
+            <select id="img-universal-report-type" onchange="if(this.value) applyImagingTemplate(this.value)" class="field text-xs font-semibold py-1.5 px-3 bg-white text-slate-900 border-slate-300 rounded-xl">
+                {$templateSelectHtml}
             </select>
         </div>
     </div>
-    <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-teal-200/70 text-xs">
-        <span class="font-bold text-teal-900 uppercase tracking-wide text-[10px] mr-1">Quick Select:</span>
-        <button type="button" onclick="applyImagingUsType('us_whole_abd')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Whole Abdomen
+    <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-700 text-xs">
+        <span class="font-bold text-[#c2f13c] uppercase tracking-wide text-[10px] mr-1">Fast Quick Select:</span>
+        <button type="button" onclick="applyImagingTemplate('us_whole_abd')" class="px-2.5 py-1 rounded-lg bg-teal-900/60 hover:bg-teal-800 text-teal-200 border border-teal-500/40 font-semibold text-[11px] transition-colors">
+            🌊 USG Abdomen
         </button>
-        <button type="button" onclick="applyImagingUsType('us_kub')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            KUB &amp; Prostate
+        <button type="button" onclick="applyImagingTemplate('us_kub')" class="px-2.5 py-1 rounded-lg bg-teal-900/60 hover:bg-teal-800 text-teal-200 border border-teal-500/40 font-semibold text-[11px] transition-colors">
+            🌊 KUB &amp; Prostate
         </button>
-        <button type="button" onclick="applyImagingUsType('us_pelvis')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Female Pelvis
+        <button type="button" onclick="applyImagingTemplate('us_obstetric')" class="px-2.5 py-1 rounded-lg bg-teal-900/60 hover:bg-teal-800 text-teal-200 border border-teal-500/40 font-semibold text-[11px] transition-colors">
+            🌊 Pregnancy (Obs)
         </button>
-        <button type="button" onclick="applyImagingUsType('us_obstetric')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Pregnancy (Obs)
+        <button type="button" onclick="applyImagingTemplate('xr_chest_pa')" class="px-2.5 py-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 font-semibold text-[11px] transition-colors">
+            🩻 Chest X-Ray
         </button>
-        <button type="button" onclick="applyImagingUsType('us_anomaly')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Anomaly Scan
+        <button type="button" onclick="applyImagingTemplate('xr_ls_spine')" class="px-2.5 py-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 font-semibold text-[11px] transition-colors">
+            🩻 L/S Spine X-Ray
         </button>
-        <button type="button" onclick="applyImagingUsType('us_scrotal')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Scrotal Doppler
+        <button type="button" onclick="applyImagingTemplate('xr_knee')" class="px-2.5 py-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 font-semibold text-[11px] transition-colors">
+            🩻 Knee X-Ray
         </button>
-        <button type="button" onclick="applyImagingUsType('us_thyroid')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Thyroid &amp; Neck
+        <button type="button" onclick="applyImagingTemplate('ecg_12lead')" class="px-2.5 py-1 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-500/40 font-semibold text-[11px] transition-colors">
+            💓 12-Lead ECG
         </button>
-        <button type="button" onclick="applyImagingUsType('us_breast')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 font-semibold shadow-2xs text-[11px]">
-            Breast
+        <button type="button" onclick="applyImagingTemplate('ct_brain_plain')" class="px-2.5 py-1 rounded-lg bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-semibold text-[11px] transition-colors">
+            🖥️ Brain CT Scan
         </button>
-        <button type="button" onclick="applyImagingUsType('xray_chest')" class="px-2 py-0.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold shadow-2xs text-[11px]">
-            Chest X-Ray
+        <button type="button" onclick="applyImagingTemplate('ct_hrct_chest')" class="px-2.5 py-1 rounded-lg bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-semibold text-[11px] transition-colors">
+            🖥️ HRCT Chest
         </button>
-        <button type="button" onclick="clearImagingFields()" class="px-2 py-0.5 rounded-lg bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 text-[11px] font-semibold ml-auto">
-            Clear
+        <button type="button" onclick="applyImagingTemplate('mri_brain_plain')" class="px-2.5 py-1 rounded-lg bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40 font-semibold text-[11px] transition-colors">
+            🧲 Brain MRI
+        </button>
+        <button type="button" onclick="applyImagingTemplate('mri_lumbar')" class="px-2.5 py-1 rounded-lg bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40 font-semibold text-[11px] transition-colors">
+            🧲 Lumbar Spine MRI
+        </button>
+        <button type="button" onclick="clearImagingFields()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-rose-950 text-slate-300 hover:text-rose-300 border border-white/20 text-[11px] font-semibold ml-auto transition-colors">
+            <i class="fa-solid fa-trash-can mr-1"></i> Clear Fields
         </button>
     </div>
 </div>
 HTML;
 
+    $autoNotice = $isAutoLoaded
+        ? '<div class="p-2.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 flex items-center gap-2"><i class="fa-solid fa-circle-check text-emerald-600"></i> Auto-loaded standard normal template for <strong>' . e($scan['study']) . '</strong>. Review findings and edit any abnormal lines before saving.</div>'
+        : '';
+
     $content .= card(
         '<form method="post" class="space-y-4 p-4 sm:p-6">' .
         '<input type="hidden" name="scan_no" value="' . e($scan['scan_no']) . '">' .
         '<div class="grid gap-4 sm:grid-cols-2">' .
-        '<div><label class="field-label">Reporting Doctor / Radiologist</label><select name="rad" class="field text-sm">' . $radSelectHtml . '</select></div>' .
+        '<div><label class="field-label">Reporting Doctor / Consultant Radiologist</label><select name="rad" class="field text-sm font-semibold">' . $radSelectHtml . '</select></div>' .
         form_field('Or Custom Doctor Name (Switch Doctor)', 'rad_custom', 'text', null, 'Type any doctor name to switch', true) .
         '</div>' .
-        '<div><label class="field-label">Clinical Indication / History</label><p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 m-0">' . e($scan['clinical_notes'] ?: 'None provided.') . '</p></div>' .
-        $usSectionHtml .
-        '<div><label class="field-label">Radiological Findings</label><textarea id="imaging-findings-ta" name="findings" rows="12" class="field text-sm font-mono leading-relaxed" placeholder="Describe findings (e.g. Bone alignment, soft tissues, lung fields, organ dimensions...)">' . e($scan['findings'] ?? '') . '</textarea></div>' .
-        '<div><label class="field-label">Impression / Conclusion</label><textarea id="imaging-impression-ta" name="impression" rows="3" class="field text-sm font-semibold" placeholder="Diagnostic impression (e.g. Normal study, no focal lesion seen.)">' . e($scan['impression'] ?? '') . '</textarea></div>' .
-        '<div class="pt-2 flex flex-wrap gap-2">' .
+        '<div class="grid gap-4 sm:grid-cols-3">' .
+        '<div><label class="field-label">Patient</label><p class="text-xs text-slate-800 font-bold bg-slate-50 p-2.5 rounded-lg border border-slate-200 m-0">' . e($scan['patient']) . ' (' . e($scan['patient_id'] ?: 'Walk-in') . ')</p></div>' .
+        '<div><label class="field-label">Examination Study</label><p class="text-xs text-slate-800 font-bold bg-slate-50 p-2.5 rounded-lg border border-slate-200 m-0">' . e($scan['study']) . '</p></div>' .
+        '<div><label class="field-label">Clinical Indication / History</label><p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 m-0">' . e($scan['clinical_notes'] ?: 'Routine diagnostic evaluation.') . '</p></div>' .
+        '</div>' .
+        $templateBarHtml .
+        $autoNotice .
+        '<div><label class="field-label font-bold text-slate-900">Radiological &amp; Clinical Findings</label><textarea id="imaging-findings-ta" name="findings" rows="14" class="field text-sm font-mono leading-relaxed" placeholder="Describe findings (Organ dimensions, parenchymal echotexture, lung fields, bone alignment, signal intensities...)">' . e($initialFindings) . '</textarea></div>' .
+        '<div><label class="field-label font-bold text-slate-900">Impression / Conclusion</label><textarea id="imaging-impression-ta" name="impression" rows="3" class="field text-sm font-semibold" placeholder="Diagnostic impression (e.g. Normal study, no focal lesion seen.)">' . e($initialImpression) . '</textarea></div>' .
+        '<div class="pt-2 flex flex-wrap items-center gap-3">' .
         btn_submit('Save findings & generate report') .
         '<a href="/portals/imaging/pending-scans.php" class="btn btn-secondary">Back to pending</a>' .
         '</div>' .
         '</form>'
     );
 
-    $content .= <<<'SCRIPT'
+    $content .= <<<SCRIPT
 <script>
-window.__IMAGING_FINDINGS_PRESETS__ = {
-    us_whole_abd: {
-        findings: "LIVER: Normal in size, smooth contour and uniform parenchymal echotexture. No focal solid or cystic mass lesion seen. Intrahepatic biliary tree and portal vein are normal in caliber.\n\nGALLBLADDER: Normal in size and shape. Wall thickness is normal (< 3 mm). Acoustic lumen is completely clear; no calculus, sludge or mass lesion seen. Common bile duct (CBD) is normal.\n\nPANCREAS: Visualized head, body and tail appear normal in size and echogenicity. Main pancreatic duct is not dilated.\n\nSPLEEN: Normal in size and parenchymal echotexture. No splenomegaly or focal lesion noted.\n\nKIDNEYS: Both kidneys are normal in size, shape and cortical thickness. Corticomedullary differentiation is well preserved. No calculus or hydronephrosis seen bilaterally.\n\nURINARY BLADDER: Well distended with thin, smooth walls and clear lumen. No intraluminal calculus or mass.\n\nPELVIS / PROSTATE: Visualized pelvic structures are unremarkable. No free fluid in abdomen or pelvis.",
-        impression: "NORMAL ULTRASOUND EXAMINATION OF WHOLE ABDOMEN & PELVIS."
-    },
-    us_upper_abd: {
-        findings: "LIVER: Normal in size, shape and parenchymal echotexture. No focal mass, abscess, or nodule seen. Intrahepatic ducts are not dilated. Portal vein is normal in caliber.\n\nGALLBLADDER: Normal lumen without gallstones, sludge, or wall thickening. Common bile duct (CBD) measures within normal limits.\n\nPANCREAS: Visualized portions appear normal in size and echogenicity without mass or calcification.\n\nSPLEEN: Normal in size with homogenous parenchymal echotexture. No focal lesion or splenomegaly.\n\nKIDNEYS: Both kidneys are normal in size, shape, and cortical thickness. No calculus or hydronephrosis seen.",
-        impression: "NORMAL ULTRASOUND EXAMINATION OF UPPER ABDOMEN."
-    },
-    us_kub: {
-        findings: "RIGHT KIDNEY: Measures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nLEFT KIDNEY: Measures normal in size and anatomical position. Corticomedullary differentiation is well preserved. Normal parenchymal thickness. No evidence of renal calculus, hydronephrosis, or focal lesion.\n\nURETERS: Both ureters are not dilated; no obstructive ureteric calculus visualized.\n\nURINARY BLADDER: Adequately distended with clear acoustic lumen. Bladder wall thickness is smooth and uniform (< 3 mm). No intraluminal calculus, mass, or diverticulum seen.\n- Pre-void volume: Adequate.\n- Post-void residual (PVR): Insignificant (< 20 ml).\n\nPROSTATE: Normal in size, shape, and echotexture with smooth capsule. Estimated volume is within normal age-related limits. Median lobe is not enlarged.",
-        impression: "NORMAL ULTRASOUND KUB & PROSTATE. NO EVIDENCE OF NEPHROLITHIASIS OR URINARY TRACT OBSTRUCTION."
-    },
-    us_pelvis: {
-        findings: "URINARY BLADDER: Well distended with clear lumen and smooth walls.\n\nUTERUS: Anteverted, normal in size and regular in contour. Myometrium is homogeneous without fibroids or adenomyosis. Endometrium is central, regular, and well-defined measuring within normal limits.\n\nCERVIX: Normal in appearance.\n\nRIGHT OVARY: Normal in size with physiological follicular pattern. No cyst or mass.\n\nLEFT OVARY: Normal in size with physiological follicular pattern. No cyst or mass.\n\nADNEXAE & POD: Clear. No adnexal mass or free fluid in Pouch of Douglas.",
-        impression: "NORMAL PELVIC ULTRASOUND EXAMINATION. NORMAL APPEARANCE OF UTERUS AND BOTH OVARIES."
-    },
-    us_obstetric: {
-        findings: "FETAL VIABILITY: Single live intrauterine fetus in cephalic presentation. Regular cardiac activity (FHR: ~144 bpm) and active somatic movements.\n\nFETAL BIOMETRY:\n- BPD, FL, AC, HC correspond to clinical gestational age.\n- EGA & EDD consistent with biometry.\n\nAMNIOTIC FLUID: Adequate in volume (normal AFI).\n\nPLACENTA: Anterior / Fundal, Grade I maturity. Clear of internal cervical os. No hematoma.",
-        impression: "SINGLE LIVE INTRAUTERINE PREGNANCY CORRESPONDING TO GESTATIONAL AGE WITH ACTIVE FETAL MOVEMENTS AND NORMAL LIQUOR / PLACENTAL POSITION."
-    },
-    us_anomaly: {
-        findings: "Single live fetus in cephalic presentation with regular cardiac activity.\n\nANATOMICAL SURVEY:\n- Head & Brain: Intact skull contour, normal lateral ventricles, cavum septum pellucidum & posterior fossa.\n- Face: Intact orbits, nasal bone, and upper lip.\n- Spine: Intact vertebrae from cervical to sacral region.\n- Heart: Normal 4-chamber view, normal outflow tracts (LVOT/RVOT).\n- Abdomen: Intact wall, normal stomach bubble, intact cord insertion, both kidneys & bladder.\n- Limbs: Bilateral upper & lower limbs morphologically intact.\n- Amniotic fluid: Adequate.\n- Placenta: Normal position, 3-vessel umbilical cord.",
-        impression: "TARGETED ANOMALY SCAN REVEALS NO GROSS CONGENITAL OR STRUCTURAL ANOMALY DETECTED AT PRESENT GESTATIONAL AGE."
-    },
-    us_tvs: {
-        findings: "UTERUS: Anteverted, homogeneous myometrium without focal fibroids. Trilaminar endometrial stripe of normal thickness.\n\nOVARIES: Both ovaries are normal in size with physiological follicles. No complex ovarian mass.\n\nCUL-DE-SAC: Clear of free fluid or endometriotic deposits.",
-        impression: "NORMAL TRANSVAGINAL ULTRASOUND STUDY (TVS)."
-    },
-    us_scrotal: {
-        findings: "BILATERAL TESTES: Normal in size, contour, and homogeneous echotexture. Symmetrical normal color and spectral Doppler flow. No intratesticular lesion.\n\nEPIDIDYMIDES: Bilateral epididymides are normal.\n\nPAMPINIFORM PLEXUS: Normal diameter bilaterally (< 2 mm). No retrograde venous reflux on Valsalva maneuver.",
-        impression: "NORMAL SCROTAL AND TESTICULAR COLOR DOPPLER STUDY. NO EVIDENCE OF EPIDIDYMO-ORCHITIS, HYDROCELE, OR VARICOCELE."
-    },
-    us_thyroid: {
-        findings: "RIGHT & LEFT THYROID LOBES: Normal in dimensions and parenchymal echogenicity. No focal solid nodule, cystic lesion, or calcification identified. Normal vascularity on color Doppler.\n\nISTHMUS: Normal in thickness (< 3 mm).\n\nCERVICAL LYMPH NODES: No suspicious lymphadenopathy identified.",
-        impression: "NORMAL ULTRASOUND EXAMINATION OF THYROID GLAND. NO EVIDENCE OF GOITRE, NODULE, OR CYSTIC LESION."
-    },
-    us_breast: {
-        findings: "BILATERAL BREASTS: Normal fibroglandular parenchyma with normal ductal pattern. No focal solid mass lesion, cyst, or architectural distortion seen. Retroareolar ducts are not dilated.\n\nAXILLARY REGIONS: Preserved normal lymph nodes with fatty hilum.\n\nACR BI-RADS ASSESSMENT: CATEGORY 1 (NEGATIVE / NORMAL STUDY).",
-        impression: "NORMAL BILATERAL BREAST ULTRASOUND (BI-RADS CATEGORY 1)."
-    },
-    xray_chest: {
-        findings: "LUNG FIELDS: Clear with normal bronchovascular markings. No consolidation, mass, or cavity.\n\nCOSTOPHRENIC ANGLES: Sharp and clear bilaterally.\n\nCARDIAC SILHOUETTE: Normal in size and contour (CTR < 50%).\n\nHILAR & MEDIASTINUM: Unremarkable. Bony thorax intact.",
-        impression: "NORMAL RADIOLOGICAL STUDY OF CHEST."
-    },
-    ecg_12: {
-        findings: "Rhythm: Normal Sinus Rhythm\nHeart Rate: 72 bpm\nPR Interval: 0.16 sec\nQRS Duration: 0.08 sec\nQTc: 410 ms\nAxis: Normal cardiac axis (+45°)\nST-T Changes: None.",
-        impression: "NORMAL 12-LEAD ELECTROCARDIOGRAM (ECG)."
-    }
-};
+window.__IMAGING_FINDINGS_PRESETS__ = {$templatesJson};
 
-function applyImagingUsType(key) {
+function applyImagingTemplate(key) {
     const fTa = document.getElementById('imaging-findings-ta');
     const iTa = document.getElementById('imaging-impression-ta');
-    const sel = document.getElementById('img-us-report-type');
+    const sel = document.getElementById('img-universal-report-type');
     if (!fTa || !iTa) return;
 
     if (sel && sel.value !== key) {
@@ -257,7 +253,7 @@ function applyImagingUsType(key) {
     const tpl = window.__IMAGING_FINDINGS_PRESETS__[key];
     if (!tpl) return;
 
-    if ((fTa.value.trim() || iTa.value.trim()) && !confirm('Replace current findings & impression with the selected Ultrasound Report Type template?')) {
+    if ((fTa.value.trim() || iTa.value.trim()) && !confirm('Replace current findings & impression with the selected Normal Report template?')) {
         return;
     }
 

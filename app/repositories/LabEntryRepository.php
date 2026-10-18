@@ -132,65 +132,8 @@ class LabEntryRepository
                     (string)($data['organization_id'] ?? 'ORG-001')
                 );
 
-                // Auto-route any Imaging / Radiology tests (X-Ray, Ultrasound, CT, ECG) to imaging_scans
-                $testArr = array_filter(array_map('trim', explode(',', $tests)));
-                $orgIdVal = (string)($data['organization_id'] ?? 'ORG-001');
-                $patientNameVal = (string)($data['patient_name'] ?? $data['patient'] ?? 'Unknown');
-                $patientIdVal = (string)($data['patient_id'] ?? '');
-                $doctorVal = (string)($data['doctor'] ?? 'Walk-in / Self');
-                $notesVal = (string)($data['clinical_notes'] ?? '');
-
-                foreach ($testArr as $singleTest) {
-                    $stUpper = strtoupper($singleTest);
-                    $modality = null;
-                    if (str_contains($stUpper, 'X-RAY') || str_contains($stUpper, 'XRAY')) {
-                        $modality = 'X-Ray';
-                    } elseif (str_contains($stUpper, 'ULTRASOUND') || str_contains($stUpper, 'USG') || str_contains($stUpper, 'DOPPLER') || str_contains($stUpper, 'ANOMALY') || str_contains($stUpper, 'PELVIS') || str_contains($stUpper, 'ABDOMEN')) {
-                        $modality = 'Ultrasound';
-                    } elseif (str_contains($stUpper, 'CT SCAN') || str_contains($stUpper, 'CT ') || str_contains($stUpper, ' CT')) {
-                        $modality = 'CT Scan';
-                    } elseif (str_contains($stUpper, 'ECG') || str_contains($stUpper, 'EKG')) {
-                        $modality = 'ECG';
-                    } else {
-                        $testMeta = \test_repo()->findByCode($singleTest);
-                        if ($testMeta && strcasecmp((string)($testMeta['category'] ?? ''), 'Radiology') === 0) {
-                            $modality = 'Imaging';
-                        }
-                    }
-
-                    if ($modality !== null) {
-                        $scanId = 'IMG-' . bin2hex(random_bytes(5));
-                        $prefix = match ($modality) {
-                            'CT Scan' => 'CT',
-                            'Ultrasound' => 'US',
-                            'ECG' => 'ECG',
-                            default => 'XR',
-                        };
-                        $scanNo = $prefix . '-' . date('Y') . '-' . sprintf('%04d', rand(1000, 9999));
-                        try {
-                            $this->db->execute(
-                                "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, amount, paid)
-                                 VALUES (:id, :org, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, 'pending', :scan_date, :radiologist, :doctor, :notes, :amount, :paid)",
-                                [
-                                    'id' => $scanId,
-                                    'org' => $orgIdVal,
-                                    'scan_no' => $scanNo,
-                                    'lab_no' => $labNo,
-                                    'patient' => $patientNameVal,
-                                    'patient_id' => $patientIdVal,
-                                    'modality' => $modality,
-                                    'study' => $singleTest,
-                                    'scan_date' => date('Y-m-d'),
-                                    'radiologist' => $doctorVal,
-                                    'doctor' => $doctorVal,
-                                    'notes' => $notesVal,
-                                    'amount' => (float)($data['amount'] ?? 0),
-                                    'paid' => (float)($data['paid'] ?? 0),
-                                ]
-                            );
-                        } catch (\Throwable $e) {}
-                    }
-                }
+                // Auto-route any Imaging / Radiology tests (Ultrasound, X-Ray, ECG, CT, MRI) to imaging_scans
+                $this->syncImagingScans($labNo, $tests, $data);
             }
 
             if (($data['sample_status'] ?? '') === 'collected') {
@@ -217,6 +160,65 @@ class LabEntryRepository
         );
     }
 
+    public function syncImagingScans(string $labNo, string $tests, array $data): void
+    {
+        $testArr = array_filter(array_map('trim', explode(',', $tests)));
+        $orgIdVal = (string)($data['organization_id'] ?? 'ORG-001');
+        $patientNameVal = (string)($data['patient_name'] ?? $data['patient'] ?? 'Unknown');
+        $patientIdVal = (string)($data['patient_id'] ?? '');
+        $doctorVal = (string)($data['doctor'] ?? 'Walk-in / Self');
+        $notesVal = (string)($data['clinical_notes'] ?? '');
+
+        foreach ($testArr as $singleTest) {
+            $deptMeta = get_department_meta($singleTest);
+            if (!empty($deptMeta['is_imaging'])) {
+                $modality = $deptMeta['name']; // 'Ultrasound', 'X-Ray', 'ECG', 'CT Scan', 'MRI'
+
+                $existingScan = $this->db->fetchOne(
+                    "SELECT id FROM imaging_scans WHERE lab_no = :lab_no AND (study = :st OR study LIKE :st_like) LIMIT 1",
+                    ['lab_no' => $labNo, 'st' => $singleTest, 'st_like' => '%' . $singleTest . '%']
+                );
+                if (!$existingScan) {
+                    $scanId = 'IMG-' . bin2hex(random_bytes(5));
+                    $prefix = match ($deptMeta['id']) {
+                        'ct' => 'CT',
+                        'ultrasound' => 'US',
+                        'ecg' => 'ECG',
+                        'mri' => 'MRI',
+                        default => 'XR',
+                    };
+                    $scanNo = $prefix . '-' . date('Y') . '-' . sprintf('%04d', rand(1000, 9999));
+                    $defTemplate = get_default_imaging_template($singleTest, $deptMeta['id']);
+
+                    try {
+                        $this->db->execute(
+                            "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, findings, impression, amount, paid)
+                             VALUES (:id, :org, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, 'pending', :scan_date, :radiologist, :doctor, :notes, :findings, :impression, :amount, :paid)",
+                            [
+                                'id' => $scanId,
+                                'org' => $orgIdVal,
+                                'scan_no' => $scanNo,
+                                'lab_no' => $labNo,
+                                'patient' => $patientNameVal,
+                                'patient_id' => $patientIdVal,
+                                'modality' => $modality,
+                                'study' => $singleTest,
+                                'scan_date' => date('Y-m-d'),
+                                'radiologist' => $doctorVal,
+                                'doctor' => $doctorVal,
+                                'notes' => $notesVal,
+                                'findings' => $defTemplate['findings'] ?? '',
+                                'impression' => $defTemplate['impression'] ?? '',
+                                'amount' => (float)($data['amount'] ?? 0),
+                                'paid' => (float)($data['paid'] ?? 0),
+                            ]
+                        );
+                    } catch (\Throwable $e) {}
+                }
+            }
+        }
+    }
+
     public function updateEntry(string $labNo, array $data): bool
     {
         $fields = [];
@@ -235,10 +237,17 @@ class LabEntryRepository
             }
         }
         if (empty($fields)) return true;
-        return $this->db->execute(
+        $ok = $this->db->execute(
             "UPDATE lab_entries SET " . implode(', ', $fields) . " WHERE lab_no = :lab_no",
             $params
         );
+        if ($ok && !empty($data['tests'])) {
+            $cur = $this->findByLabNo($labNo);
+            if ($cur) {
+                $this->syncImagingScans($labNo, (string)$data['tests'], array_merge($cur, $data));
+            }
+        }
+        return $ok;
     }
 
     public function updateStatus(string $labNo, string $status, ?string $sampleStatus = null): bool
@@ -333,6 +342,7 @@ class LabEntryRepository
 
         $this->db->execute('DELETE FROM results WHERE lab_no = :lab_no', ['lab_no' => $labNo]);
         $this->db->execute('DELETE FROM samples WHERE lab_no = :lab_no', ['lab_no' => $labNo]);
+        $this->db->execute('DELETE FROM imaging_scans WHERE lab_no = :lab_no', ['lab_no' => $labNo]);
         $this->db->execute('DELETE FROM lab_entry_tests WHERE lab_entry_id = :id', ['id' => $entry['id']]);
 
         return $this->db->execute(

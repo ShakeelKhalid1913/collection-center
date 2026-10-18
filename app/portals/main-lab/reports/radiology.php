@@ -24,13 +24,12 @@ $modalityCounts = [
     'xray' => 0,
     'ecg' => 0,
     'ct' => 0,
+    'mri' => 0,
     'other' => 0,
 ];
 
 foreach ($allLabEntries as $e) {
     $testsStr = (string)($e['tests'] ?? '');
-    $testsLower = strtolower($testsStr);
-
     $isImaging = preg_match('/(ultrasound|usg|sonograph|doppler|pelvis|abdomen|kub|x-ray|xray|radiograph|chest pa|ecg|ekg|ct scan|computed tomography|mri)/i', $testsStr)
         || is_narrative_imaging_test($testsStr);
 
@@ -38,40 +37,17 @@ foreach ($allLabEntries as $e) {
         continue;
     }
 
-    // Classify primary modality
-    $modality = 'other';
-    $modalityLabel = 'Radiology';
-    $modalityIcon = 'fa-solid fa-radiation text-slate-600';
-    $modalityBadgeClass = 'bg-slate-100 text-slate-800 border-slate-200';
+    $deptMeta = get_department_meta($testsStr);
+    $modality = $deptMeta['id'];
+    $modalityLabel = $deptMeta['name'];
+    $modalityIcon = $deptMeta['icon'] . ' ' . $deptMeta['icon_color'];
+    $modalityBadgeClass = $deptMeta['badge_class'];
 
-    if (preg_match('/(ultrasound|usg|sonograph|doppler|pelvis|kub)/i', $testsStr)) {
-        $modality = 'ultrasound';
-        $modalityLabel = 'Ultrasound';
-        $modalityIcon = 'fa-solid fa-wave-square text-teal-600';
-        $modalityBadgeClass = 'bg-teal-50 text-teal-800 border-teal-200';
-        $modalityCounts['ultrasound']++;
-    } elseif (preg_match('/(x-ray|xray|radiograph|chest pa)/i', $testsStr)) {
-        $modality = 'xray';
-        $modalityLabel = 'X-Ray';
-        $modalityIcon = 'fa-solid fa-x-ray text-blue-600';
-        $modalityBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
-        $modalityCounts['xray']++;
-    } elseif (preg_match('/(ecg|ekg)/i', $testsStr)) {
-        $modality = 'ecg';
-        $modalityLabel = 'ECG';
-        $modalityIcon = 'fa-solid fa-heart-pulse text-rose-600';
-        $modalityBadgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
-        $modalityCounts['ecg']++;
-    } elseif (preg_match('/(ct|computed tomography)/i', $testsStr)) {
-        $modality = 'ct';
-        $modalityLabel = 'CT Scan';
-        $modalityIcon = 'fa-solid fa-laptop-medical text-purple-600';
-        $modalityBadgeClass = 'bg-purple-50 text-purple-800 border-purple-200';
-        $modalityCounts['ct']++;
+    if (isset($modalityCounts[$modality])) {
+        $modalityCounts[$modality]++;
     } else {
         $modalityCounts['other']++;
     }
-
     $modalityCounts['all']++;
 
     $imagingEntries[] = [
@@ -103,40 +79,18 @@ foreach ($dedicatedScans as $sc) {
         continue;
     }
 
-    $scMod = strtolower((string)($sc['modality'] ?? 'us'));
-    $modality = 'other';
-    $modalityLabel = 'Radiology';
-    $modalityIcon = 'fa-solid fa-radiation text-slate-600';
-    $modalityBadgeClass = 'bg-slate-100 text-slate-800 border-slate-200';
+    $studyStr = (string)($sc['study'] ?? $sc['modality'] ?? 'Radiology');
+    $deptMeta = get_department_meta($studyStr, (string)($sc['modality'] ?? ''));
+    $modality = $deptMeta['id'];
+    $modalityLabel = $deptMeta['name'];
+    $modalityIcon = $deptMeta['icon'] . ' ' . $deptMeta['icon_color'];
+    $modalityBadgeClass = $deptMeta['badge_class'];
 
-    if (str_contains($scMod, 'us') || str_contains($scMod, 'ultra')) {
-        $modality = 'ultrasound';
-        $modalityLabel = 'Ultrasound';
-        $modalityIcon = 'fa-solid fa-wave-square text-teal-600';
-        $modalityBadgeClass = 'bg-teal-50 text-teal-800 border-teal-200';
-        $modalityCounts['ultrasound']++;
-    } elseif (str_contains($scMod, 'xray') || str_contains($scMod, 'x-ray')) {
-        $modality = 'xray';
-        $modalityLabel = 'X-Ray';
-        $modalityIcon = 'fa-solid fa-x-ray text-blue-600';
-        $modalityBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
-        $modalityCounts['xray']++;
-    } elseif (str_contains($scMod, 'ecg')) {
-        $modality = 'ecg';
-        $modalityLabel = 'ECG';
-        $modalityIcon = 'fa-solid fa-heart-pulse text-rose-600';
-        $modalityBadgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
-        $modalityCounts['ecg']++;
-    } elseif (str_contains($scMod, 'ct')) {
-        $modality = 'ct';
-        $modalityLabel = 'CT Scan';
-        $modalityIcon = 'fa-solid fa-laptop-medical text-purple-600';
-        $modalityBadgeClass = 'bg-purple-50 text-purple-800 border-purple-200';
-        $modalityCounts['ct']++;
+    if (isset($modalityCounts[$modality])) {
+        $modalityCounts[$modality]++;
     } else {
         $modalityCounts['other']++;
     }
-
     $modalityCounts['all']++;
 
     $imagingEntries[] = [
@@ -184,30 +138,44 @@ $cntAll = $modalityCounts['all'];
 $cntUs = $modalityCounts['ultrasound'];
 $cntXr = $modalityCounts['xray'];
 $cntEcg = $modalityCounts['ecg'];
+$cntCt = $modalityCounts['ct'];
+$cntMri = $modalityCounts['mri'];
 
 $content .= <<<HTML
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div onclick="filterModality('all')" class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs hover:border-slate-400 cursor-pointer transition-all">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">All Imaging Reports</div>
-        <div class="text-2xl font-black text-slate-900 font-mono mt-1">{$cntAll}</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    <div onclick="filterModality('all')" class="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs hover:border-slate-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">All Imaging</div>
+        <div class="text-xl font-black text-slate-900 font-mono mt-1">{$cntAll}</div>
     </div>
-    <div onclick="filterModality('ultrasound')" class="bg-teal-50/70 border border-teal-200 rounded-2xl p-4 shadow-2xs hover:border-teal-400 cursor-pointer transition-all">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
-            <i class="fa-solid fa-wave-square text-teal-600"></i> Ultrasound Scans
+    <div onclick="filterModality('ultrasound')" class="bg-teal-50/70 border border-teal-200 rounded-2xl p-3.5 shadow-2xs hover:border-teal-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5 truncate">
+            <i class="fa-solid fa-wave-square text-teal-600"></i> Ultrasound
         </div>
-        <div class="text-2xl font-black text-teal-900 font-mono mt-1">{$cntUs}</div>
+        <div class="text-xl font-black text-teal-900 font-mono mt-1">{$cntUs}</div>
     </div>
-    <div onclick="filterModality('xray')" class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 shadow-2xs hover:border-blue-400 cursor-pointer transition-all">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
-            <i class="fa-solid fa-x-ray text-blue-600"></i> X-Ray Studies
+    <div onclick="filterModality('xray')" class="bg-blue-50/70 border border-blue-200 rounded-2xl p-3.5 shadow-2xs hover:border-blue-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5 truncate">
+            <i class="fa-solid fa-x-ray text-blue-600"></i> X-Ray
         </div>
-        <div class="text-2xl font-black text-blue-900 font-mono mt-1">{$cntXr}</div>
+        <div class="text-xl font-black text-blue-900 font-mono mt-1">{$cntXr}</div>
     </div>
-    <div onclick="filterModality('ecg')" class="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 shadow-2xs hover:border-rose-400 cursor-pointer transition-all">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-            <i class="fa-solid fa-heart-pulse text-rose-600"></i> ECG Tracings
+    <div onclick="filterModality('ecg')" class="bg-rose-50/70 border border-rose-200 rounded-2xl p-3.5 shadow-2xs hover:border-rose-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5 truncate">
+            <i class="fa-solid fa-heart-pulse text-rose-600"></i> ECG
         </div>
-        <div class="text-2xl font-black text-rose-900 font-mono mt-1">{$cntEcg}</div>
+        <div class="text-xl font-black text-rose-900 font-mono mt-1">{$cntEcg}</div>
+    </div>
+    <div onclick="filterModality('ct')" class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-3.5 shadow-2xs hover:border-indigo-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1.5 truncate">
+            <i class="fa-solid fa-laptop-medical text-indigo-600"></i> CT Scan
+        </div>
+        <div class="text-xl font-black text-indigo-900 font-mono mt-1">{$cntCt}</div>
+    </div>
+    <div onclick="filterModality('mri')" class="bg-purple-50/70 border border-purple-200 rounded-2xl p-3.5 shadow-2xs hover:border-purple-400 cursor-pointer transition-all">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-purple-800 flex items-center gap-1.5 truncate">
+            <i class="fa-solid fa-magnet text-purple-600"></i> MRI Scan
+        </div>
+        <div class="text-xl font-black text-purple-900 font-mono mt-1">{$cntMri}</div>
     </div>
 </div>
 
@@ -228,6 +196,12 @@ $content .= <<<HTML
             </button>
             <button type="button" onclick="filterModality('ecg')" id="pill-ecg" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-900 transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-heart-pulse text-rose-600"></i> ECG ({$cntEcg})
+            </button>
+            <button type="button" onclick="filterModality('ct')" id="pill-ct" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-900 transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-laptop-medical text-indigo-600"></i> CT Scan ({$cntCt})
+            </button>
+            <button type="button" onclick="filterModality('mri')" id="pill-mri" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-magnet text-purple-600"></i> MRI Scan ({$cntMri})
             </button>
         </div>
 
@@ -329,7 +303,7 @@ let activeModality = 'all';
 function filterModality(mod) {
     activeModality = mod;
 
-    const pills = ['all', 'ultrasound', 'xray', 'ecg'];
+    const pills = ['all', 'ultrasound', 'xray', 'ecg', 'ct', 'mri'];
     pills.forEach(p => {
         const el = document.getElementById('pill-' + p);
         if (!el) return;

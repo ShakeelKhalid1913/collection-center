@@ -33,10 +33,13 @@ foreach ($scans as $scan) {
         '</a>' .
     '</div>';
 
+    $deptMeta = get_department_meta($study, $modality);
+    $modBadge = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ' . $deptMeta['badge_class'] . '"><i class="' . $deptMeta['icon'] . ' ' . $deptMeta['icon_color'] . '"></i> ' . e($deptMeta['name']) . '</span>';
+
     $rows[] = [
         '<span class="font-mono font-bold text-teal-800">' . e($scanNo) . '</span>',
         '<div class="font-bold text-slate-900">' . e($patient) . '</div>',
-        '<span class="font-medium text-slate-700">' . e($study) . '</span>',
+        '<div><div class="font-bold text-slate-900 text-xs">' . e($study) . '</div><div class="mt-1">' . $modBadge . '</div></div>',
         '<span class="text-xs text-slate-500">' . e($date) . '</span>',
         $statusBadge,
         $actionHtml
@@ -48,7 +51,7 @@ $headerActions = '<div class="flex items-center gap-2">' .
     '<a href="/portals/imaging/results.php" class="btn btn-secondary text-xs py-2 px-3"><i class="fa-solid fa-notes-medical mr-1"></i> Enter Findings</a>' .
 '</div>';
 
-$content = page_header('Imaging Report History', 'View, print, and edit all Ultrasound, X-Ray, ECG, and CT Scan reports.', $headerActions, 'fa-solid fa-folder-open');
+$content = page_header('Imaging Report History', 'View, print, and edit all Ultrasound, X-Ray, ECG, CT Scan, and MRI reports.', $headerActions, 'fa-solid fa-folder-open');
 $content .= card(data_table(['Scan No', 'Patient', 'Study', 'Date', 'Status', 'Actions'], $rows), 'overflow-hidden');
 
 render_page('Report History', 'imaging', 'report-history', $content);

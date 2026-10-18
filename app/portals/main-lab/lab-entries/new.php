@@ -66,12 +66,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
     ]);
 
+    $portal = current_portal();
     if ($res['success']) {
-        header('Location: /portals/main-lab/results/entry.php?lab_no=' . urlencode($res['lab_no']));
+        if ($portal === 'imaging') {
+            header('Location: /portals/imaging/receipt.php?lab_no=' . urlencode($res['lab_no']) . '&created=1');
+        } else {
+            header('Location: /portals/main-lab/results/entry.php?lab_no=' . urlencode($res['lab_no']));
+        }
         exit;
     }
     $message = flash_error('Could not save lab entry.');
 }
+
+$portal = current_portal();
+$activeKey = ($portal === 'imaging') ? 'new-scan' : 'new-entry';
+$pageTitle = ($portal === 'imaging') ? 'New Booking (Unified Slip)' : 'New Lab Entry';
 
 $patientOpts = ['' => '— Select patient —'];
 foreach (patient_repo()->getAll(current_user()['organization_id'] ?? 'ORG-001') as $p) {
@@ -91,10 +100,12 @@ foreach (mock('mock_routes') as $r) {
 
 $selectedPatientId = trim((string)($_GET['patient_id'] ?? ''));
 
+$registerUrl = ($portal === 'imaging') ? '/portals/imaging/patients.php' : '/portals/main-lab/patients/register.php';
+
 $content = page_header(
-    'New Lab Entry',
+    $pageTitle,
     'Patient → pick test type → choose tests → discount & save.',
-    btn_primary('/portals/main-lab/patients/register.php', 'Register new patient')
+    btn_primary($registerUrl, 'Register new patient')
 );
 
 $content .= $message;
@@ -214,4 +225,4 @@ if (!empty($preTestsArray) || $preDiscount > 0) {
 
 $content .= '</div></form>';
 
-render_page('New Lab Entry', 'main-lab', 'new-entry', $content);
+render_page($pageTitle, $portal, $activeKey, $content);

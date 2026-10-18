@@ -9,10 +9,14 @@ require_once __DIR__ . '/../../includes/documents.php';
 
 $orgId = current_user()['organization_id'] ?? 'ORG-001';
 $scanNo = trim((string)($_GET['scan_no'] ?? ''));
+$labNo = trim((string)($_GET['lab_no'] ?? ''));
 
 $scan = null;
 if ($scanNo !== '') {
     $scan = result_repo()->findImagingScan($scanNo);
+}
+if (!$scan && $labNo !== '') {
+    $scan = db()->fetchOne("SELECT * FROM imaging_scans WHERE lab_no = :lab_no ORDER BY id DESC LIMIT 1", ['lab_no' => $labNo]);
 }
 
 if (!$scan) {
