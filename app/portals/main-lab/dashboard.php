@@ -67,15 +67,15 @@ ob_start();
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <a href="/portals/main-lab/patients/register.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
+            <a href="/portals/patients/register.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
                 <i class="fa-solid fa-user-plus"></i>
                 <span>Register Patient</span>
             </a>
-            <a href="/portals/main-lab/results/entry.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
+            <a href="/portals/results/entry.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
                 <i class="fa-solid fa-keyboard"></i>
                 <span>Result Entry</span>
             </a>
-            <a href="/portals/main-lab/reports/history.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
+            <a href="/portals/reports/history.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
                 <i class="fa-solid fa-folder-open"></i>
                 <span>Reports History</span>
             </a>
@@ -133,7 +133,7 @@ ob_start();
 
             <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
                 <span class="text-xs text-slate-400">Lab Dash Pro Engine 3.2</span>
-                <a href="/portals/main-lab/results/entry.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
+                <a href="/portals/results/entry.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
                     <span>Inspect Queue</span>
                     <i class="fa-solid fa-arrow-right text-[10px]"></i>
                 </a>
@@ -185,7 +185,7 @@ ob_start();
 
             <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>Integrated with Diagnostic Center</span>
-                <a href="/portals/main-lab/tests/index.php" class="font-bold text-blue-600 hover:underline">Manage Catalog &rarr;</a>
+                <a href="/portals/tests/index.php" class="font-bold text-blue-600 hover:underline">Manage Catalog &rarr;</a>
             </div>
         </div>
 
@@ -194,7 +194,7 @@ ob_start();
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Specimen Breakdown</span>
-                    <a href="/portals/main-lab/results/entry.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">See all &gt;</a>
+                    <a href="/portals/results/entry.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">See all &gt;</a>
                 </div>
 
                 <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Biomarker Health Spectrum</h3>
@@ -253,7 +253,7 @@ ob_start();
             </div>
 
             <!-- Action Button: Verification Queue -->
-            <a href="/portals/main-lab/results/entry.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
+            <a href="/portals/results/entry.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
                 <span>Pathologist Verification Queue</span>
                 <i class="fa-solid fa-arrow-right"></i>
             </a>
@@ -299,7 +299,7 @@ ob_start();
                 'lead' => 'Liver Enzyme & Protein Evaluation',
                 'desc' => 'Evaluated biomarkers include Alanine Transaminase (ALT/SGPT), Aspartate Aminotransferase (AST/SGOT), Alkaline Phosphatase, Total Bilirubin, and Albumin/Globulin ratio.',
                 'ranges' => ['ALT (SGPT): 10–40 U/L', 'AST: 10–35 U/L', 'Bilirubin: 0.2–1.2 mg/dL'],
-                'entry_link' => '/portals/main-lab/results/entry.php?filter=lft',
+                'entry_link' => '/portals/results/entry.php?filter=lft',
             ],
             'renal' => [
                 'title' => 'Renal Profile (RFT)',
@@ -309,7 +309,7 @@ ob_start();
                 'lead' => 'Kidney Filtration & Electrolytes',
                 'desc' => 'Tracks serum creatinine, Blood Urea Nitrogen (BUN), serum uric acid, sodium, potassium, and estimated Glomerular Filtration Rate (eGFR).',
                 'ranges' => ['Creatinine: 0.6–1.2 mg/dL', 'Urea: 15–45 mg/dL', 'Uric Acid: 3.5–7.2 mg/dL'],
-                'entry_link' => '/portals/main-lab/results/entry.php?filter=rft',
+                'entry_link' => '/portals/results/entry.php?filter=rft',
             ],
             'hematology' => [
                 'title' => 'Hematology (CBC)',
@@ -319,7 +319,7 @@ ob_start();
                 'lead' => 'Complete Blood Count & Morphology',
                 'desc' => 'Automatic calculation of Red Blood Cells (RBC), Total Leukocyte Count (TLC), Platelets, Hemoglobin, MCV, MCH, MCHC, and differential WBC percentages.',
                 'ranges' => ['Hemoglobin: 13.0–17.5 g/dL', 'Platelets: 150–450 k/uL', 'WBC: 4.0–11.0 k/uL'],
-                'entry_link' => '/portals/main-lab/results/entry.php?filter=cbc',
+                'entry_link' => '/portals/results/entry.php?filter=cbc',
             ],
             'cardiac' => [
                 'title' => 'Lipid & Cardiac Panel',
@@ -329,7 +329,7 @@ ob_start();
                 'lead' => 'Atherosclerosis Risk & Cardiac Markers',
                 'desc' => 'Total Cholesterol, Triglycerides, HDL (Good Cholesterol), LDL (Bad Cholesterol), VLDL, Troponin-I, and CK-MB testing with automated coronary heart disease risk categorization.',
                 'ranges' => ['Cholesterol: < 200 mg/dL', 'Triglycerides: < 150 mg/dL', 'HDL: > 40 mg/dL'],
-                'entry_link' => '/portals/main-lab/results/entry.php?filter=lipid',
+                'entry_link' => '/portals/results/entry.php?filter=lipid',
             ],
             'metabolic' => [
                 'title' => 'Metabolic & Glycemic',
@@ -339,7 +339,7 @@ ob_start();
                 'lead' => 'Fasting Blood Sugar & Glycated Hemoglobin',
                 'desc' => 'Fasting Blood Glucose (FBS), Post-Prandial (RBS), and HbA1c with estimated Average Glucose (eAG) calculation. Flags high glycemic indexes immediately.',
                 'ranges' => ['Fasting: 70–100 mg/dL', 'Random: < 140 mg/dL', 'HbA1c: 4.0–5.6 %'],
-                'entry_link' => '/portals/main-lab/results/entry.php?filter=sugar',
+                'entry_link' => '/portals/results/entry.php?filter=sugar',
             ],
         ];
 
@@ -393,7 +393,7 @@ ob_start();
                         <a href="<?= $deck['entry_link'] ?>" class="w-full text-center py-2.5 px-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs transition-colors">
                             Enter <?= explode(' ', $deck['title'])[0] ?> Batch
                         </a>
-                        <a href="/portals/main-lab/tests/index.php" class="w-full text-center py-2 px-4 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition-colors">
+                        <a href="/portals/tests/index.php" class="w-full text-center py-2 px-4 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition-colors">
                             Configure Parameters
                         </a>
                     </div>
@@ -437,7 +437,7 @@ ob_start();
 
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <span class="text-xs text-slate-400">Showing recent <?= $totalEntriesCount ?> orders</span>
-                <a href="/portals/main-lab/archive.php" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors">
+                <a href="/portals/archive.php" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors">
                     <i class="fa-solid fa-clock-rotate-left"></i> All History
                 </a>
             </div>
@@ -461,7 +461,7 @@ ob_start();
                         <tr>
                             <td colspan="6" class="py-12 text-center text-slate-400">
                                 <i class="fa-solid fa-vials text-3xl mb-2 text-slate-300 block"></i>
-                                No active lab entries found. Click <a href="/portals/main-lab/patients/register.php" class="text-blue-600 underline font-bold">Register Patient</a> to create an entry.
+                                No active lab entries found. Click <a href="/portals/patients/register.php" class="text-blue-600 underline font-bold">Register Patient</a> to create an entry.
                             </td>
                         </tr>
                     <?php else: ?>
@@ -516,13 +516,13 @@ ob_start();
                                 </td>
                                 <td class="py-3.5 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1.5">
-                                        <a href="/portals/main-lab/results/entry.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-xs font-bold" title="Enter Results">
+                                        <a href="/portals/results/entry.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-xs font-bold" title="Enter Results">
                                             <i class="fa-solid fa-keyboard"></i>
                                         </a>
-                                        <a href="/portals/main-lab/reports/preview.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white transition-all text-xs font-bold" title="View Report">
+                                        <a href="/portals/reports/preview.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white transition-all text-xs font-bold" title="View Report">
                                             <i class="fa-solid fa-file-lines"></i>
                                         </a>
-                                        <a href="/portals/main-lab/receipts.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white transition-all text-xs font-bold" title="Billing Receipt">
+                                        <a href="/portals/receipts.php?lab_no=<?= urlencode($entry['lab_no']) ?>" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white transition-all text-xs font-bold" title="Billing Receipt">
                                             <i class="fa-solid fa-receipt"></i>
                                         </a>
                                     </div>
@@ -546,27 +546,27 @@ ob_start();
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            <a href="/portals/main-lab/patients/register.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/patients/register.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-user-plus text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Patient Register</span>
             </a>
-            <a href="/portals/main-lab/results/entry.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/results/entry.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-keyboard text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Result Entry</span>
             </a>
-            <a href="/portals/main-lab/waste-record.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/waste-record.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-trash-can text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Waste Record</span>
             </a>
-            <a href="/portals/main-lab/doctors-share.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/doctors-share.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-user-doctor text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Doctor's Share</span>
             </a>
-            <a href="/portals/main-lab/tests/index.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/tests/index.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-flask text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Add Test</span>
             </a>
-            <a href="/portals/main-lab/settings/report-template.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
+            <a href="/portals/settings/report-template.php" class="p-3.5 rounded-2xl bg-white/5 hover:bg-[#c2f13c] hover:text-slate-950 border border-white/10 text-center transition-all group">
                 <i class="fa-solid fa-heading text-xl text-[#c2f13c] group-hover:text-slate-950 mb-1.5 block"></i>
                 <span class="text-xs font-bold block">Header / Footer</span>
             </a>

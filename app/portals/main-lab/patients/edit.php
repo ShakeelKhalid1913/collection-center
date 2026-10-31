@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $patient) {
 
 if (!$patient) {
     $content = page_header('Edit Patient', 'Patient record not found.');
-    $content .= card('<div class="p-6 text-slate-600"><p class="mb-4">No patient was found for the requested ID.</p>' . btn_secondary('/portals/main-lab/patients/records.php', 'Back to Patient Records') . '</div>');
+    $content .= card('<div class="p-6 text-slate-600"><p class="mb-4">No patient was found for the requested ID.</p>' . btn_secondary('/portals/patients/records.php', 'Back to Patient Records') . '</div>');
     render_page('Edit Patient', 'main-lab', 'records', $content);
     exit;
 }
@@ -97,8 +97,8 @@ $form = '<form method="post">' .
         '</div>' .
         '<div class="sticky-actions">' .
         btn_submit('Save Changes', '', 'fa-solid fa-check') .
-        btn_secondary('/portals/main-lab/patients/history.php?id=' . urlencode($mrNo), 'View History', 'fa-solid fa-clock-rotate-left') .
-        btn_secondary('/portals/main-lab/patients/records.php', 'Back to Records', 'fa-solid fa-arrow-left') .
+        btn_secondary('/portals/patients/history.php?id=' . urlencode($mrNo), 'View History', 'fa-solid fa-clock-rotate-left') .
+        btn_secondary('/portals/patients/records.php', 'Back to Records', 'fa-solid fa-arrow-left') .
         '</div>'
     ) . '</form>';
 

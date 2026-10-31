@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/head.php';
 
 if (!empty($_SESSION['user'])) {
     $portal = $_SESSION['portal'] ?? 'collection-center';
-    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/collection-center/dashboard.php'));
+    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/dashboard.php'));
     exit;
 }
 ?>

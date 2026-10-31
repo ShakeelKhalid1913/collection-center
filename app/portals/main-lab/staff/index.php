@@ -12,10 +12,11 @@ $user = current_user();
 $orgId = $user['organization_id'] ?? 'ORG-001';
 $portal = current_portal();
 $message = '';
+$today = date('Y-m-d');
 $tab = trim((string)($_GET['tab'] ?? 'staff'));
 
 if ($tab === 'attendance') {
-    header('Location: /portals/main-lab/staff/attendance.php');
+    header('Location: /portals/staff/attendance.php');
     exit;
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -56,7 +57,7 @@ $licenseTitle = e($license['license_title'] ?? 'Healthcare Commission Registrati
 $licenseNumber = e($license['license_number'] ?? 'PHC-LAB-2024-8891');
 $licenseAuth = e($license['license_authority'] ?? 'Punjab Healthcare Commission (PHC)');
 $hasLicenseImg = !empty($license['has_license']);
-$licenseImgUrl = $hasLicenseImg ? '/portals/main-lab/staff/license-image.php?org=' . urlencode($orgId) . '&v=' . ($license['license_image_ver'] ?? 1) : '';
+$licenseImgUrl = $hasLicenseImg ? '/portals/staff/license-image.php?org=' . urlencode($orgId) . '&v=' . ($license['license_image_ver'] ?? 1) : '';
 
 // Data for Staff Table
 $employees = employee_repo()->getAll($orgId);
@@ -73,14 +74,14 @@ foreach ($employees as $e) {
     $hasDegree = !empty($e['has_degree']);
 
     $avatarHtml = $hasPhoto
-        ? '<img src="/portals/main-lab/staff/photo.php?id=' . urlencode($eid) . '" alt="' . e($name) . '" class="w-10 h-10 rounded-full object-cover border-2 border-teal-500 shadow-xs">'
+        ? '<img src="/portals/staff/photo.php?id=' . urlencode($eid) . '" alt="' . e($name) . '" class="w-10 h-10 rounded-full object-cover border-2 border-teal-500 shadow-xs">'
         : '<div class="w-10 h-10 rounded-full bg-slate-800 text-[#c2f13c] font-black flex items-center justify-center text-xs shadow-xs">' . e(user_initials($name)) . '</div>';
 
     $degreeBadge = $hasDegree
-        ? '<a href="/portals/main-lab/staff/degree.php?id=' . urlencode($eid) . '" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" title="View Uploaded Degree / Diploma"><i class="fa-solid fa-graduation-cap"></i> ' . e($degreeTitle) . '</a>'
+        ? '<a href="/portals/staff/degree.php?id=' . urlencode($eid) . '" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" title="View Uploaded Degree / Diploma"><i class="fa-solid fa-graduation-cap"></i> ' . e($degreeTitle) . '</a>'
         : '<span class="text-xs text-slate-400">' . e($degreeTitle) . '</span>';
 
-    $cardBtn = '<a href="/portals/main-lab/staff/card.php?id=' . urlencode($eid) . '" target="_blank" class="btn btn-secondary text-xs py-1 px-2" title="Print Worker ID Badge"><i class="fa-solid fa-id-card text-blue-600 mr-1"></i> ID Card</a>';
+    $cardBtn = '<a href="/portals/staff/card.php?id=' . urlencode($eid) . '" target="_blank" class="btn btn-secondary text-xs py-1 px-2" title="Print Worker ID Badge"><i class="fa-solid fa-id-card text-blue-600 mr-1"></i> ID Card</a>';
 
     $editBtn = '<button type="button" onclick=\'openEditEmpModal(' . htmlspecialchars(json_encode([
         'id' => $eid,
@@ -133,7 +134,7 @@ $content .= <<<HTML
     <a href="?tab=staff" class="pb-3 px-1 transition-all {$staffActive}">
         <i class="fa-solid fa-users mr-1.5"></i> Employees &amp; ID Cards ({$empCount})
     </a>
-    <a href="/portals/main-lab/staff/attendance.php" class="pb-3 px-1 transition-all text-slate-500 hover:text-slate-800 font-medium">
+    <a href="/portals/staff/attendance.php" class="pb-3 px-1 transition-all text-slate-500 hover:text-slate-800 font-medium">
         <i class="fa-solid fa-camera mr-1.5 text-teal-600"></i> Worker Photo Attendance Terminal
     </a>
     <a href="?tab=license" class="pb-3 px-1 transition-all {$licenseActive}">

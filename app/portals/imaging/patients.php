@@ -35,7 +35,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['register_p
         ]);
         if ($res) {
             $createdPid = $res['patient_no'] ?? $pId;
-            header('Location: /portals/imaging/new-scan.php?patient_id=' . urlencode($createdPid));
+            header('Location: /portals/new-scan.php?patient_id=' . urlencode($createdPid));
             exit;
         }
         $message = flash_error('Could not register patient.');
@@ -53,9 +53,9 @@ foreach ($allPatients as $p) {
     $city = (string)($p['city'] ?? '—');
 
     $actions = '<div class="inline-flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/imaging/new-scan.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-bold bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a]"><i class="fa-solid fa-plus mr-1"></i> Book Order</a>' .
-        '<a href="/portals/imaging/report-history.php?q=' . urlencode($pName) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
-        '<a href="/portals/main-lab/patients/card.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2 py-1 font-semibold" title="Print ID Card"><i class="fa-solid fa-id-card"></i></a>' .
+        '<a href="/portals/new-scan.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-bold bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a]"><i class="fa-solid fa-plus mr-1"></i> Book Order</a>' .
+        '<a href="/portals/report-history.php?q=' . urlencode($pName) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
+        '<a href="/portals/patients/card.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2 py-1 font-semibold" title="Print ID Card"><i class="fa-solid fa-id-card"></i></a>' .
         '</div>';
 
     $rows[] = [
@@ -73,7 +73,7 @@ $headerActions = <<<HTML
     <button type="button" onclick="toggleRegisterModal(true)" class="btn btn-primary text-xs font-bold py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
         <i class="fa-solid fa-user-plus mr-1"></i> Register New Patient
     </button>
-    <a href="/portals/imaging/new-scan.php" class="btn btn-primary text-xs font-bold py-2 px-3 bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a] shadow-sm">
+    <a href="/portals/new-scan.php" class="btn btn-primary text-xs font-bold py-2 px-3 bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a] shadow-sm">
         <i class="fa-solid fa-file-circle-plus mr-1"></i> New Booking Slip
     </a>
 </div>

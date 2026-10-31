@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
-$orgId = current_user()['organization_id'] ?? 'ORG-001';
+require_auth(['imaging', 'admin']);
+$orgId = current_organization_id();
 $message = '';
 
 // Preselected modality from query parameter (e.g. ?modality=us or ?modality=xray)
@@ -110,7 +111,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $firstScan = db()->fetchOne("SELECT scan_no FROM imaging_scans WHERE lab_no = :ln LIMIT 1", ['ln' => $createdLabNo]);
             $scanParam = !empty($firstScan['scan_no']) ? ('&scan_no=' . urlencode($firstScan['scan_no'])) : '';
 
-            header('Location: /portals/imaging/receipt.php?lab_no=' . urlencode($createdLabNo) . $scanParam . '&created=1');
+            header('Location: /portals/receipt.php?lab_no=' . urlencode($createdLabNo) . $scanParam . '&created=1');
             exit;
         }
 
@@ -345,10 +346,10 @@ foreach ($doctorOpts as $k => $v) {
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/imaging/patients.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
+    <a href="/portals/patients.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
         <i class="fa-solid fa-users mr-1"></i> Patient Directory
     </a>
-    <a href="/portals/imaging/dashboard.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
+    <a href="/portals/dashboard.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
         <i class="fa-solid fa-gauge-high mr-1"></i> Center Dashboard
     </a>
 </div>
@@ -372,7 +373,7 @@ $content .= <<<HTML
                     <span class="text-xs text-slate-400">Search patient from records or quickly enter walk-in</span>
                 </div>
             </div>
-            <a href="/portals/imaging/patients.php" class="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1">
+            <a href="/portals/patients.php" class="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1">
                 <i class="fa-solid fa-address-book"></i> Browse Patients
             </a>
         </div>
@@ -563,7 +564,7 @@ $content .= <<<HTML
                         <i class="fa-solid fa-print"></i>
                         <span>Generate Unified Token Slip</span>
                     </button>
-                    <a href="/portals/imaging/dashboard.php" class="text-center text-xs text-slate-400 hover:text-white py-1">
+                    <a href="/portals/dashboard.php" class="text-center text-xs text-slate-400 hover:text-white py-1">
                         Cancel &amp; Return to Dashboard
                     </a>
                 </div>

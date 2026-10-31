@@ -166,7 +166,7 @@ $isEdit = $editingTest !== null;
 $formTitle = $isEdit ? 'Edit Test: ' . e($editingTest['name']) . ' (' . e($editingTest['code']) . ')' : 'Add New Test &amp; Parameters';
 $formAction = $isEdit ? 'update' : 'create';
 $testIdHidden = $isEdit ? '<input type="hidden" name="test_id" value="' . e($editingTest['id']) . '">' : '';
-$cancelBtn = $isEdit ? '<a href="/portals/main-lab/tests/index.php" class="btn btn-secondary ml-2">Cancel / Add New</a>' : '';
+$cancelBtn = $isEdit ? '<a href="/portals/tests/index.php" class="btn btn-secondary ml-2">Cancel / Add New</a>' : '';
 
 $valCode = e($editingTest['code'] ?? '');
 $valName = e($editingTest['name'] ?? '');
@@ -293,7 +293,7 @@ $queryBase = array_filter([
 
 $buildUrl = static function (int $p) use ($queryBase): string {
     $qs = http_build_query(array_merge($queryBase, ['page' => $p]));
-    return '/portals/main-lab/tests/index.php' . ($qs !== '' ? '?' . $qs : '');
+    return '/portals/tests/index.php' . ($qs !== '' ? '?' . $qs : '');
 };
 
 $rows = [];
@@ -303,7 +303,7 @@ foreach ($tests as $t) {
     $pCountBadge = '<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded ' . $badgeClass . '">' . $pCount . ' parameter' . ($pCount === 1 ? '' : 's') . '</span>';
 
     $editQs = http_build_query(array_merge($queryBase, ['edit' => $t['id'], 'page' => $page]));
-    $editUrl = '/portals/main-lab/tests/index.php?' . $editQs;
+    $editUrl = '/portals/tests/index.php?' . $editQs;
     $delForm = '<form method="post" class="inline" style="display:inline;" onsubmit="return confirm(\'Delete test ' . e($t['name']) . '?\');">
         <input type="hidden" name="action" value="delete">
         <input type="hidden" name="test_id" value="' . e($t['id']) . '">
@@ -339,7 +339,7 @@ $filterHtml = '<form method="get" class="grid gap-3 p-4 sm:grid-cols-4 border-b 
     . select_field('Specimen', 'sample', $sampleOpts, $sampleFilter, true)
     . '<div class="sm:col-span-4 flex flex-wrap gap-2">'
     . '<button type="submit" class="btn btn-primary text-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> Filter</button>'
-    . '<a href="/portals/main-lab/tests/index.php" class="btn btn-secondary text-sm">Clear</a>'
+    . '<a href="/portals/tests/index.php" class="btn btn-secondary text-sm">Clear</a>'
     . '</div></form>';
 
 $paginationHtml = '';
@@ -367,7 +367,7 @@ if ($totalPages > 1) {
 $content = page_header(
     'Add Test',
     'Add new laboratory tests not already in the system, or edit existing catalog items.',
-    btn_primary('/portals/main-lab/tests/prices.php', 'Add / Update Price', 'fa-solid fa-tags')
+    btn_primary('/portals/tests/prices.php', 'Add / Update Price', 'fa-solid fa-tags')
 );
 $content .= $message;
 $content .= card(

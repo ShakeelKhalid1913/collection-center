@@ -63,7 +63,7 @@ foreach (test_departments() as $k => $label) {
 $content = page_header(
     'Add / Update Price',
     'Quickly edit laboratory test pricing. Use Add Test for new catalog items.',
-    btn_primary('/portals/main-lab/tests/index.php', 'Add new test', 'fa-solid fa-flask')
+    btn_primary('/portals/tests/index.php', 'Add new test', 'fa-solid fa-flask')
 );
 $content .= $message;
 $content .= card(

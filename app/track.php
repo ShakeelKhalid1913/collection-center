@@ -161,8 +161,8 @@ $settings = branding_settings();
                 </div>
             </div>
 
-            <!-- Report Document Preview (If ready) -->
-            <?php if ($ctx && !empty($ctx['lines'])): ?>
+            <!-- Report Document Preview (If ready & verified) -->
+            <?php if ($ctx && !empty($ctx['lines']) && ($curStatus === 'verified' || in_array($entry['status'] ?? '', ['verified', 'completed'], true))): ?>
                 <div class="print-container bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-8 overflow-x-auto">
                     <div class="no-print mb-4 flex items-center justify-between pb-3 border-b border-slate-200">
                         <span class="text-xs uppercase tracking-wider font-extrabold text-slate-500"><i class="fa-solid fa-file-medical text-blue-600 mr-1.5"></i> Official Diagnostic Report</span>

@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if ($labRes['success']) {
-                header('Location: /portals/collection-center/entry-done.php?lab_no=' . urlencode($labRes['lab_no']));
+                header('Location: /portals/entry-done.php?lab_no=' . urlencode($labRes['lab_no']));
                 exit;
             }
             $message = flash_error('Patient saved, but lab entry failed.');
@@ -160,7 +160,7 @@ $billingBlock = card(
     '</div>' .
     '<div class="sticky-actions">' .
     btn_submit('Save & preview receipt / report') .
-    btn_secondary('/portals/collection-center/patients/register.php', 'Full registration only') .
+    btn_secondary('/portals/patients/register.php', 'Full registration only') .
     '</div>'
 );
 

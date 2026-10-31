@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
+require_auth(['imaging', 'admin']);
+
 $message = '';
 $scanNo = trim((string)($_GET['scan_no'] ?? $_POST['scan_no'] ?? ''));
 $labNo = trim((string)($_GET['lab_no'] ?? $_POST['lab_no'] ?? ''));
@@ -45,7 +47,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($_POST['scan_no']
         'status' => 'reported',
     ]);
     if ($ok) {
-        header('Location: /portals/imaging/reports.php?scan_no=' . urlencode($_POST['scan_no']));
+        header('Location: /portals/reports.php?scan_no=' . urlencode($_POST['scan_no']));
         exit;
     }
     $message = flash_error('Could not save findings.');
@@ -62,7 +64,7 @@ $content .= $message;
 if (!$scan) {
     $content .= card(
         '<p class="p-6 text-sm text-slate-600">No imaging studies found. Book a study from New Study first.</p>' .
-        '<div class="p-6 pt-0">' . btn_primary('/portals/main-lab/lab-entries/new.php', 'New study') . '</div>'
+        '<div class="p-6 pt-0">' . btn_primary('/portals/lab-entries/new.php', 'New study') . '</div>'
     );
 } else {
     $currentRad = $scan['radiologist'] ?? ($scan['doctor'] ?? 'Dr. Imran Sheikh');
@@ -91,6 +93,7 @@ if (!$scan) {
         'ultrasound' => ['label' => '🌊 Ultrasound Examinations', 'items' => []],
         'xray' => ['label' => '🩻 Digital X-Ray Examinations', 'items' => []],
         'ecg' => ['label' => '💓 12-Lead ECG Examinations', 'items' => []],
+        'echo' => ['label' => '💓 Echocardiography (Echo)', 'items' => []],
         'ct' => ['label' => '🖥️ CT Scan Examinations', 'items' => []],
         'mri' => ['label' => '🧲 MRI Scan Examinations', 'items' => []],
     ];
@@ -127,7 +130,7 @@ if (!$scan) {
 <div class="mb-5 no-print p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
     <div class="flex-1 min-w-[16rem]">
         <label class="field-label text-xs">Switch Study / Patient Worklist</label>
-        <select class="field text-sm font-semibold" onchange="if(this.value) location.href='/portals/imaging/results.php?scan_no='+encodeURIComponent(this.value)">
+        <select class="field text-sm font-semibold" onchange="if(this.value) location.href='/portals/results.php?scan_no='+encodeURIComponent(this.value)">
             {$scanPickerOpts}
         </select>
     </div>
@@ -136,10 +139,10 @@ if (!$scan) {
             <i class="{$deptMeta['icon']} {$deptMeta['icon_color']}"></i>
             <span>Department: {$deptMeta['name']}</span>
         </span>
-        <a href="/portals/imaging/receipt.php?scan_no={$scan['scan_no']}" class="btn btn-secondary text-xs">
+        <a href="/portals/receipt.php?scan_no={$scan['scan_no']}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-receipt mr-1"></i> Print Slip
         </a>
-        <a href="/portals/imaging/reports.php?scan_no={$scan['scan_no']}" class="btn btn-secondary text-xs">
+        <a href="/portals/reports.php?scan_no={$scan['scan_no']}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-file-waveform mr-1"></i> View Report
         </a>
     </div>
@@ -190,6 +193,9 @@ HTML;
         <button type="button" onclick="applyImagingTemplate('ecg_12lead')" class="px-2.5 py-1 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-500/40 font-semibold text-[11px] transition-colors">
             💓 12-Lead ECG
         </button>
+        <button type="button" onclick="applyImagingTemplate('echo_2d_doppler')" class="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/50 font-semibold text-[11px] transition-colors">
+            💓 2D Echo &amp; Doppler
+        </button>
         <button type="button" onclick="applyImagingTemplate('ct_brain_plain')" class="px-2.5 py-1 rounded-lg bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-semibold text-[11px] transition-colors">
             🖥️ Brain CT Scan
         </button>
@@ -227,11 +233,68 @@ HTML;
         '</div>' .
         $templateBarHtml .
         $autoNotice .
-        '<div><label class="field-label font-bold text-slate-900">Radiological &amp; Clinical Findings</label><textarea id="imaging-findings-ta" name="findings" rows="14" class="field text-sm font-mono leading-relaxed" placeholder="Describe findings (Organ dimensions, parenchymal echotexture, lung fields, bone alignment, signal intensities...)">' . e($initialFindings) . '</textarea></div>' .
+        '<div>' .
+        '  <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-100 p-2.5 rounded-t-2xl border border-b-0 border-slate-300">' .
+        '    <div class="flex flex-wrap items-center gap-1.5">' .
+        '      <span class="text-xs font-extrabold text-slate-800 mr-1.5 flex items-center gap-1"><i class="fa-solid fa-pen-nib text-teal-600"></i> Findings Pad:</span>' .
+        '      <button type="button" onclick="formatPad(\'h1\')" title="Heading 1" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-xs font-black text-slate-800 shadow-2xs">H1</button>' .
+        '      <button type="button" onclick="formatPad(\'h2\')" title="Heading 2" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-xs font-bold text-slate-700 shadow-2xs">H2</button>' .
+        '      <button type="button" onclick="formatPad(\'bold\')" title="Bold Selection" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-xs font-bold text-slate-900 shadow-2xs"><b>B</b></button>' .
+        '      <button type="button" onclick="formatPad(\'bullet\')" title="Bullet List" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs"><i class="fa-solid fa-list-ul"></i></button>' .
+        '      <button type="button" onclick="formatPad(\'uppercase\')" title="Convert to UPPERCASE" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-xs font-extrabold text-slate-700 shadow-2xs">AA</button>' .
+        '      <span class="border-r border-slate-300 h-4 mx-1"></span>' .
+        '      <select onchange="if(this.value){ insertOrganHeader(this.value); this.selectedIndex=0; }" class="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-semibold shadow-2xs">' .
+        '        <option value="">+ Insert Organ Header...</option>' .
+        '        <optgroup label="Abdominal &amp; Pelvic">' .
+        '          <option value="LIVER">LIVER</option>' .
+        '          <option value="GALLBLADDER &amp; BILIARY TRACT">GALLBLADDER &amp; BILIARY TRACT</option>' .
+        '          <option value="SPLEEN">SPLEEN</option>' .
+        '          <option value="PANCREAS">PANCREAS</option>' .
+        '          <option value="KIDNEYS &amp; URETERS">KIDNEYS &amp; URETERS</option>' .
+        '          <option value="URINARY BLADDER">URINARY BLADDER</option>' .
+        '          <option value="PROSTATE GLAND">PROSTATE GLAND</option>' .
+        '          <option value="UTERUS &amp; ADNEXA">UTERUS &amp; ADNEXA</option>' .
+        '        </optgroup>' .
+        '        <optgroup label="Cardiac / Echocardiography">' .
+        '          <option value="LEFT VENTRICLE &amp; SYSTOLIC FUNCTION">LEFT VENTRICLE &amp; SYSTOLIC FUNCTION</option>' .
+        '          <option value="LEFT ATRIUM &amp; RIGHT CHAMBERS">LEFT ATRIUM &amp; RIGHT CHAMBERS</option>' .
+        '          <option value="VALVULAR MORPHOLOGY &amp; DOPPLER">VALVULAR MORPHOLOGY &amp; DOPPLER</option>' .
+        '          <option value="PERICARDIUM &amp; INFERIOR VENA CAVA">PERICARDIUM &amp; INFERIOR VENA CAVA</option>' .
+        '        </optgroup>' .
+        '        <optgroup label="Chest &amp; Lungs">' .
+        '          <option value="LUNG PARENCHYMA &amp; BRONCHOVASCULAR MARKINGS">LUNG PARENCHYMA &amp; BRONCHOVASCULAR MARKINGS</option>' .
+        '          <option value="CARDIOPHRENIC &amp; COSTOPHRENIC SULCI">CARDIOPHRENIC &amp; COSTOPHRENIC SULCI</option>' .
+        '          <option value="CARDIOTHORACIC RATIO">CARDIOTHORACIC RATIO</option>' .
+        '          <option value="TRACHEA &amp; MEDIASTINUM">TRACHEA &amp; MEDIASTINUM</option>' .
+        '        </optgroup>' .
+        '        <optgroup label="Musculoskeletal &amp; Neuro">' .
+        '          <option value="VERTEBRAL ALIGNMENT &amp; DISC SPACES">VERTEBRAL ALIGNMENT &amp; DISC SPACES</option>' .
+        '          <option value="BONES &amp; SOFT TISSUES">BONES &amp; SOFT TISSUES</option>' .
+        '          <option value="CEREBRAL PARENCHYMA &amp; SULCI">CEREBRAL PARENCHYMA &amp; SULCI</option>' .
+        '          <option value="VENTRICULAR SYSTEM &amp; CISTERNS">VENTRICULAR SYSTEM &amp; CISTERNS</option>' .
+        '        </optgroup>' .
+        '      </select>' .
+        '    </div>' .
+        '    <div class="flex items-center gap-2">' .
+        '      <label class="text-[11px] font-bold text-slate-500 uppercase">Font:</label>' .
+        '      <select id="pad-font-family" onchange="changePadFont(this.value)" class="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-semibold shadow-2xs">' .
+        '        <option value="font-mono" selected>Monospace (Clean Data)</option>' .
+        '        <option value="font-serif">Medical Serif (Times)</option>' .
+        '        <option value="font-sans">Modern Sans (Arial)</option>' .
+        '      </select>' .
+        '      <div class="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 shadow-2xs">' .
+        '        <button type="button" onclick="changePadSize(-1)" title="Smaller Text (A-)" class="px-2 py-0.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded">A-</button>' .
+        '        <button type="button" onclick="changePadSize(0)" title="Default Text Size (A)" class="px-2 py-0.5 text-xs font-bold text-slate-800 hover:bg-slate-100 rounded border-x border-slate-200">A</button>' .
+        '        <button type="button" onclick="changePadSize(1)" title="Larger Text (A+)" class="px-2 py-0.5 text-xs font-bold text-slate-900 hover:bg-slate-100 rounded">A+</button>' .
+        '      </div>' .
+        '    </div>' .
+        '  </div>' .
+        '  <textarea id="imaging-findings-ta" name="findings" rows="15" class="field text-sm font-mono leading-relaxed rounded-t-none border-t-0" placeholder="Describe findings (Organ dimensions, parenchymal echotexture, lung fields, bone alignment, signal intensities...)">' . e($initialFindings) . '</textarea>' .
+        '</div>' .
         '<div><label class="field-label font-bold text-slate-900">Impression / Conclusion</label><textarea id="imaging-impression-ta" name="impression" rows="3" class="field text-sm font-semibold" placeholder="Diagnostic impression (e.g. Normal study, no focal lesion seen.)">' . e($initialImpression) . '</textarea></div>' .
         '<div class="pt-2 flex flex-wrap items-center gap-3">' .
         btn_submit('Save findings & generate report') .
-        '<a href="/portals/imaging/pending-scans.php" class="btn btn-secondary">Back to pending</a>' .
+        '<a href="/portals/pending-scans.php" class="btn btn-secondary">Back to pending</a>' .
         '</div>' .
         '</form>'
     );
@@ -270,6 +333,85 @@ function clearImagingFields() {
         if (iTa) iTa.value = '';
     }
 }
+
+function formatPad(cmd) {
+    const ta = document.getElementById('imaging-findings-ta');
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = ta.value;
+    const sel = text.substring(start, end);
+
+    let replacement = '';
+    if (cmd === 'h1') {
+        replacement = (start > 0 && text[start - 1] !== '\n' ? '\n' : '') + '# ' + (sel || 'SECTION HEADING') + '\n';
+    } else if (cmd === 'h2') {
+        replacement = (start > 0 && text[start - 1] !== '\n' ? '\n' : '') + '## ' + (sel || 'SUBHEADING') + '\n';
+    } else if (cmd === 'bold') {
+        replacement = '**' + (sel || 'bold text') + '**';
+    } else if (cmd === 'bullet') {
+        if (sel) {
+            replacement = sel.split('\n').map(l => l.startsWith('- ') ? l : '- ' + l).join('\n');
+        } else {
+            replacement = (start > 0 && text[start - 1] !== '\n' ? '\n' : '') + '- ';
+        }
+    } else if (cmd === 'uppercase') {
+        replacement = sel.toUpperCase();
+    }
+
+    ta.setRangeText(replacement, start, end, 'end');
+    ta.focus();
+}
+
+function insertOrganHeader(title) {
+    const ta = document.getElementById('imaging-findings-ta');
+    if (!ta) return;
+    const prefix = ta.value.length > 0 && !ta.value.endsWith('\n\n') ? '\n\n' : '';
+    const insert = prefix + '# ' + title + ':\nNormal in appearance. ';
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    ta.setRangeText(insert, start, end, 'end');
+    ta.focus();
+}
+
+function changePadFont(fontClass) {
+    const ta = document.getElementById('imaging-findings-ta');
+    if (!ta) return;
+    ta.classList.remove('font-sans', 'font-serif', 'font-mono');
+    ta.classList.add(fontClass);
+    try { localStorage.setItem('lab_findings_pad_font', fontClass); } catch(e){}
+}
+
+let currentPadSize = 14;
+function changePadSize(delta) {
+    const ta = document.getElementById('imaging-findings-ta');
+    if (!ta) return;
+    if (delta === 0) currentPadSize = 14;
+    else currentPadSize = Math.max(11, Math.min(22, currentPadSize + delta * 2));
+    ta.style.fontSize = currentPadSize + 'px';
+    ta.style.lineHeight = (currentPadSize * 1.5) + 'px';
+    try { localStorage.setItem('lab_findings_pad_size', currentPadSize); } catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const savedFont = localStorage.getItem('lab_findings_pad_font');
+        if (savedFont) {
+            const fontSel = document.getElementById('pad-font-family');
+            if (fontSel) fontSel.value = savedFont;
+            changePadFont(savedFont);
+        }
+        const savedSize = localStorage.getItem('lab_findings_pad_size');
+        if (savedSize) {
+            currentPadSize = parseInt(savedSize, 10);
+            const ta = document.getElementById('imaging-findings-ta');
+            if (ta) {
+                ta.style.fontSize = currentPadSize + 'px';
+                ta.style.lineHeight = (currentPadSize * 1.5) + 'px';
+            }
+        }
+    } catch(e){}
+});
 </script>
 SCRIPT;
 }

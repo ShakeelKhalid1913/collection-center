@@ -17,10 +17,10 @@ foreach ($patients as $p) {
     $ageGender = trim(($p['age'] ?? '—') . ' yrs / ' . ($p['gender'] ?? '—'), ' /');
 
     $actions = '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/main-lab/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
-        '<a href="/portals/main-lab/patients/edit.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
-        '<a href="/portals/main-lab/patients/card.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold" title="Print ID Card"><i class="fa-solid fa-id-card mr-1"></i> Card</a>' .
-        '<a href="/portals/main-lab/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-plus mr-1"></i> Book Tests</a>' .
+        '<a href="/portals/patients/history.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
+        '<a href="/portals/patients/edit.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
+        '<a href="/portals/patients/card.php?id=' . urlencode($pId) . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold" title="Print ID Card"><i class="fa-solid fa-id-card mr-1"></i> Card</a>' .
+        '<a href="/portals/lab-entries/new.php?patient_id=' . urlencode($pId) . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-plus mr-1"></i> Book Tests</a>' .
         '</div>';
 
     $rows[] = [
@@ -36,7 +36,7 @@ foreach ($patients as $p) {
 $content = page_header(
     'Patient Records',
     'Shared patient directory. Click History to view all tests or Book / Assign Tests to order new tests.',
-    btn_primary('/portals/main-lab/patients/register.php', 'Register New Patient')
+    btn_primary('/portals/patients/register.php', 'Register New Patient')
 );
 
 $content .= card(

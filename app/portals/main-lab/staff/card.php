@@ -15,7 +15,7 @@ $id = trim((string)($_GET['id'] ?? ''));
 $emp = employee_repo()->findById($id, $orgId);
 if (!$emp) {
     http_response_code(404);
-    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;text-align:center;"><h2>Employee not found</h2><p><a href="/portals/main-lab/staff/index.php">Back to staff list</a></p></body></html>';
+    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;text-align:center;"><h2>Employee not found</h2><p><a href="/portals/staff/index.php">Back to staff list</a></p></body></html>';
     exit;
 }
 
@@ -35,7 +35,7 @@ $joining = !empty($emp['joining_date']) ? date('M Y', strtotime((string)$emp['jo
 
 $hasPhoto = !empty($emp['has_photo']);
 $photoUrl = $hasPhoto
-    ? '/portals/main-lab/staff/photo.php?id=' . urlencode((string)$emp['id'])
+    ? '/portals/staff/photo.php?id=' . urlencode((string)$emp['id'])
     : '';
 
 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=0&data=' . rawurlencode('EMP:' . $empNo . '|' . $name . '|' . $labName);
@@ -61,7 +61,7 @@ $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&margin=0&data='
 
     <!-- Action Toolbar -->
     <div class="no-print max-w-xl w-full mb-6 flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <a href="/portals/main-lab/staff/index.php" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+        <a href="/portals/staff/index.php" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
             <i class="fa-solid fa-arrow-left"></i> Back to Staff Directory
         </a>
         <button type="button" onclick="window.print()" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md hover:bg-slate-800 transition-all flex items-center gap-2">

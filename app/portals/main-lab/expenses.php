@@ -13,7 +13,7 @@ $message = '';
 if (isset($_GET['delete'])) {
     $delId = trim((string)$_GET['delete']);
     if (expense_repo()->delete($delId, $orgId)) {
-        header('Location: /portals/main-lab/expenses.php?deleted=1');
+        header('Location: /portals/expenses.php?deleted=1');
         exit;
     }
     $message = flash_error('Could not delete expense record.');
@@ -87,7 +87,7 @@ $rows = [];
 $totalFiltered = 0.0;
 foreach ($expenses as $exp) {
     $totalFiltered += (float)$exp['amount'];
-    $delUrl = '/portals/main-lab/expenses.php?delete=' . urlencode($exp['id']);
+    $delUrl = '/portals/expenses.php?delete=' . urlencode($exp['id']);
     
     $rows[] = [
         '<span class="font-mono text-xs font-semibold text-slate-600">' . e(date('d-M-Y', strtotime($exp['expense_date']))) . '</span>',

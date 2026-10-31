@@ -8,11 +8,10 @@ require_once __DIR__ . '/../../../includes/components.php';
 
 $labNo = trim($_GET['lab_no'] ?? '');
 if ($labNo !== '') {
-    lab_repo()->updateTransitStatus($labNo, 'verified');
-    audit_log('GENERATE_REPORT', 'lab_entries', $labNo, 'Generated/Viewed verified diagnostic report');
+    audit_log('VIEW_REPORT', 'lab_entries', $labNo, 'Viewed diagnostic report preview');
 }
 $ctx = load_document_context($labNo !== '' ? $labNo : null);
-$previewUrl = '/portals/main-lab/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
+$previewUrl = '/portals/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 
 $content = '<div class="no-print">' . page_header('Report Preview', 'Unified multi-department diagnostic dossier for Laboratory, Ultrasound, X-Ray, ECG, CT Scan, and MRI.') . '</div>';
 
@@ -29,13 +28,13 @@ if ($entryTests !== '') {
             {$deptBadges}
         </div>
         <div class="flex items-center gap-2 text-xs">
-            <a href="/portals/main-lab/receipts.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-slate-700" title="View Patient Payment & Token Slip">
+            <a href="/portals/receipts.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-slate-700" title="View Patient Payment & Token Slip">
                 <i class="fa-solid fa-receipt mr-1 text-slate-500"></i> Patient Bill
             </a>
-            <a href="/portals/main-lab/results/entry.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-blue-700 hover:bg-blue-50" title="Edit Laboratory Biomarkers">
+            <a href="/portals/results/entry.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-blue-700 hover:bg-blue-50" title="Edit Laboratory Biomarkers">
                 <i class="fa-solid fa-flask-vial text-blue-600 mr-1"></i> Lab Entry
             </a>
-            <a href="/portals/imaging/results.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-teal-700 hover:bg-teal-50" title="Edit Radiology & Imaging Narrative">
+            <a href="/portals/results.php?lab_no={$qLab}" class="btn btn-secondary py-1.5 px-3 font-semibold text-teal-700 hover:bg-teal-50" title="Edit Radiology & Imaging Narrative">
                 <i class="fa-solid fa-wave-square text-teal-600 mr-1"></i> Imaging Findings
             </a>
         </div>
@@ -43,8 +42,11 @@ if ($entryTests !== '') {
 HTML;
 }
 
+$format = trim((string)($_GET['format'] ?? 'graph'));
+$useGraph = ($format !== 'simple');
+
 $content .= '<div class="no-print mb-4">';
-$content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
+$content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'), $format);
 $content .= '</div>';
 $content .= render_report_document(
     $ctx['settings'],
@@ -53,7 +55,8 @@ $content .= render_report_document(
     $ctx['entry'],
     $ctx['report_title'] ?? 'DEPARTMENT OF LABORATORY MEDICINE',
     $ctx['signatories'] ?? [],
-    $ctx['specimen'] ?? 'Serum'
+    $ctx['specimen'] ?? 'Serum',
+    ['graph_mode' => $useGraph]
 );
 
 $portal = current_portal();

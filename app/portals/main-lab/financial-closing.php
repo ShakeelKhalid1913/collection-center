@@ -14,9 +14,26 @@ $orgId = $user['organization_id'] ?? 'ORG-001';
 $isCollectionCenter = $portal === 'collection-center';
 $userBranch = $isCollectionCenter ? ($user['branch_id'] ?? null) : null;
 
-$date = trim((string)($_GET['date'] ?? date('Y-m-d')));
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-    $date = date('Y-m-d');
+$period = trim((string)($_GET['period'] ?? 'daily'));
+$dateFrom = trim((string)($_GET['from'] ?? ''));
+$dateTo = trim((string)($_GET['to'] ?? ''));
+
+if ($period === 'weekly') {
+    $dateFrom = date('Y-m-d', strtotime('-6 days'));
+    $dateTo = date('Y-m-d');
+} elseif ($period === 'monthly') {
+    $dateFrom = date('Y-m-01');
+    $dateTo = date('Y-m-d');
+} elseif ($period === 'custom' && $dateFrom !== '' && $dateTo !== '') {
+    // Keep custom from & to
+} else {
+    $period = 'daily';
+    $date = trim((string)($_GET['date'] ?? date('Y-m-d')));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        $date = date('Y-m-d');
+    }
+    $dateFrom = $date;
+    $dateTo = $date;
 }
 
 $modality = trim((string)($_GET['modality'] ?? 'all'));
@@ -29,17 +46,18 @@ $sqlLab = "SELECT 'Laboratory' AS dept, le.lab_no AS ref_no, le.patient_id, le.p
                   COALESCE(p.phone, '—') AS patient_phone
            FROM lab_entries le
            LEFT JOIN patients p ON (p.id = le.patient_id OR p.patient_no = le.patient_id)
-           WHERE le.organization_id = :org AND DATE(le.created_at) = :dt";
-$paramsLab = ['org' => $orgId, 'dt' => $date];
+           WHERE le.organization_id = :org AND DATE(le.created_at) BETWEEN :dt_from AND :dt_to";
+$paramsLab = ['org' => $orgId, 'dt_from' => $dateFrom, 'dt_to' => $dateTo];
 
 if ($branchFilter !== '') {
-    $sqlLab .= " AND (le.branch_id = :branch OR le.branch = :branch)";
+    $sqlLab .= " AND (le.branch_id = :branch OR le.branch = :branch2)";
     $paramsLab['branch'] = $branchFilter;
+    $paramsLab['branch2'] = $branchFilter;
 }
 
 $labEntries = db()->fetchAll($sqlLab, $paramsLab);
 
-// Fetch imaging scans (X-Ray, Ultrasound, CT Scan, ECG)
+// Fetch imaging scans (X-Ray, Ultrasound, CT Scan, ECG, Echocardiography)
 $sqlImg = "SELECT s.modality AS dept, s.scan_no AS ref_no, s.patient_id, s.patient AS patient_name,
                   s.study AS study_title, COALESCE(s.amount, 0) AS amount, COALESCE(s.paid, 0) AS paid,
                   COALESCE(s.discount, 0) AS discount, s.status, s.created_at,
@@ -47,8 +65,8 @@ $sqlImg = "SELECT s.modality AS dept, s.scan_no AS ref_no, s.patient_id, s.patie
                   COALESCE(p.phone, '—') AS patient_phone
            FROM imaging_scans s
            LEFT JOIN patients p ON (p.id = s.patient_id OR p.patient_no = s.patient_id)
-           WHERE (s.organization_id = :org OR s.organization_id = 'ORG-001') AND DATE(s.scan_date) = :dt";
-$paramsImg = ['org' => $orgId, 'dt' => $date];
+           WHERE (s.organization_id = :org OR s.organization_id = 'ORG-001') AND DATE(s.scan_date) BETWEEN :dt_from AND :dt_to";
+$paramsImg = ['org' => $orgId, 'dt_from' => $dateFrom, 'dt_to' => $dateTo];
 
 if ($branchFilter !== '') {
     $sqlImg .= " AND s.branch_id = :branch";
@@ -78,6 +96,9 @@ if ($modality !== 'all') {
         }
         if ($m === 'ecg') {
             return str_contains($d, 'ecg');
+        }
+        if ($m === 'echo' || $m === 'echocardiography') {
+            return str_contains($d, 'echo');
         }
         return str_contains($d, $m);
     });
@@ -201,7 +222,13 @@ $selLab = ($modality === 'Laboratory') ? 'selected' : '';
 $selUS  = ($modality === 'Ultrasound') ? 'selected' : '';
 $selXR  = ($modality === 'X-Ray') ? 'selected' : '';
 $selECG = ($modality === 'ECG') ? 'selected' : '';
+$selEcho = ($modality === 'echo' || $modality === 'Echocardiography') ? 'selected' : '';
 $selCT  = ($modality === 'CT Scan') ? 'selected' : '';
+$selPeriodDaily = ($period === 'daily') ? 'selected' : '';
+$selPeriodWeekly = ($period === 'weekly') ? 'selected' : '';
+$selPeriodMonthly = ($period === 'monthly') ? 'selected' : '';
+$selPeriodCustom = ($period === 'custom') ? 'selected' : '';
+$displayRange = ($dateFrom === $dateTo) ? date('d M Y', strtotime($dateFrom)) : (date('d M Y', strtotime($dateFrom)) . ' — ' . date('d M Y', strtotime($dateTo)));
 $branchScopeHtml = ($branchOpts !== '') ? '<div><label class="field-label text-[11px] mb-1">Branch Scope</label><select name="branch" class="field text-xs font-semibold py-1.5" onchange="this.form.submit()">' . $branchOpts . '</select></div>' : '';
 $modalityMiniCardsHtml = ($breakdownsHtml !== '' && $modality === 'all') ? '<div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">' . $breakdownsHtml . '</div>' : '';
 $generatedTime = date('d-M-Y h:i A');
@@ -212,13 +239,43 @@ $totalGrossFmt = number_format($totalGross, 0);
 $totalDiscountFmt = number_format($totalDiscount, 0);
 
 $content .= <<<HTML
+<style>
+@media print {
+    body * { visibility: hidden !important; }
+    .closing-slip-print, .closing-slip-print * { visibility: visible !important; }
+    .closing-slip-print {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
 <div class="no-print space-y-5">
     <!-- Filter Bar -->
     <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card">
         <form method="get" class="flex flex-wrap items-center gap-3">
             <div>
-                <label class="field-label text-[11px] mb-1">Closing Date</label>
-                <input type="date" name="date" value="{$date}" class="field text-xs font-semibold py-1.5" onchange="this.form.submit()">
+                <label class="field-label text-[11px] mb-1">Summary Period</label>
+                <select name="period" class="field text-xs font-semibold py-1.5" onchange="this.form.submit()">
+                    <option value="daily" {$selPeriodDaily}>Daily Summary (Single Day)</option>
+                    <option value="weekly" {$selPeriodWeekly}>Weekly Summary (Last 7 Days)</option>
+                    <option value="monthly" {$selPeriodMonthly}>Monthly Summary (This Month)</option>
+                    <option value="custom" {$selPeriodCustom}>Custom Date Range</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label text-[11px] mb-1">From Date</label>
+                <input type="date" name="from" value="{$dateFrom}" class="field text-xs font-semibold py-1.5">
+            </div>
+            <div>
+                <label class="field-label text-[11px] mb-1">To Date</label>
+                <input type="date" name="to" value="{$dateTo}" class="field text-xs font-semibold py-1.5">
             </div>
             <div>
                 <label class="field-label text-[11px] mb-1">Department / Modality</label>
@@ -228,14 +285,18 @@ $content .= <<<HTML
                     <option value="Ultrasound" {$selUS}>Ultrasound</option>
                     <option value="X-Ray" {$selXR}>X-Ray</option>
                     <option value="ECG" {$selECG}>ECG</option>
+                    <option value="echo" {$selEcho}>Echocardiography (Echo)</option>
                     <option value="CT Scan" {$selCT}>CT Scan</option>
                 </select>
             </div>
             {$branchScopeHtml}
             <div class="flex items-end self-end">
-                <button type="submit" class="btn btn-secondary text-xs py-2 px-3"><i class="fa-solid fa-filter mr-1"></i> Refresh Slip</button>
+                <button type="submit" class="btn btn-primary text-xs py-2 px-3 font-bold"><i class="fa-solid fa-filter mr-1"></i> Calculate Summary</button>
             </div>
         </form>
+        <div class="mt-2.5 text-xs text-slate-500 font-medium">
+            Active Period: <strong class="text-teal-800 font-mono">{$displayRange}</strong>
+        </div>
     </div>
 
     <!-- Metrics Cards -->
@@ -287,7 +348,7 @@ $content .= <<<HTML
 </div>
 
 <!-- Printable Slip Container -->
-<div class="mt-6 bg-white border border-slate-200/90 rounded-3xl p-6 shadow-card print:border-none print:shadow-none print:p-0 print:m-0">
+<div class="mt-6 bg-white border border-slate-200/90 rounded-3xl p-6 shadow-card print:border-none print:shadow-none print:p-0 print:m-0 print-area closing-slip-print">
     <!-- Header on Print -->
     <div class="border-b-2 border-slate-900 pb-4 mb-4 text-center">
         <h2 class="text-xl font-black uppercase text-slate-900 tracking-wider">{$labName}</h2>

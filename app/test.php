@@ -1,5 +1,12 @@
 <?php
 
+require_once __DIR__ . '/includes/bootstrap.php';
+require_auth('admin');
+if (!is_super_admin()) {
+    http_response_code(403);
+    exit('Super Admin required');
+}
+
 echo '<pre>';
 echo 'PHP: ' . PHP_VERSION . "\n";
 echo 'SAPI: ' . PHP_SAPI . "\n";

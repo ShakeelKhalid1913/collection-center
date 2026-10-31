@@ -29,8 +29,9 @@ class LabEntryRepository
         $sql = "SELECT * FROM lab_entries WHERE organization_id = :org";
         $params = ['org' => $orgId];
         if ($branchId !== null && $branchId !== '') {
-            $sql .= " AND (branch_id = :branch OR branch = :branch)";
+            $sql .= " AND (branch_id = :branch OR branch = :branch2)";
             $params['branch'] = $branchId;
+            $params['branch2'] = $branchId;
         }
         $sql .= " ORDER BY created_at DESC LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
@@ -57,8 +58,9 @@ class LabEntryRepository
                 WHERE le.organization_id = :org";
         $params = ['org' => $orgId];
         if ($branchId !== null && $branchId !== '') {
-            $sql .= " AND (le.branch_id = :branch OR le.branch = :branch)";
+            $sql .= " AND (le.branch_id = :branch OR le.branch = :branch2)";
             $params['branch'] = $branchId;
+            $params['branch2'] = $branchId;
         }
         $sql .= " ORDER BY le.created_at DESC LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
@@ -357,8 +359,9 @@ class LabEntryRepository
         $params = ['org' => $orgId];
 
         if ($branchId !== null && $branchId !== '') {
-            $sql .= ' AND (branch_id = :branch OR branch = :branch)';
+            $sql .= ' AND (branch_id = :branch OR branch = :branch2)';
             $params['branch'] = $branchId;
+            $params['branch2'] = $branchId;
         }
         if ($q !== '') {
             $sql .= ' AND (lab_no LIKE :q OR patient_name LIKE :q OR patient_id LIKE :q OR doctor LIKE :q OR tests LIKE :q)';

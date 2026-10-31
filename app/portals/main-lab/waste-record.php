@@ -92,10 +92,10 @@ $rows = [];
 foreach ($records as $r) {
     $id = urlencode((string)$r['id']);
     $mouLink = !empty($r['has_mou'])
-        ? '<a href="/portals/main-lab/waste-image.php?id=' . $id . '&type=mou" target="_blank" class="btn btn-secondary text-xs"><i class="fa-solid fa-image mr-1"></i> MOU</a>'
+        ? '<a href="/portals/waste-image.php?id=' . $id . '&type=mou" target="_blank" class="btn btn-secondary text-xs"><i class="fa-solid fa-image mr-1"></i> MOU</a>'
         : '<span class="text-slate-400 text-xs">—</span>';
     $slipLink = !empty($r['has_slip'])
-        ? '<a href="/portals/main-lab/waste-image.php?id=' . $id . '&type=slip" target="_blank" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Slip</a>'
+        ? '<a href="/portals/waste-image.php?id=' . $id . '&type=slip" target="_blank" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Slip</a>'
         : '<span class="text-slate-400 text-xs">—</span>';
 
     $rows[] = [

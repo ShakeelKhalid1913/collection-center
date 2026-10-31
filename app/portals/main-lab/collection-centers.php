@@ -133,7 +133,7 @@ foreach ($centers as $c) {
     $staffDisplay = '<div class="text-xs font-semibold text-slate-800">' . e((string)$c['staff_name']) . '</div>'
                   . '<div class="text-[11px] text-slate-500 font-mono">' . e((string)$c['staff_email']) . '</div>';
 
-    $actionBtn = '<a href="/portals/main-lab/archive.php?branch=' . urlencode($cCode) . '" class="btn btn-secondary text-xs py-1 px-2.5" title="View Patient Entries from this Center"><i class="fa-solid fa-list mr-1"></i> View Entries</a>';
+    $actionBtn = '<a href="/portals/archive.php?branch=' . urlencode($cCode) . '" class="btn btn-secondary text-xs py-1 px-2.5" title="View Patient Entries from this Center"><i class="fa-solid fa-list mr-1"></i> View Entries</a>';
 
     $rows[] = [
         '<span class="font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded text-xs">' . e($cCode) . '</span>',

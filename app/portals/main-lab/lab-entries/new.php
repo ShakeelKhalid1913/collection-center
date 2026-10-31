@@ -69,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $portal = current_portal();
     if ($res['success']) {
         if ($portal === 'imaging') {
-            header('Location: /portals/imaging/receipt.php?lab_no=' . urlencode($res['lab_no']) . '&created=1');
+            header('Location: /portals/receipt.php?lab_no=' . urlencode($res['lab_no']) . '&created=1');
         } else {
-            header('Location: /portals/main-lab/results/entry.php?lab_no=' . urlencode($res['lab_no']));
+            header('Location: /portals/results/entry.php?lab_no=' . urlencode($res['lab_no']));
         }
         exit;
     }
@@ -100,7 +100,7 @@ foreach (mock('mock_routes') as $r) {
 
 $selectedPatientId = trim((string)($_GET['patient_id'] ?? ''));
 
-$registerUrl = ($portal === 'imaging') ? '/portals/imaging/patients.php' : '/portals/main-lab/patients/register.php';
+$registerUrl = ($portal === 'imaging') ? '/portals/patients.php' : '/portals/patients/register.php';
 
 $content = page_header(
     $pageTitle,

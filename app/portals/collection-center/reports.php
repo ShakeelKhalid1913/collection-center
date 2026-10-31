@@ -20,8 +20,8 @@ foreach (mock('mock_lab_entries') as $e) {
         e($e['branch'] ?? '—'),
         e(format_date($e['date'])),
         '<div class="flex flex-wrap gap-2">' .
-        btn_secondary('/portals/collection-center/reports/preview.php?lab_no=' . $labQ, 'Report') .
-        btn_secondary('/portals/collection-center/receipts.php?lab_no=' . $labQ, 'Receipt') .
+        btn_secondary('/portals/reports/preview.php?lab_no=' . $labQ, 'Report') .
+        btn_secondary('/portals/receipts.php?lab_no=' . $labQ, 'Receipt') .
         '</div>',
     ];
 }

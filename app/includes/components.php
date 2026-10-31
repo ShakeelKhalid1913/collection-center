@@ -275,15 +275,13 @@ function billing_panel(): string
     HTML;
 }
 
-function report_actions(string $patientPhone, string $reportUrl = '', string $pdfFilename = 'lab-report'): string
+function report_actions(string $patientPhone, string $reportUrl = '', string $pdfFilename = 'lab-report', string $currentFormat = 'graph'): string
 {
     if ($reportUrl === '') {
         $portal = current_portal();
-        $reportUrl = $portal === 'collection-center'
-            ? '/portals/collection-center/reports/preview.php'
-            : ($portal === 'imaging'
-                ? '/portals/imaging/reports.php'
-                : '/portals/main-lab/reports/preview.php');
+        $reportUrl = $portal === 'imaging'
+            ? '/portals/reports.php'
+            : '/portals/reports/preview.php';
     }
     $waPhone = preg_replace('/\D/', '', $patientPhone);
     if (str_starts_with($waPhone, '0')) {
@@ -297,14 +295,39 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     if (preg_match('/lab_no=([^&]+)/', $reportUrl, $m)) {
         $bLabNo = urldecode($m[1]);
         $encLab = urlencode($bLabNo);
-        $barcodeBtn = '<a href="/portals/collection-center/barcode-label.php?lab_no=' . $encLab . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
-        $editReportBtn = '<a href="/portals/main-lab/results/entry.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300" title="Edit Test Results & Findings"><i class="fa-solid fa-file-pen text-amber-600 mr-1"></i> Edit Report</a>';
-        $editEntryBtn = '<a href="/portals/main-lab/lab-entries/edit.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300" title="Edit Patient Info, Age & Billing Slip"><i class="fa-solid fa-user-pen text-indigo-600 mr-1"></i> Edit Entry &amp; Bill</a>';
+        $barcodeBtn = '<a href="/portals/barcode-label.php?lab_no=' . $encLab . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
+        $editReportBtn = '<a href="/portals/results/entry.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300" title="Edit Test Results & Findings"><i class="fa-solid fa-file-pen text-amber-600 mr-1"></i> Edit Report</a>';
+        $editEntryBtn = '<a href="/portals/lab-entries/edit.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300" title="Edit Patient Info, Age & Billing Slip"><i class="fa-solid fa-user-pen text-indigo-600 mr-1"></i> Edit Entry &amp; Bill</a>';
     }
     $file = e($pdfFilename !== '' ? $pdfFilename : 'lab-report');
 
+    $qsGraph = $_GET ?? [];
+    $qsGraph['format'] = 'graph';
+    $graphUrl = '?' . http_build_query($qsGraph);
+
+    $qsSimple = $_GET ?? [];
+    $qsSimple['format'] = 'simple';
+    $simpleUrl = '?' . http_build_query($qsSimple);
+
+    $isSimple = (isset($_GET['format']) && $_GET['format'] === 'simple') || $currentFormat === 'simple';
+    $graphClass = !$isSimple ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200';
+    $simpleClass = $isSimple ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200';
+
+    $formatSwitcher = <<<HTML
+    <div class="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200" title="Choose Report Style">
+        <span class="text-[10px] uppercase font-bold text-slate-400 px-1.5 hidden sm:inline">Format:</span>
+        <a href="{$graphUrl}" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all {$graphClass}">
+            <i class="fa-solid fa-chart-simple mr-1"></i> Graph Report
+        </a>
+        <a href="{$simpleUrl}" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all {$simpleClass}">
+            <i class="fa-solid fa-table-list mr-1"></i> Simple Report
+        </a>
+    </div>
+    HTML;
+
     return <<<HTML
     <div class="no-print flex flex-wrap gap-2.5 items-center" data-print-toolbar>
+        {$formatSwitcher}
         <button type="button" onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print" aria-hidden="true"></i> Print</button>
         <button type="button" class="btn btn-secondary" data-download-pdf data-pdf-name="{$file}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF</button>
         {$barcodeBtn}

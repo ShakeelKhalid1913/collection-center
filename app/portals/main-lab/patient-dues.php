@@ -69,10 +69,10 @@ $tabHistoryActive = $tab === 'history' ? 'border-slate-900 text-slate-900 bg-whi
 
 $tabsNav = <<<HTML
 <div class="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl mb-6 max-w-sm border border-slate-200">
-    <a href="/portals/main-lab/patient-dues.php?tab=pending" class="flex-1 text-center py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabPendingActive}">
+    <a href="/portals/patient-dues.php?tab=pending" class="flex-1 text-center py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabPendingActive}">
         <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Pending Dues ({$stats['pending_cases']})
     </a>
-    <a href="/portals/main-lab/patient-dues.php?tab=history" class="flex-1 text-center py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabHistoryActive}">
+    <a href="/portals/patient-dues.php?tab=history" class="flex-1 text-center py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabHistoryActive}">
         <i class="fa-solid fa-receipt mr-1.5"></i> Recovery Log
     </a>
 </div>
@@ -117,7 +117,7 @@ if ($tab === 'history') {
             <button type="submit" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold whitespace-nowrap shadow-sm">
                 <i class="fa-solid fa-check text-[#c2f13c] mr-1"></i> Collect
             </button>
-            <a href="/portals/main-lab/receipts.php?lab_no={$d['lab_no']}" class="p-1 text-slate-500 hover:text-slate-800 text-xs" title="View Bill">
+            <a href="/portals/receipts.php?lab_no={$d['lab_no']}" class="p-1 text-slate-500 hover:text-slate-800 text-xs" title="View Bill">
                 <i class="fa-solid fa-receipt"></i>
             </a>
         </form>

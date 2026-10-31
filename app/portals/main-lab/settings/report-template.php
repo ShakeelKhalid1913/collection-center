@@ -11,17 +11,23 @@ $orgId = current_user()['organization_id'] ?? 'ORG-001';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_permission('header_footer_edit');
-    if (isset($_POST['action']) && $_POST['action'] === 'save_signatories') {
+    if (isset($_POST['action']) && in_array($_POST['action'], ['save_signatories', 'save_imaging_signatories'], true)) {
+        $dept = ($_POST['action'] === 'save_imaging_signatories' || ($_POST['sig_department'] ?? '') === 'imaging') ? 'imaging' : 'laboratory';
         $sigs = [];
+        $prefix = $dept === 'imaging' ? 'imaging_sig_' : 'sig_';
         for ($i = 0; $i < 5; $i++) {
+            $name = $_POST[$prefix . 'name'][$i] ?? ($_POST['sig_name'][$i] ?? '');
+            $quals = $_POST[$prefix . 'quals'][$i] ?? ($_POST['sig_quals'][$i] ?? '');
+            $desig = $_POST[$prefix . 'desig'][$i] ?? ($_POST['sig_desig'][$i] ?? '');
             $sigs[] = [
-                'name' => $_POST['sig_name'][$i] ?? '',
-                'qualifications' => $_POST['sig_quals'][$i] ?? '',
-                'designation' => $_POST['sig_desig'][$i] ?? '',
+                'name' => $name,
+                'qualifications' => $quals,
+                'designation' => $desig,
             ];
         }
-        $ok = setting_repo()->saveSignatories($orgId, $sigs);
-        $message = $ok ? flash_success('Doctor signatories saved successfully.') : flash_error('Could not save signatories.');
+        $ok = setting_repo()->saveSignatories($orgId, $sigs, $dept);
+        $label = $dept === 'imaging' ? 'Diagnostic Center / Imaging' : 'Laboratory';
+        $message = $ok ? flash_success("{$label} doctor signatories saved successfully.") : flash_error('Could not save signatories.');
     } else {
         $result = save_branding_request($orgId);
         $message = $result['ok'] ? flash_success($result['message']) : flash_error($result['message']);
@@ -29,12 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $s = branding_settings($orgId);
-$signatories = setting_repo()->getSignatories($orgId);
+$labSignatories = setting_repo()->getSignatories($orgId, 'laboratory');
+$imagingSignatories = setting_repo()->getSignatories($orgId, 'imaging');
 
 $content = page_header(
     'Report & Bill Letterhead',
     'Design and customize your laboratory header, footer, contact branding, and doctor signatories.',
-    '<a href="/portals/main-lab/reports/preview.php" class="btn btn-secondary text-sm"><i class="fa-solid fa-eye mr-1.5"></i> Preview Sample Report</a>'
+    '<a href="/portals/reports/preview.php" class="btn btn-secondary text-sm"><i class="fa-solid fa-eye mr-1.5"></i> Preview Sample Report</a>'
 );
 $content .= $message;
 
@@ -50,6 +57,8 @@ $sHeader = e($s['header']);
 $sBillHeader = e($s['bill_header']);
 $sFooter = e($s['footer']);
 $sBillFooter = e($s['bill_footer']);
+$sImagingFooter = e($s['imaging_footer'] ?? '');
+$sImagingDisclaimer = e($s['imaging_disclaimer'] ?? '');
 
 $supportedFonts = supported_document_fonts();
 $currentReportFont = $s['report_font'] ?? 'times_bold_italic';
@@ -164,31 +173,46 @@ $content .= <<<HTML
 
     <!-- Section 4: Header & Footer Text Messages -->
     <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-sm">
-                <i class="fa-solid fa-quote-left"></i>
-            </span>
-            <div>
-                <h2 class="text-sm font-bold text-slate-800">Print Notes &amp; Custom Messages</h2>
-                <p class="text-xs text-slate-500">Optional greetings, notes, and disclaimers printed on reports and patient bills</p>
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-sm">
+                    <i class="fa-solid fa-quote-left"></i>
+                </span>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-800">Print Notes &amp; Custom Messages</h2>
+                    <p class="text-xs text-slate-500">Shared header note with department-specific footers for Laboratory vs. Diagnostic Imaging</p>
+                </div>
             </div>
+            <span class="badge badge-purple">Header &amp; Footer Notes</span>
         </div>
         <div class="p-5 grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="field-label text-xs">Report Header Note <span class="text-slate-400 font-normal">(optional)</span></label>
+                <label class="field-label text-xs">Report Header Note <span class="text-slate-400 font-normal">(Top Header — Identical Across All Departments)</span></label>
                 <input type="text" name="header" class="field text-sm" value="{$sHeader}" placeholder="e.g. ISO 9001:2015 Certified Diagnostic Center">
+                <span class="text-[11px] text-slate-400 mt-0.5 block">Appears on Lab, Ultrasound, X-Ray, ECG, Echo, CT &amp; MRI reports</span>
             </div>
             <div>
-                <label class="field-label text-xs">Bill Header Note <span class="text-slate-400 font-normal">(optional)</span></label>
+                <label class="field-label text-xs">Patient Bill Header Note <span class="text-slate-400 font-normal">(Receipts &amp; Tokens)</span></label>
                 <input type="text" name="bill_header" class="field text-sm" value="{$sBillHeader}" placeholder="e.g. Official Patient Receipt">
             </div>
-            <div>
-                <label class="field-label text-xs">Report Footer Message</label>
-                <input type="text" name="footer" class="field text-sm" value="{$sFooter}" placeholder="e.g. Get well soon.">
+            <div class="p-3 bg-teal-50/50 rounded-xl border border-teal-200/60">
+                <label class="field-label text-xs font-bold text-teal-900"><i class="fa-solid fa-flask-vial mr-1 text-teal-600"></i> Laboratory Report Footer Message</label>
+                <input type="text" name="footer" class="field text-sm bg-white" value="{$sFooter}" placeholder="e.g. Get well soon.">
+                <span class="text-[11px] text-teal-700/80 mt-1 block">Printed exclusively at the bottom of Pathology &amp; Lab Medicine reports</span>
+            </div>
+            <div class="p-3 bg-sky-50/50 rounded-xl border border-sky-200/60">
+                <label class="field-label text-xs font-bold text-sky-900"><i class="fa-solid fa-wave-square mr-1 text-sky-600"></i> Diagnostic Imaging / Modality Footer Message</label>
+                <input type="text" name="imaging_footer" class="field text-sm bg-white" value="{$sImagingFooter}" placeholder="e.g. Diagnostic Center &amp; Imaging — For scan inquiries contact reception.">
+                <span class="text-[11px] text-sky-700/80 mt-1 block">Printed at the bottom of Ultrasound, X-Ray, ECG, Echo, CT &amp; MRI reports</span>
             </div>
             <div>
-                <label class="field-label text-xs">Bill Footer Message</label>
+                <label class="field-label text-xs">Patient Bill Footer Message</label>
                 <input type="text" name="bill_footer" class="field text-sm" value="{$sBillFooter}" placeholder="e.g. Get well soon.">
+            </div>
+            <div>
+                <label class="field-label text-xs">Custom Imaging Clinical Disclaimer <span class="text-slate-400 font-normal">(optional override)</span></label>
+                <input type="text" name="imaging_disclaimer" class="field text-sm" value="{$sImagingDisclaimer}" placeholder="Leave blank for automatic modality disclaimer">
+                <span class="text-[11px] text-slate-400 mt-0.5 block">Overrides default clinical correlation note for imaging</span>
             </div>
         </div>
     </div>
@@ -267,68 +291,131 @@ $content .= <<<HTML
         <button type="submit" class="btn btn-primary text-sm py-2.5 px-5 shadow-sm">
             <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Branding &amp; Letterhead
         </button>
-        <a href="/portals/main-lab/reports/preview.php" class="btn btn-secondary text-sm py-2.5 px-4">
+        <a href="/portals/reports/preview.php" class="btn btn-secondary text-sm py-2.5 px-4">
             <i class="fa-solid fa-eye mr-1.5"></i> Preview Sample Report
         </a>
     </div>
 </form>
 HTML;
 
-// Section 5: Doctor Signatories Form
-$sigFormFields = '';
+// Section 6A: Laboratory Medicine Signatories Form
+$labSigFormFields = '';
 for ($i = 0; $i < 5; $i++) {
-    $sig = $signatories[$i] ?? ['name' => '', 'qualifications' => '', 'designation' => ''];
+    $sig = $labSignatories[$i] ?? ['name' => '', 'qualifications' => '', 'designation' => ''];
     $slotNum = $i + 1;
     $sDocName = e($sig['name']);
     $sQuals = e($sig['qualifications']);
     $sDesig = e($sig['designation']);
 
-    $sigFormFields .= <<<HTML
-    <div class="p-4 border border-slate-200 rounded-xl bg-white shadow-xs space-y-3 relative">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                <i class="fa-solid fa-user-doctor text-teal-600"></i> Doctor Signatory #{$slotNum}
+    $labSigFormFields .= <<<HTML
+    <div class="p-4 border border-teal-200/80 rounded-xl bg-teal-50/20 shadow-xs space-y-3 relative">
+        <div class="flex items-center justify-between border-b border-teal-100 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800">
+                <i class="fa-solid fa-flask-vial text-teal-600"></i> Lab Signatory #{$slotNum}
             </span>
-            <span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Slot {$slotNum}</span>
+            <span class="text-[10px] uppercase font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">Slot {$slotNum}</span>
         </div>
         <div>
-            <label class="field-label text-xs">Doctor Name</label>
-            <input type="text" name="sig_name[]" class="field text-sm font-semibold" value="{$sDocName}" placeholder="e.g. Dr. John Doe">
+            <label class="field-label text-xs">Pathologist / Doctor Name</label>
+            <input type="text" name="sig_name[]" class="field text-sm font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. A. K. Khan">
         </div>
         <div>
             <label class="field-label text-xs">Qualifications <span class="text-slate-400 font-normal">(optional)</span></label>
-            <textarea name="sig_quals[]" rows="2" class="field text-xs" placeholder="e.g. M.B.B.S, M.Phil, F.C.P.S">{$sQuals}</textarea>
+            <textarea name="sig_quals[]" rows="2" class="field text-xs bg-white" placeholder="e.g. M.B.B.S, M.Phil, F.C.P.S (Pathology)">{$sQuals}</textarea>
         </div>
         <div>
             <label class="field-label text-xs">Designation <span class="text-slate-400 font-normal">(optional)</span></label>
-            <input type="text" name="sig_desig[]" class="field text-xs" value="{$sDesig}" placeholder="e.g. Consultant Pathologist">
+            <input type="text" name="sig_desig[]" class="field text-xs bg-white" value="{$sDesig}" placeholder="e.g. Consultant Pathologist">
+        </div>
+    </div>
+    HTML;
+}
+
+// Section 6B: Diagnostic Center & Imaging Signatories Form
+$imagingSigFormFields = '';
+for ($i = 0; $i < 5; $i++) {
+    $sig = $imagingSignatories[$i] ?? ['name' => '', 'qualifications' => '', 'designation' => ''];
+    $slotNum = $i + 1;
+    $sDocName = e($sig['name']);
+    $sQuals = e($sig['qualifications']);
+    $sDesig = e($sig['designation']);
+
+    $imagingSigFormFields .= <<<HTML
+    <div class="p-4 border border-sky-200/80 rounded-xl bg-sky-50/20 shadow-xs space-y-3 relative">
+        <div class="flex items-center justify-between border-b border-sky-100 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                <i class="fa-solid fa-user-doctor text-sky-600"></i> Imaging Specialist #{$slotNum}
+            </span>
+            <span class="text-[10px] uppercase font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">Slot {$slotNum}</span>
+        </div>
+        <div>
+            <label class="field-label text-xs">Radiologist / Sonologist Name</label>
+            <input type="text" name="imaging_sig_name[]" class="field text-sm font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. Imran Sheikh">
+        </div>
+        <div>
+            <label class="field-label text-xs">Qualifications <span class="text-slate-400 font-normal">(optional)</span></label>
+            <textarea name="imaging_sig_quals[]" rows="2" class="field text-xs bg-white" placeholder="e.g. M.B.B.S, F.C.P.S (Radiology)">{$sQuals}</textarea>
+        </div>
+        <div>
+            <label class="field-label text-xs">Designation <span class="text-slate-400 font-normal">(optional)</span></label>
+            <input type="text" name="imaging_sig_desig[]" class="field text-xs bg-white" value="{$sDesig}" placeholder="e.g. Consultant Radiologist / Sonologist">
         </div>
     </div>
     HTML;
 }
 
 $content .= <<<HTML
+<!-- Section 6A: Laboratory Medicine Signatories -->
 <div class="mt-8 bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">
-                <i class="fa-solid fa-signature"></i>
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-700 font-bold text-sm">
+                <i class="fa-solid fa-flask-vial"></i>
             </span>
             <div>
-                <h2 class="text-sm font-bold text-slate-800">Report Footer — Doctor Signatories</h2>
-                <p class="text-xs text-slate-500">Up to 5 verified pathologist or consultant signature blocks on reports</p>
+                <h2 class="text-sm font-bold text-slate-800">Laboratory Medicine Footer — Doctor Signatories</h2>
+                <p class="text-xs text-slate-500">Signatures printed exclusively at the bottom of Pathology &amp; Laboratory Medicine reports</p>
             </div>
         </div>
-        <span class="badge badge-emerald">Sign-off Blocks</span>
+        <span class="badge badge-teal">Lab Sign-offs</span>
     </div>
     <form method="post" class="p-5 space-y-4">
         <input type="hidden" name="action" value="save_signatories">
+        <input type="hidden" name="sig_department" value="laboratory">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {$sigFormFields}
+            {$labSigFormFields}
         </div>
         <div class="pt-2">
             <button type="submit" class="btn btn-primary text-sm py-2 px-4 shadow-sm">
-                <i class="fa-solid fa-check mr-1.5"></i> Save Signatories
+                <i class="fa-solid fa-check mr-1.5"></i> Save Laboratory Signatories
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Section 6B: Diagnostic Center & Imaging Signatories -->
+<div class="mt-6 bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-sky-100 text-sky-700 font-bold text-sm">
+                <i class="fa-solid fa-wave-square"></i>
+            </span>
+            <div>
+                <h2 class="text-sm font-bold text-slate-800">Diagnostic Center &amp; Imaging Footer — Specialist Signatories</h2>
+                <p class="text-xs text-slate-500">Signatures printed exclusively at the bottom of Ultrasound, X-Ray, ECG, Echo, CT Scan &amp; MRI reports</p>
+            </div>
+        </div>
+        <span class="badge badge-sky">Imaging Sign-offs</span>
+    </div>
+    <form method="post" class="p-5 space-y-4">
+        <input type="hidden" name="action" value="save_imaging_signatories">
+        <input type="hidden" name="sig_department" value="imaging">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {$imagingSigFormFields}
+        </div>
+        <div class="pt-2">
+            <button type="submit" class="btn btn-primary text-sm py-2 px-4 shadow-sm bg-sky-600 hover:bg-sky-700 border-sky-600">
+                <i class="fa-solid fa-check mr-1.5"></i> Save Diagnostic Imaging Signatories
             </button>
         </div>
     </form>

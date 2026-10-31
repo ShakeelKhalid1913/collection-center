@@ -276,6 +276,8 @@ function branding_settings(?string $orgId = null): array
         'email' => $set['email'] ?? '',
         'header' => $set['header_text'] ?? '',
         'footer' => $footer,
+        'imaging_footer' => trim((string)($set['imaging_footer_text'] ?? '')),
+        'imaging_disclaimer' => trim((string)($set['imaging_disclaimer'] ?? '')),
         'logo_text' => $set['logo_text'] ?? 'LDP',
         'bill_header' => $set['bill_header_text'] ?? $set['header_text'] ?? '',
         'bill_footer' => $billFooter,
@@ -437,6 +439,8 @@ function save_branding_request(string $orgId): array
         'address' => $_POST['address'] ?? '',
         'header' => $_POST['header'] ?? '',
         'footer' => $_POST['footer'] ?? '',
+        'imaging_footer' => $_POST['imaging_footer'] ?? '',
+        'imaging_disclaimer' => $_POST['imaging_disclaimer'] ?? '',
         'logo_text' => $_POST['logo'] ?? 'HLP',
         'bill_header' => $_POST['bill_header'] ?? '',
         'bill_footer' => $_POST['bill_footer'] ?? '',
@@ -1042,20 +1046,27 @@ function render_branded_header(array $settings, bool $forBill = false): string
     HTML;
 }
 
-function render_branded_footer(array $settings, bool $forBill = false): string
+function render_branded_footer(array $settings, bool $forBill = false, string $department = 'laboratory'): string
 {
     $imgHtml = '';
     if (!empty($settings['has_footer_image']) && !empty($settings['footer_image_url'])) {
         $imgHtml = '<div class="lab-report__footer-custom mb-2 text-center"><img src="' . e($settings['footer_image_url']) . '" alt="Footer Letterhead" style="max-height:60px;max-width:100%;object-fit:contain;"></div>';
     }
 
-    $rawFooter = trim((string)($forBill ? (!empty($settings['bill_footer']) ? $settings['bill_footer'] : ($settings['footer'] ?? '')) : ($settings['footer'] ?? '')));
-    if ($forBill) {
-        if ($rawFooter === '' || preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
+    if ($department === 'imaging') {
+        $rawFooter = trim((string)($settings['imaging_footer'] ?? ''));
+        if ($rawFooter === '') {
+            $rawFooter = 'Diagnostic Center & Imaging — For scan appointments or image queries contact reception.';
+        }
+    } else {
+        $rawFooter = trim((string)($forBill ? (!empty($settings['bill_footer']) ? $settings['bill_footer'] : ($settings['footer'] ?? '')) : ($settings['footer'] ?? '')));
+        if ($forBill) {
+            if ($rawFooter === '' || preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
+                $rawFooter = 'Get well soon.';
+            }
+        } elseif ($rawFooter !== '' && preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
             $rawFooter = 'Get well soon.';
         }
-    } elseif ($rawFooter !== '' && preg_match('/electronically verified|queries call reception/i', $rawFooter)) {
-        $rawFooter = 'Get well soon.';
     }
     $footer = e($rawFooter);
     $labLine = $footer !== ''
@@ -1177,7 +1188,8 @@ function render_report_document(
             $specimen,
             $index,
             $totalPages,
-            $index < $totalPages
+            $index < $totalPages,
+            $options
         );
     }
 
@@ -1880,7 +1892,7 @@ HTML;
 /**
  * Build result table rows for one report page.
  */
-function build_report_result_rows(array $resultLines, bool $isTwoColumn = false): string
+function build_report_result_rows(array $resultLines, bool $isTwoColumn = false, bool $useGraph = true): string
 {
     $rows = '';
     $currentTestTitle = null;
@@ -2036,7 +2048,7 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false)
             continue;
         }
 
-        $isGraphEligible = is_graph_eligible_test($testTitle, $paramRaw);
+        $isGraphEligible = $useGraph && is_graph_eligible_test($testTitle, $paramRaw);
         $hasNumericVal = is_numeric($resultRaw) || (preg_match('/^([0-9]+(?:\.[0-9]+)?)/', $resultRaw, $nm) && (float)$nm[1] > 0);
 
         if ($isGraphEligible && $hasNumericVal && !$isTwoColumn) {
@@ -2158,7 +2170,8 @@ function render_report_sheet(
     string $specimen,
     int $pageIndex,
     int $totalPages,
-    bool $forceBreakAfter
+    bool $forceBreakAfter,
+    array $options = []
 ): string {
     $labAddress = e($settings['address'] ?? '');
     $labPhone = e($settings['phone'] ?? '');
@@ -2195,7 +2208,8 @@ function render_report_sheet(
     $title = e(strtoupper($sheetTitle));
 
     $resultDate = e(format_date_report(null));
-    $rows = build_report_result_rows($resultLines, $isTwoColumn);
+    $useGraph = $options['graph_mode'] ?? true;
+    $rows = build_report_result_rows($resultLines, $isTwoColumn, $useGraph);
     $pageLabel = 'Page ' . $pageIndex . ' of ' . max(1, $totalPages);
     $breakClass = $forceBreakAfter ? ' lab-report--page-break' : '';
     $isFirstPage = $pageIndex <= 1;
@@ -2284,8 +2298,67 @@ function render_report_sheet(
     $credit = software_credit_footer(true);
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $contactBar = $addrLine !== '' ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
-    $signatoriesHtml = render_report_signatories($signatories);
-    $disclaimer = '<p class="lab-report__disclaimer">All results should be interpreted and correlated by a physician. Electronically varified report - not valid for legal proceedings unless stamped®</p>';
+
+    if ($isAllImaging) {
+        // --- DIAGNOSTIC CENTER & IMAGING FOOTER ---
+        // 1. Signatories: Consultant Radiologist / Sonologist / Cardiologist
+        $imagingSigs = setting_repo()->getSignatories($settings['organization_id'] ?? 'ORG-001', 'imaging');
+        if (empty($imagingSigs)) {
+            $repDoc = trim((string)($entry['doctor'] ?? ''));
+            if ($repDoc !== '') {
+                $imagingSigs = [
+                    [
+                        'name' => $repDoc,
+                        'qualifications' => 'M.B.B.S, F.C.P.S (Radiology)',
+                        'designation' => 'Consultant Radiologist / Sonologist',
+                    ]
+                ];
+            } else {
+                $imagingSigs = [
+                    [
+                        'name' => 'Dr. Imran Sheikh',
+                        'qualifications' => 'M.B.B.S, F.C.P.S (Radiology)',
+                        'designation' => 'Consultant Radiologist & Sonologist',
+                    ]
+                ];
+            }
+        }
+        $signatoriesHtml = render_report_signatories($imagingSigs);
+
+        // 2. Modality-specific clinical impression disclaimer
+        $sheetTitleUpper = strtoupper($sheetTitle);
+        if (str_contains($sheetTitleUpper, 'ULTRASOUND') || str_contains($sheetTitleUpper, 'ULTRASONOGRAPHY')) {
+            $disclaimerText = 'Sonographic findings are an operator-dependent diagnostic aid and must be correlated with clinical history, laboratory findings, and physical examination. Electronically verified report — not valid for medico-legal proceedings.';
+        } elseif (str_contains($sheetTitleUpper, 'CARDIOLOGY') || str_contains($sheetTitleUpper, 'ECG') || str_contains($sheetTitleUpper, 'ECHOCARDIOGRAPHY')) {
+            $disclaimerText = 'Electrocardiographic & Echocardiographic interpretations reflect status at the time of recording and must be clinically evaluated in context of patient hemodynamics. Electronically verified report.';
+        } elseif (str_contains($sheetTitleUpper, 'MRI') || str_contains($sheetTitleUpper, 'CT SCAN')) {
+            $disclaimerText = 'Advanced cross-sectional imaging interpretations are diagnostic opinions and should be correlated with clinical presentation. Electronically verified report — not valid for medico-legal proceedings unless stamped.';
+        } else {
+            $disclaimerText = !empty($settings['imaging_disclaimer'])
+                ? $settings['imaging_disclaimer']
+                : 'Diagnostic imaging findings are an aid to clinical diagnosis and must be correlated with patient\'s clinical history. Electronically verified report — not valid for medico-legal proceedings unless stamped.';
+        }
+        $disclaimer = '<p class="lab-report__disclaimer lab-report__disclaimer--imaging">' . e($disclaimerText) . '</p>';
+
+        // 3. Imaging footer note
+        $imagingMsg = trim((string)($settings['imaging_footer'] ?? ''));
+        if ($imagingMsg !== '') {
+            $footerBlock = '<p class="lab-report__lab-note lab-report__lab-note--imaging text-center text-xs text-slate-500 mt-1">' . e($imagingMsg) . '</p>';
+        }
+    } else {
+        // --- LABORATORY MEDICINE FOOTER ---
+        // 1. Signatories: Pathology & Laboratory Signatories
+        $signatoriesHtml = render_report_signatories($signatories);
+
+        // 2. Laboratory disclaimer
+        $disclaimer = '<p class="lab-report__disclaimer">All laboratory results should be interpreted and correlated clinically by an attending physician. Electronically verified lab report — not valid for legal proceedings unless stamped®</p>';
+
+        // 3. Laboratory footer message
+        $labFooterMsg = trim((string)($settings['footer'] ?? ''));
+        if ($labFooterMsg !== '' && !preg_match('/electronically verified|queries call reception/i', $labFooterMsg)) {
+            $footerBlock = '<p class="lab-report__lab-note text-center text-xs text-slate-500 mt-1">' . e($labFooterMsg) . '</p>';
+        }
+    }
     $customFooterHtml = '';
     if (!empty($settings['has_footer_image']) && !empty($settings['footer_image_url'])) {
         $fLayout = $settings['footer_layout'] ?? null;
@@ -2495,6 +2568,8 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $discFmt = 'Rs ' . number_format($discount, 0);
     $afterFmt = 'Rs ' . number_format($afterDiscount, 0);
     $paidFmt = 'Rs ' . number_format($paid, 0);
+    $dueFmt = 'Rs ' . number_format($due, 0);
+    $stamp = $isPaid ? '<div class="lab-bill__paid-stamp">PAID</div>' : '';
     $billFontKey = $settings['bill_font'] ?? 'times_bold_italic';
     $allFonts = supported_document_fonts();
     $bFontConf = $allFonts[$billFontKey] ?? $allFonts['times_bold_italic'];

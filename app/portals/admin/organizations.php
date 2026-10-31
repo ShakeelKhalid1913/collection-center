@@ -10,7 +10,7 @@ require_auth('admin');
 
 // Super Admin access gate
 if (!is_super_admin()) {
-    header('Location: /portals/admin/dashboard.php');
+    header('Location: /portals/dashboard.php');
     exit;
 }
 

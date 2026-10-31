@@ -94,8 +94,8 @@ foreach ($clients as $c) {
 }
 
 $headerActions = '<div class="flex items-center gap-2">'
-    . '<a href="/portals/main-lab/tests/prices.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-tags mr-1"></i> Walk-in Retail Rates</a>'
-    . '<a href="/portals/main-lab/lab-entries/new.php?type=b2b" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> New B2B Entry</a>'
+    . '<a href="/portals/tests/prices.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-tags mr-1"></i> Walk-in Retail Rates</a>'
+    . '<a href="/portals/lab-entries/new.php?type=b2b" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> New B2B Entry</a>'
     . '</div>';
 
 $content = page_header('B2B (Lab-to-Lab) Rates & Contracts', 'Dedicated wholesale test pricing for partner referring laboratories and hospital contracts.', $headerActions);

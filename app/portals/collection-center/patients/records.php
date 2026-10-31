@@ -20,10 +20,10 @@ foreach (mock('mock_patients') as $p) {
         e($p['branch'] ?? '—'),
         e(format_date($p['registered'] ?? null)),
         '<div class="flex flex-wrap gap-2">' .
-        '<a href="/portals/collection-center/lab-entries/new.php?patient_id=' . urlencode($p['id']) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Assign Tests</a>' .
-        '<a href="/portals/collection-center/patients/history.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
-        '<a href="/portals/collection-center/patients/edit.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
-        '<a href="/portals/collection-center/patients/card.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs" title="Print Patient ID Card"><i class="fa-solid fa-id-card mr-1"></i> Card</a>' .
+        '<a href="/portals/lab-entries/new.php?patient_id=' . urlencode($p['id']) . '" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> Assign Tests</a>' .
+        '<a href="/portals/patients/history.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>' .
+        '<a href="/portals/patients/edit.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-user-pen mr-1"></i> Edit</a>' .
+        '<a href="/portals/patients/card.php?id=' . urlencode($p['id']) . '" class="btn btn-secondary text-xs" title="Print Patient ID Card"><i class="fa-solid fa-id-card mr-1"></i> Card</a>' .
         '</div>',
     ];
 }
@@ -55,8 +55,8 @@ $filters = filter_bar([
 $content = page_header(
     'Patient Records',
     'Filter by demographics, branch, and registration date.',
-    btn_primary('/portals/collection-center/patients/quick-register.php', 'Quick registration') . ' ' .
-    btn_secondary('/portals/collection-center/patients/register.php', 'Full registration')
+    btn_primary('/portals/patients/quick-register.php', 'Quick registration') . ' ' .
+    btn_secondary('/portals/patients/register.php', 'Full registration')
 );
 
 $content .= card(

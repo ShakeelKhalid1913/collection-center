@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/head.php';
 
 if (!empty($_SESSION['user'])) {
     $portal = current_portal() ?: 'collection-center';
-    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/collection-center/dashboard.php'));
+    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/dashboard.php'));
     exit;
 }
 
@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Please enter a valid email address.';
     } elseif (strlen($password) < 4) {
         $error = 'Password must be at least 4 characters long.';
-    } elseif (!isset(PORTALS[$portal])) {
-        $error = 'Please select a valid user type / portal.';
+    } elseif (!isset(PORTALS[$portal]) || $portal === 'admin') {
+        $error = 'Please select a valid staff user type / portal.';
     } else {
         $result = user_repo()->createUser([
             'name' => $name,
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result['success']) {
             start_user_session($result['user']);
-            header('Location: ' . (PORTALS[current_portal()]['path'] ?? '/portals/collection-center/dashboard.php'));
+            header('Location: ' . (PORTALS[current_portal()]['path'] ?? '/portals/dashboard.php'));
             exit;
         }
         $error = $result['error'] ?? 'Signup failed. Please try again.';
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="field-label" for="portal"><i class="fa-solid fa-user-tag"></i> Portal (locked to this account)</label>
                     <select id="portal" name="portal" required class="field">
                         <?php
-                        $order = ['collection-center', 'main-lab', 'imaging', 'admin'];
+                        $order = ['collection-center', 'main-lab', 'imaging'];
                         foreach ($order as $key):
                             if (!isset(PORTALS[$key])) continue;
                             $portalMeta = PORTALS[$key];

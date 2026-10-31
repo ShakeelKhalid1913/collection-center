@@ -14,7 +14,7 @@ $message = '';
 if (isset($_GET['delete'])) {
     $delId = trim((string)$_GET['delete']);
     if (template_repo()->delete($delId, $orgId)) {
-        header('Location: /portals/main-lab/templates.php?deleted=1');
+        header('Location: /portals/templates.php?deleted=1');
         exit;
     }
     $message = flash_error('Could not delete template.');
@@ -92,7 +92,7 @@ foreach ($templates as $tpl) {
 
     $deptBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700">' . e($tpl['department']) . '</span>';
     $rawContent = htmlspecialchars($tpl['content'], ENT_QUOTES, 'UTF-8');
-    $delUrl = '/portals/main-lab/templates.php?delete=' . urlencode($tpl['id']);
+    $delUrl = '/portals/templates.php?delete=' . urlencode($tpl['id']);
 
     $cardsHtml .= <<<HTML
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between hover:border-slate-300 transition-all">
@@ -123,7 +123,7 @@ if ($cardsHtml === '') {
     $cardsHtml = '<div class="col-span-full p-8 text-center text-slate-500 font-medium bg-white rounded-2xl border border-slate-200">No report templates found for the selected department filter.</div>';
 }
 
-$deptSelect = select_field('Filter by Department', 'dept', $departments, $deptFilter, false, 'onchange="window.location.href=\'/portals/main-lab/templates.php?dept=\' + encodeURIComponent(this.value);"');
+$deptSelect = select_field('Filter by Department', 'dept', $departments, $deptFilter, false, 'onchange="window.location.href=\'/portals/templates.php?dept=\' + encodeURIComponent(this.value);"');
 
 $content = page_header('Report Templates', 'Private & shared diagnostic templates, narrative macro findings, and impression blocks.');
 $content .= $message . '<div class="mb-6">' . $addForm . '</div>' .

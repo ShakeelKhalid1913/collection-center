@@ -43,7 +43,7 @@ foreach ($dues as $d) {
         <button type="submit" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-sm">
             <i class="fa-solid fa-check text-[#c2f13c] mr-1"></i> Receive
         </button>
-        <a href="/portals/collection-center/receipts.php?lab_no={$d['lab_no']}" class="p-1 text-slate-500 hover:text-slate-800 text-xs" title="Receipt">
+        <a href="/portals/receipts.php?lab_no={$d['lab_no']}" class="p-1 text-slate-500 hover:text-slate-800 text-xs" title="Receipt">
             <i class="fa-solid fa-receipt"></i>
         </a>
     </form>

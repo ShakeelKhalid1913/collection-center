@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../../includes/components.php';
 $labNo = trim($_GET['lab_no'] ?? '');
 $ctx = load_document_context($labNo !== '' ? $labNo : null);
 
-$previewUrl = '/portals/collection-center/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
+$previewUrl = '/portals/reports/preview.php' . ($labNo !== '' ? '?lab_no=' . urlencode($labNo) : '');
 
 $content = '<div class="no-print">' . page_header(
     'Report Preview',
@@ -17,8 +17,8 @@ $content = '<div class="no-print">' . page_header(
 ) . '</div>';
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'));
 $content .= '<div class="mt-6 no-print flex flex-wrap gap-2">' .
-    btn_secondary('/portals/collection-center/receipts.php?lab_no=' . urlencode((string)($ctx['entry']['lab_no'] ?? '')), 'Receipt') .
-    btn_secondary('/portals/collection-center/branding.php', 'Edit header / footer') .
+    btn_secondary('/portals/receipts.php?lab_no=' . urlencode((string)($ctx['entry']['lab_no'] ?? '')), 'Receipt') .
+    btn_secondary('/portals/branding.php', 'Edit header / footer') .
     '</div>';
 $content .= render_report_document(
     $ctx['settings'],

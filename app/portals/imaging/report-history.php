@@ -25,10 +25,10 @@ foreach ($scans as $scan) {
 
     $q = urlencode($scanNo);
     $actionHtml = '<div class="inline-flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/imaging/reports.php?scan_no=' . $q . '" class="btn btn-primary text-xs px-2.5 py-1 font-bold" title="View & Print Report">' .
+        '<a href="/portals/reports.php?scan_no=' . $q . '" class="btn btn-primary text-xs px-2.5 py-1 font-bold" title="View & Print Report">' .
             '<i class="fa-solid fa-file-waveform mr-1"></i> View Report' .
         '</a>' .
-        '<a href="/portals/imaging/results.php?scan_no=' . $q . '" class="btn btn-secondary text-xs px-2.5 py-1 font-bold" title="Edit Findings">' .
+        '<a href="/portals/results.php?scan_no=' . $q . '" class="btn btn-secondary text-xs px-2.5 py-1 font-bold" title="Edit Findings">' .
             '<i class="fa-solid fa-pen-to-square text-teal-600 mr-1"></i> Edit' .
         '</a>' .
     '</div>';
@@ -47,8 +47,8 @@ foreach ($scans as $scan) {
 }
 
 $headerActions = '<div class="flex items-center gap-2">' .
-    '<a href="/portals/imaging/new-scan.php" class="btn btn-primary text-xs py-2 px-3"><i class="fa-solid fa-plus mr-1"></i> New Study</a>' .
-    '<a href="/portals/imaging/results.php" class="btn btn-secondary text-xs py-2 px-3"><i class="fa-solid fa-notes-medical mr-1"></i> Enter Findings</a>' .
+    '<a href="/portals/new-scan.php" class="btn btn-primary text-xs py-2 px-3"><i class="fa-solid fa-plus mr-1"></i> New Study</a>' .
+    '<a href="/portals/results.php" class="btn btn-secondary text-xs py-2 px-3"><i class="fa-solid fa-notes-medical mr-1"></i> Enter Findings</a>' .
 '</div>';
 
 $content = page_header('Imaging Report History', 'View, print, and edit all Ultrasound, X-Ray, ECG, CT Scan, and MRI reports.', $headerActions, 'fa-solid fa-folder-open');

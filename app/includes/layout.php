@@ -6,7 +6,7 @@ require_once __DIR__ . '/head.php';
 
 function portal_nav(string $portal, string $activeKey): string
 {
-    $base = '/portals/' . $portal;
+    $base = '/portals';
     $badges = nav_badge_counts();
 
     $menus = [
@@ -27,6 +27,7 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Billing & Finance', [
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
                 nav_item("{$base}/patient-dues.php", 'Patient Dues', $activeKey, 'patient-dues', null, 'fa-solid fa-hand-holding-dollar'),
                 nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/receipts.php", 'Receipts', $activeKey, 'receipts', null, 'fa-solid fa-file-invoice'),
@@ -43,7 +44,9 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Lab Entries & Reports', [
                 nav_item("{$base}/lab-entries/new.php", 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/lab-entries/pending.php", 'Pending Orders', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock'),
                 nav_item("{$base}/lab-entries/edit.php", 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
+                nav_item("{$base}/sample-collection.php", 'Sample Tracking & Collection', $activeKey, 'sample-tracking', null, 'fa-solid fa-vial'),
                 nav_item("{$base}/results/entry.php", 'Report Edit', $activeKey, 'results-entry', null, 'fa-solid fa-file-pen'),
                 nav_item("{$base}/reports/history.php", 'Report History', $activeKey, 'reports-history', null, 'fa-solid fa-folder-open'),
                 nav_item("{$base}/reports/radiology.php", 'Ultrasound & Radiology', $activeKey, 'radiology-reports', null, 'fa-solid fa-file-waveform'),
@@ -55,6 +58,7 @@ function portal_nav(string $portal, string $activeKey): string
             ]),
             nav_group('Operations & Finance', [
                 nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
                 nav_item("{$base}/collection-centers.php", 'Collection Centers', $activeKey, 'collection-centers', null, 'fa-solid fa-code-branch'),
                 nav_item("{$base}/staff/index.php", 'Staff Directory', $activeKey, 'staff-docs', null, 'fa-solid fa-id-badge'),
                 nav_item("{$base}/staff/attendance.php", 'Staff Attendance', $activeKey, 'staff-attendance', null, 'fa-solid fa-camera'),
@@ -86,26 +90,53 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Overview', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Department Workstations', [
-                nav_item("{$base}/laboratory.php", 'Laboratory Station', $activeKey, 'station-lab', null, 'fa-solid fa-flask'),
+            nav_group('Laboratory Operations', [
+                nav_item("{$base}/laboratory.php", 'Laboratory Station', $activeKey, 'station-lab', null, 'fa-solid fa-flask text-emerald-500'),
+                nav_item("{$base}/lab-entries/new.php", 'New Lab Order', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus text-emerald-500'),
+                nav_item("{$base}/lab-entries/pending.php", 'Pending Lab Orders', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock text-amber-500'),
+                nav_item("{$base}/sample-collection.php", 'Sample Collection', $activeKey, 'sample-collection', null, 'fa-solid fa-vial text-teal-500'),
+                nav_item("{$base}/results/entry.php", 'Lab Results Entry', $activeKey, 'results-entry', null, 'fa-solid fa-vials text-indigo-500'),
+                nav_item("{$base}/results/critical.php", 'Critical Lab Values', $activeKey, 'critical-results', null, 'fa-solid fa-triangle-exclamation text-rose-500'),
+                nav_item("{$base}/reports/generate.php", 'Generate Lab Report', $activeKey, 'reports-generate', null, 'fa-solid fa-file-pdf text-blue-500'),
+                nav_item("{$base}/reports/history.php", 'Lab Reports History', $activeKey, 'reports-history', null, 'fa-solid fa-box-archive text-slate-500'),
+            ]),
+            nav_group('Imaging & Clinical Stations', [
                 nav_item("{$base}/ultrasound.php", 'Ultrasound Station', $activeKey, 'station-us', null, 'fa-solid fa-wave-square'),
                 nav_item("{$base}/xray.php", 'X-Ray Station', $activeKey, 'station-xray', null, 'fa-solid fa-x-ray'),
                 nav_item("{$base}/ecg.php", 'ECG Station', $activeKey, 'station-ecg', null, 'fa-solid fa-heart-pulse'),
+                nav_item("{$base}/echo.php", 'Echocardiography (Echo)', $activeKey, 'station-echo', null, 'fa-solid fa-heart-pulse text-indigo-500'),
                 nav_item("{$base}/ct.php", 'CT Scan Station', $activeKey, 'station-ct', null, 'fa-solid fa-laptop-medical'),
                 nav_item("{$base}/mri.php", 'MRI Station', $activeKey, 'station-mri', null, 'fa-solid fa-magnet'),
             ]),
-            nav_group('Reports & Findings', [
+            nav_group('Hospital & OPD Slips', [
+                nav_item("{$base}/opd-slip.php", 'Doctor OPD Slip', $activeKey, 'opd-slip', null, 'fa-solid fa-user-doctor'),
+                nav_item("{$base}/hospital-files.php", 'Hospital Files & Charts', $activeKey, 'hospital-files', null, 'fa-solid fa-file-medical'),
+            ]),
+            nav_group('Findings & Reports', [
                 nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
+                nav_item("{$base}/reports.php", 'Scan & Echo Reports', $activeKey, 'reports', null, 'fa-solid fa-file-waveform'),
                 nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
             ]),
             nav_group('Reception & Billing', [
                 nav_item("{$base}/new-scan.php", 'New Booking (Unified Slip)', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
-                nav_item("{$base}/patients.php", 'Patients', $activeKey, 'patients', null, 'fa-solid fa-users'),
+                nav_item("{$base}/patients.php", 'Patients Directory', $activeKey, 'patients', null, 'fa-solid fa-users'),
+                nav_item("{$base}/patients/card.php", 'Patient MR Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
                 nav_item("{$base}/receipt.php", 'Patient Bill / Slip', $activeKey, 'receipt', null, 'fa-solid fa-receipt'),
-                nav_item("{$base}/financial-closing.php", 'Daily Closing Slip', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/financial-closing.php", 'Daily / Weekly / Monthly Closing', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
             ]),
-            nav_group('Settings', [
-                nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
+            nav_group('Operations & Finance', [
+                nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-file-invoice-dollar'),
+                nav_item("{$base}/doctors-share.php", "Doctor's Share", $activeKey, 'doctors-share', null, 'fa-solid fa-user-doctor'),
+                nav_item("{$base}/stock-management.php", 'Stock & Supplies', $activeKey, 'stock', null, 'fa-solid fa-boxes-stacked'),
+                nav_item("{$base}/waste-record.php", 'Waste Record', $activeKey, 'waste-record', null, 'fa-solid fa-trash-can'),
+                nav_item("{$base}/delete-entry.php", 'Delete History / Entry', $activeKey, 'delete-entry', null, 'fa-solid fa-user-xmark'),
+            ]),
+            nav_group('Staff & Settings', [
+                nav_item("{$base}/staff/index.php", 'Staff Directory', $activeKey, 'staff-docs', null, 'fa-solid fa-id-badge'),
+                nav_item("{$base}/staff/attendance.php", 'Staff Attendance', $activeKey, 'staff-attendance', null, 'fa-solid fa-camera'),
+                nav_item("{$base}/settings/report-template.php", 'Header & Footer Branding', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
+                nav_item("{$base}/settings.php", 'Department Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
             ]),
         ],
         'admin' => array_merge(
@@ -119,6 +150,7 @@ function portal_nav(string $portal, string $activeKey): string
                     nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
                 ]),
                 nav_group('Management', [
+                    nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
                     nav_item("{$base}/labs.php", 'Labs & Branches', $activeKey, 'labs', null, 'fa-solid fa-sitemap'),
                     nav_item("{$base}/users.php", 'Users & Permissions', $activeKey, 'users', null, 'fa-solid fa-user-shield'),
                     nav_item("{$base}/audit-trail.php", 'Audit Trail', $activeKey, 'audit-trail', null, 'fa-solid fa-clock-rotate-left'),
@@ -137,8 +169,12 @@ function portal_nav(string $portal, string $activeKey): string
 function render_layout(string $title, string $portal, string $activeKey, string $content, bool $hideAppCredit = false): void
 {
     $user = current_user();
-    $portalLabel = PORTALS[$portal]['label'] ?? ucfirst($portal);
-    $nav = portal_nav($portal, $activeKey);
+    $userPortal = current_portal();
+
+    // Preserve the user's active portal sidebar so clicking shared features NEVER flips or resets their menu!
+    $navPortal = (!empty($userPortal) && isset(PORTALS[$userPortal])) ? $userPortal : $portal;
+    $portalLabel = PORTALS[$navPortal]['label'] ?? ucfirst($navPortal);
+    $nav = portal_nav($navPortal, $activeKey);
     $userName = e($user['name'] ?? 'User');
     $userRole = e($user['role'] ?? '');
     $pageTitle = e($title);
@@ -149,7 +185,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     $logo = brand_logo('brand-logo brand-logo--sidebar');
     $wa = floating_whatsapp_button('+92 306 5193582'); // CLIENT lab WhatsApp only
 
-    // Hide page credit on receipt/report preview — credit lives inside the print box only
+    // Hide page credit on receipt/report preview â€” credit lives inside the print box only
     $appCredit = $hideAppCredit ? '' : (
         '<footer class="software-credit-bar software-credit-bar--app no-print">' .
         '<p class="software-credit" style="white-space:nowrap!important;text-align:center!important;display:block!important;width:100%!important;">Software created by <strong>Shakeel Khalid</strong>' .
@@ -158,7 +194,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     );
 
     echo '<!DOCTYPE html><html lang="en" class="h-full"><head>';
-    render_head($pageTitle . ' · ' . $portalLabel);
+    render_head($pageTitle . ' - ' . $portalLabel);
     echo '</head><body class="app-body h-full">';
 
     echo <<<HTML
@@ -254,7 +290,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
         <!-- Modal Footer Help -->
         <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <div class="flex items-center gap-3">
-                <span><kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">↑</kbd> <kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">↓</kbd> navigate</span>
+                <span><kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">â†‘</kbd> <kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">â†“</kbd> navigate</span>
                 <span><kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd> open</span>
                 <span><kbd class="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">/</kbd> shortcut</span>
             </div>
@@ -267,57 +303,60 @@ function render_layout(string $title, string $portal, string $activeKey, string 
 (function() {
     const features = [
         // Primary & Overview
-        { title: "Main Lab Dashboard", category: "Overview", icon: "fa-gauge-high", url: "/portals/main-lab/dashboard.php", keywords: "home overview statistics revenue biomarkers" },
-        { title: "Collection Center Dashboard", category: "Overview", icon: "fa-gauge-high", url: "/portals/collection-center/dashboard.php", keywords: "cc home counter intake" },
-        { title: "Quick Patient Registration", category: "Patients", icon: "fa-bolt", url: "/portals/collection-center/patients/quick-register.php", keywords: "fast patient intake rapid entry counter" },
-        { title: "Register Patient", category: "Patients", icon: "fa-user-plus", url: "/portals/main-lab/patients/register.php", keywords: "patient cnic phone add new mr number" },
-        { title: "Patient Records Directory", category: "Patients", icon: "fa-address-book", url: "/portals/main-lab/patients/records.php", keywords: "all patients history search phone" },
-        { title: "Print Patient Card", category: "Patients", icon: "fa-id-card", url: "/portals/main-lab/patients/card.php", keywords: "mr card barcode plastic badge" },
+        { title: "Dashboard", category: "Overview", icon: "fa-gauge-high", url: "/portals/dashboard.php", keywords: "home overview statistics revenue biomarkers" },
+        { title: "Quick Patient Registration", category: "Patients", icon: "fa-bolt", url: "/portals/patients/quick-register.php", keywords: "fast patient intake rapid entry counter" },
+        { title: "Register Patient", category: "Patients", icon: "fa-user-plus", url: "/portals/patients/register.php", keywords: "patient cnic phone add new mr number" },
+        { title: "Patient Records Directory", category: "Patients", icon: "fa-address-book", url: "/portals/patients/records.php", keywords: "all patients history search phone" },
+        { title: "Print Patient Card", category: "Patients", icon: "fa-id-card", url: "/portals/patients/card.php", keywords: "mr card barcode plastic badge" },
 
         // Clinical Lab Entries & Results
-        { title: "Report Edit (Findings & Results)", category: "Laboratory", icon: "fa-file-pen", url: "/portals/main-lab/results/entry.php", keywords: "report edit results enter values verify cbc lft ultrasound xray ecg findings" },
-        { title: "Edit Entry & Bill Slip", category: "Laboratory", icon: "fa-user-pen", url: "/portals/main-lab/lab-entries/edit.php", keywords: "edit age slip bill patient details name change demographics doctor" },
-        { title: "Report History & Archive", category: "Laboratory", icon: "fa-folder-open", url: "/portals/main-lab/reports/history.php", keywords: "previous reports print pdf completed" },
-        { title: "New Lab Entry / Booking", category: "Laboratory", icon: "fa-file-circle-plus", url: "/portals/main-lab/lab-entries/new.php", keywords: "book test billing walkin entry" },
-        { title: "Test Estimate & Cost Calculator", category: "Laboratory", icon: "fa-calculator", url: "/portals/main-lab/tests/estimate.php", keywords: "estimate quotation price calculator test rates estimate slip inquiry discount" },
-        { title: "Sample Transit & Barcode Tracking", category: "Logistics", icon: "fa-barcode", url: "/portals/main-lab/sample-tracking.php", keywords: "courier dispatch receive vials tubes transit status" },
-        { title: "Delete / Cancel Lab Entry", category: "Laboratory", icon: "fa-user-xmark", url: "/portals/main-lab/delete-entry.php", keywords: "void remove mistake refund cancel" },
+        { title: "Report Edit (Findings & Results)", category: "Laboratory", icon: "fa-file-pen", url: "/portals/results/entry.php", keywords: "report edit results enter values verify cbc lft ultrasound xray ecg findings" },
+        { title: "Edit Entry & Bill Slip", category: "Laboratory", icon: "fa-user-pen", url: "/portals/lab-entries/edit.php", keywords: "edit age slip bill patient details name change demographics doctor" },
+        { title: "Pending Lab Orders", category: "Laboratory", icon: "fa-clock", url: "/portals/lab-entries/pending.php", keywords: "pending orders queue lab tests" },
+        { title: "Report History & Archive", category: "Laboratory", icon: "fa-folder-open", url: "/portals/reports/history.php", keywords: "previous reports print pdf completed" },
+        { title: "New Lab Entry / Booking", category: "Laboratory", icon: "fa-file-circle-plus", url: "/portals/lab-entries/new.php", keywords: "book test billing walkin entry" },
+        { title: "Sample Collection & Tracking", category: "Logistics", icon: "fa-vial", url: "/portals/sample-collection.php", keywords: "courier dispatch receive vials tubes transit status" },
+        { title: "Test Estimate & Cost Calculator", category: "Laboratory", icon: "fa-calculator", url: "/portals/tests/estimate.php", keywords: "estimate quotation price calculator test rates estimate slip inquiry discount" },
+        { title: "Delete / Cancel Lab Entry", category: "Laboratory", icon: "fa-user-xmark", url: "/portals/delete-entry.php", keywords: "void remove mistake refund cancel" },
 
         // Finance & Day End Closing
-        { title: "Daily Financial Closing Slip", category: "Finance", icon: "fa-calculator", url: "/portals/main-lab/financial-closing.php", keywords: "shift day end summary closing cash reconciliation balance modality" },
-        { title: "Patient Dues & Recovery", category: "Finance", icon: "fa-hand-holding-dollar", url: "/portals/main-lab/patient-dues.php", keywords: "pending payment balance collect money dues" },
-        { title: "Lab Expenses & Outflow", category: "Finance", icon: "fa-file-invoice-dollar", url: "/portals/main-lab/expenses.php", keywords: "bills rent electricity tea reagents expense cash" },
-        { title: "Doctor's Share & Commission", category: "Finance", icon: "fa-user-doctor", url: "/portals/main-lab/doctors-share.php", keywords: "referral cut payout doctors commission percentage" },
-        { title: "Patient Bill & Receipts", category: "Finance", icon: "fa-receipt", url: "/portals/main-lab/receipts.php", keywords: "print receipt invoice bill payment" },
+        { title: "Summary Reports Engine (All Reports)", category: "Analytics & Finance", icon: "fa-chart-pie", url: "/portals/summary-reports.php", keywords: "summary reports gross business registration user cashier non-business dues test volume doctor referral daily rate list expenses pnl" },
+        { title: "Daily / Weekly / Monthly Closing Slip", category: "Finance", icon: "fa-calculator", url: "/portals/financial-closing.php", keywords: "shift day end summary closing cash reconciliation balance modality daily weekly monthly" },
+        { title: "Patient Dues & Recovery", category: "Finance", icon: "fa-hand-holding-dollar", url: "/portals/patient-dues.php", keywords: "pending payment balance collect money dues" },
+        { title: "Expenses & Outflow", category: "Finance", icon: "fa-file-invoice-dollar", url: "/portals/expenses.php", keywords: "bills rent electricity tea reagents expense cash" },
+        { title: "Doctor's Share & Commission", category: "Finance", icon: "fa-user-doctor", url: "/portals/doctors-share.php", keywords: "referral cut payout doctors commission percentage" },
+        { title: "Patient Bill & Receipts", category: "Finance", icon: "fa-receipt", url: "/portals/receipt.php", keywords: "print receipt invoice bill payment" },
+
+        // Modalities (Diagnostic Center + Hospital)
+        { title: "Echocardiography (Echo) Station", category: "Modalities", icon: "fa-heart-pulse", url: "/portals/echo.php", keywords: "echocardiography echo doppler cardiac ejection fraction" },
+        { title: "Doctor OPD Consultation Slip", category: "Hospital", icon: "fa-user-doctor", url: "/portals/opd-slip.php", keywords: "opd slip doctor consultation prescription token clinic" },
+        { title: "Clinical Hospital Files & Charts", category: "Hospital", icon: "fa-file-medical", url: "/portals/hospital-files.php", keywords: "blood performa transfusion medicine chart mar vitals viral" },
+        { title: "Ultrasound (US) Department", category: "Modalities", icon: "fa-wave-square", url: "/portals/ultrasound.php", keywords: "ultrasound pelvis abdomen scan study" },
+        { title: "X-Ray / Radiography", category: "Modalities", icon: "fa-x-ray", url: "/portals/xray.php", keywords: "chest xray bones digital radiography" },
+        { title: "ECG Department", category: "Modalities", icon: "fa-heart-pulse", url: "/portals/ecg.php", keywords: "heart ecg tracing rhythm" },
+        { title: "CT Scan Department", category: "Modalities", icon: "fa-laptop-medical", url: "/portals/ct.php", keywords: "computed tomography scan brain chest" },
+        { title: "MRI Scan Department", category: "Modalities", icon: "fa-magnet", url: "/portals/mri.php", keywords: "mri magnetic resonance scan spine brain" },
 
         // Staff & Documents
-        { title: "Staff Management & Worker Photo", category: "Staff & Docs", icon: "fa-id-badge", url: "/portals/main-lab/staff/index.php?tab=staff", keywords: "employees workers doctors upload photo degree edit staff" },
-        { title: "Worker Attendance Tracking", category: "Staff & Docs", icon: "fa-calendar-check", url: "/portals/main-lab/staff/index.php?tab=attendance", keywords: "attendance present absent late checkin daily" },
-        { title: "Lab Registration Certificate & License", category: "Staff & Docs", icon: "fa-award", url: "/portals/main-lab/staff/index.php?tab=license", keywords: "license framed certificate phc registration accreditation" },
+        { title: "Staff Management & Directory", category: "Staff & Docs", icon: "fa-id-badge", url: "/portals/staff/index.php", keywords: "employees workers doctors upload photo degree edit staff" },
+        { title: "Worker Attendance Tracking", category: "Staff & Docs", icon: "fa-camera", url: "/portals/staff/attendance.php", keywords: "attendance present absent late checkin daily" },
 
         // Catalog & B2B Wholesale
-        { title: "Add New Test to Catalog", category: "Catalog", icon: "fa-flask", url: "/portals/main-lab/tests/index.php", keywords: "catalog new parameter reference range test" },
-        { title: "Update Retail Test Prices", category: "Catalog", icon: "fa-tags", url: "/portals/main-lab/tests/prices.php", keywords: "rates price change walkin fees" },
-        { title: "B2B Wholesale Rates & Partner Labs", category: "B2B", icon: "fa-handshake", url: "/portals/main-lab/tests/b2b-rates.php", keywords: "lab to lab wholesale contract referring partners discount" },
-        { title: "Report Templates & Findings", category: "Catalog", icon: "fa-bookmark", url: "/portals/main-lab/templates.php", keywords: "ultrasound templates radiology pathology formats predefined" },
+        { title: "Add New Test to Catalog", category: "Catalog", icon: "fa-flask", url: "/portals/tests/index.php", keywords: "catalog new parameter reference range test" },
+        { title: "Update Retail Test Prices", category: "Catalog", icon: "fa-tags", url: "/portals/tests/prices.php", keywords: "rates price change walkin fees" },
+        { title: "B2B Wholesale Rates & Partner Labs", category: "B2B", icon: "fa-handshake", url: "/portals/tests/b2b-rates.php", keywords: "lab to lab wholesale contract referring partners discount" },
+        { title: "Report Templates & Findings", category: "Catalog", icon: "fa-bookmark", url: "/portals/templates.php", keywords: "ultrasound templates radiology pathology formats predefined" },
 
         // Multi-Center & Multi-Modality
-        { title: "Child Collection Centers", category: "Multi-Tenant", icon: "fa-code-branch", url: "/portals/main-lab/collection-centers.php", keywords: "child branches points network data sync" },
-        { title: "Stock Management & Returns", category: "Inventory", icon: "fa-boxes-stacked", url: "/portals/main-lab/stock-management.php", keywords: "reagents inventory supplies stock expired return" },
-        { title: "Waste Record Disposal", category: "Operations", icon: "fa-trash-can", url: "/portals/main-lab/waste-record.php", keywords: "biohazard waste disposal sharp yellow bag" },
-        { title: "All Dates History Archive", category: "Archive", icon: "fa-clock-rotate-left", url: "/portals/main-lab/archive.php", keywords: "search past entries all time archive" },
-
-        // Modalities (Diagnostic Center)
-        { title: "Ultrasound (US) Department", category: "Modalities", icon: "fa-wave-square", url: "/portals/imaging/new-scan.php?modality=us", keywords: "ultrasound pelvis abdomen scan study" },
-        { title: "X-Ray / Radiography", category: "Modalities", icon: "fa-x-ray", url: "/portals/imaging/new-scan.php?modality=xray", keywords: "chest xray bones digital radiography" },
-        { title: "ECG Department", category: "Modalities", icon: "fa-heart-pulse", url: "/portals/imaging/new-scan.php?modality=ecg", keywords: "heart ecg tracing rhythm" },
-        { title: "CT Scan Department", category: "Modalities", icon: "fa-laptop-medical", url: "/portals/imaging/new-scan.php?modality=ct", keywords: "computed tomography scan brain chest" },
+        { title: "Child Collection Centers / Labs", category: "Multi-Tenant", icon: "fa-code-branch", url: "/portals/collection-centers.php", keywords: "child branches points network data sync" },
+        { title: "Stock Management & Supplies", category: "Inventory", icon: "fa-boxes-stacked", url: "/portals/stock-management.php", keywords: "reagents inventory supplies stock expired return" },
+        { title: "Waste Record Disposal", category: "Operations", icon: "fa-trash-can", url: "/portals/waste-record.php", keywords: "biohazard waste disposal sharp yellow bag" },
+        { title: "All Dates History Archive", category: "Archive", icon: "fa-clock-rotate-left", url: "/portals/archive.php", keywords: "search past entries all time archive" },
 
         // Settings & Branding
-        { title: "Header & Footer Letterhead Settings", category: "Settings", icon: "fa-heading", url: "/portals/main-lab/settings/report-template.php", keywords: "header footer logo letterhead font typography preview" },
-        { title: "Doctor Signatories on Reports", category: "Settings", icon: "fa-signature", url: "/portals/main-lab/settings/report-template.php", keywords: "signatories pathologist signature consultant footer" },
-        { title: "Lab Profile & Contact", category: "Settings", icon: "fa-hospital", url: "/portals/main-lab/settings/profile.php", keywords: "lab name phone address profile" },
-        { title: "System Users & Logins", category: "Settings", icon: "fa-users", url: "/portals/main-lab/settings/users.php", keywords: "accounts passwords staff users permissions" }
+        { title: "Header & Footer Letterhead Settings", category: "Settings", icon: "fa-heading", url: "/portals/settings/report-template.php", keywords: "header footer logo letterhead font typography preview" },
+        { title: "Lab Profile & Contact", category: "Settings", icon: "fa-hospital", url: "/portals/settings/profile.php", keywords: "lab name phone address profile" },
+        { title: "System Users & Logins", category: "Settings", icon: "fa-users", url: "/portals/settings/users.php", keywords: "accounts passwords staff users permissions" }
     ];
 
     let activeIdx = 0;
@@ -346,8 +385,8 @@ function render_layout(string $title, string $portal, string $activeKey, string 
         const query = (q || '').trim().toLowerCase();
 
         filtered = features.filter(f => {
-            if (activePortal !== 'admin' && !f.url.startsWith('/portals/' + activePortal + '/')) {
-                return false;
+            if (activePortal === 'collection-center') {
+                if (f.category === 'Modalities' || f.category === 'Hospital' || f.category === 'Staff & Docs') return false;
             }
             if (!query) return true;
             return f.title.toLowerCase().includes(query) ||

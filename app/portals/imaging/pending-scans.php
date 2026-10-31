@@ -6,7 +6,8 @@ require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
-$orgId = current_user()['organization_id'] ?? 'ORG-001';
+require_auth(['imaging', 'admin']);
+$orgId = current_organization_id();
 
 // Handle quick doctor switch
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_doctor'])) {
@@ -17,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_doctor'])) {
 
     if ($scanNoToUpdate !== '' && $newDoc !== '') {
         result_repo()->updateImagingDoctor($scanNoToUpdate, $newDoc);
-        header('Location: /portals/imaging/pending-scans.php?doc_switched=1');
+        header('Location: /portals/pending-scans.php?doc_switched=1');
         exit;
     }
 }
@@ -54,10 +55,10 @@ HTML;
 
     $actionButtons = <<<HTML
 <div class="flex items-center gap-1.5">
-    <a href="/portals/imaging/receipt.php?scan_no={$scanNo}" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700" title="Print Token Slip">
+    <a href="/portals/receipt.php?scan_no={$scanNo}" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700" title="Print Token Slip">
         <i class="fa-solid fa-receipt mr-1 text-slate-500"></i> Slip
     </a>
-    <a href="/portals/imaging/results.php?scan_no={$scanNo}" class="btn btn-primary text-xs px-3 py-1 font-semibold" title="Enter Findings">
+    <a href="/portals/results.php?scan_no={$scanNo}" class="btn btn-primary text-xs px-3 py-1 font-semibold" title="Enter Findings">
         <i class="fa-solid fa-pen-nib mr-1"></i> Findings
     </a>
 </div>
@@ -77,7 +78,7 @@ HTML;
 $content = page_header(
     'Pending Studies',
     'Track diagnostic scans, switch reporting doctors, print token slips, and enter findings.',
-    btn_primary('/portals/imaging/new-scan.php', 'New Study', 'fa-solid fa-plus')
+    btn_primary('/portals/new-scan.php', 'New Study', 'fa-solid fa-plus')
 );
 
 if (isset($_GET['created'])) {

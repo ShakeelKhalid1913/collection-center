@@ -257,8 +257,8 @@ function get_department_meta(string $testName, ?string $category = null): array
             'icon' => 'fa-solid fa-wave-square',
             'icon_color' => 'text-teal-600',
             'badge_class' => 'bg-teal-50 text-teal-800 border-teal-200',
-            'station_url' => '/portals/imaging/ultrasound.php',
-            'report_url' => '/portals/imaging/reports.php',
+            'station_url' => '/portals/ultrasound.php',
+            'report_url' => '/portals/reports.php',
             'is_imaging' => true,
         ];
     }
@@ -274,8 +274,8 @@ function get_department_meta(string $testName, ?string $category = null): array
             'icon' => 'fa-solid fa-x-ray',
             'icon_color' => 'text-blue-600',
             'badge_class' => 'bg-blue-50 text-blue-800 border-blue-200',
-            'station_url' => '/portals/imaging/xray.php',
-            'report_url' => '/portals/imaging/reports.php',
+            'station_url' => '/portals/xray.php',
+            'report_url' => '/portals/reports.php',
             'is_imaging' => true,
         ];
     }
@@ -291,8 +291,25 @@ function get_department_meta(string $testName, ?string $category = null): array
             'icon' => 'fa-solid fa-heart-pulse',
             'icon_color' => 'text-rose-600',
             'badge_class' => 'bg-rose-50 text-rose-800 border-rose-200',
-            'station_url' => '/portals/imaging/ecg.php',
-            'report_url' => '/portals/imaging/reports.php',
+            'station_url' => '/portals/ecg.php',
+            'report_url' => '/portals/reports.php',
+            'is_imaging' => true,
+        ];
+    }
+
+    // 3b. Echocardiography / Echo / Cardiac Ultrasound
+    if (strcasecmp($cat, 'Echocardiography') === 0 || strcasecmp($cat, 'Echo') === 0
+        || preg_match('/\b(echocardiogra|cardiac\s*echo|2d\s*echo|color\s*doppler\s*echo|tte\b)\b/i', $testUpper)
+    ) {
+        return [
+            'id' => 'echo',
+            'name' => 'Echocardiography',
+            'short' => 'Echo',
+            'icon' => 'fa-solid fa-heart-pulse',
+            'icon_color' => 'text-indigo-600',
+            'badge_class' => 'bg-indigo-50 text-indigo-800 border-indigo-200',
+            'station_url' => '/portals/echo.php',
+            'report_url' => '/portals/reports.php',
             'is_imaging' => true,
         ];
     }
@@ -309,8 +326,8 @@ function get_department_meta(string $testName, ?string $category = null): array
             'icon' => 'fa-solid fa-laptop-medical',
             'icon_color' => 'text-purple-600',
             'badge_class' => 'bg-purple-50 text-purple-800 border-purple-200',
-            'station_url' => '/portals/imaging/ct.php',
-            'report_url' => '/portals/imaging/reports.php',
+            'station_url' => '/portals/ct.php',
+            'report_url' => '/portals/reports.php',
             'is_imaging' => true,
         ];
     }
@@ -326,8 +343,8 @@ function get_department_meta(string $testName, ?string $category = null): array
             'icon' => 'fa-solid fa-magnet',
             'icon_color' => 'text-indigo-600',
             'badge_class' => 'bg-indigo-50 text-indigo-800 border-indigo-200',
-            'station_url' => '/portals/imaging/mri.php',
-            'report_url' => '/portals/imaging/reports.php',
+            'station_url' => '/portals/mri.php',
+            'report_url' => '/portals/reports.php',
             'is_imaging' => true,
         ];
     }
@@ -342,8 +359,8 @@ function get_department_meta(string $testName, ?string $category = null): array
         'icon' => 'fa-solid fa-flask-vial',
         'icon_color' => 'text-emerald-600',
         'badge_class' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        'station_url' => '/portals/main-lab/results/entry.php',
-        'report_url' => '/portals/main-lab/reports/preview.php',
+        'station_url' => '/portals/results/entry.php',
+        'report_url' => '/portals/reports/preview.php',
         'is_imaging' => false,
     ];
 }
@@ -391,9 +408,9 @@ function render_department_badges_html(string $testsString, ?string $labNo = nul
         if ($withLinks && $labNo !== null && $labNo !== '') {
             $q = urlencode($labNo);
             if ($deptId === 'lab') {
-                $url = "/portals/main-lab/reports/preview.php?lab_no={$q}";
+                $url = "/portals/reports/preview.php?lab_no={$q}";
             } else {
-                $url = "/portals/imaging/reports.php?scan_no={$q}";
+                $url = "/portals/reports.php?scan_no={$q}";
             }
         }
 
@@ -526,7 +543,14 @@ function get_all_imaging_templates(): array
             'impression' => "NORMAL PLAIN ABDOMINAL RADIOGRAPH.\nNo signs of bowel obstruction, perforation, or radiopaque urinary calculus.",
         ],
 
-        // --- 3. 12-LEAD ECG TEMPLATES ---
+        // --- 3. 12-LEAD ECG & ECHOCARDIOGRAPHY TEMPLATES ---
+        'echo_2d_doppler' => [
+            'id' => 'echo_2d_doppler',
+            'dept' => 'echo',
+            'title' => '2D Echocardiography & Color Doppler (Normal Adult Study)',
+            'findings' => "TRANSTHORACIC ECHOCARDIOGRAPHY (2D, M-MODE & COLOR DOPPLER)\n\nCARDIAC CHAMBER MEASUREMENTS:\n- Left Ventricle (LVIDd): 4.6 cm (Normal: 3.5 - 5.6 cm)\n- Left Ventricle (LVIDs): 2.9 cm (Normal: 2.0 - 4.0 cm)\n- Interventricular Septum (IVSd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- LV Posterior Wall (PWd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- Left Atrium (LA dimension): 3.2 cm (Normal: 1.9 - 4.0 cm)\n- Aortic Root Diameter: 2.8 cm (Normal: 2.0 - 3.7 cm)\n- Ejection Fraction (EF): 62% by Teichholz / Simpson biplane (Normal: 55 - 75%)\n\nVALVULAR EVALUATION:\n- Mitral Valve: Leaflets are thin, pliable with good coaptation. Trace physiological MR. No MS.\n- Aortic Valve: Trileaflet aortic valve. Good opening with normal peak velocity (< 1.5 m/s). No AR or AS.\n- Tricuspid Valve: Normal leaflet motion. Trace TR. Estimated PASP is 22 mmHg (Normal < 30 mmHg).\n- Pulmonic Valve: Unremarkable.\n\nMYOCARDIAL KINETICS:\n- Normal global LV systolic function. No regional wall motion abnormality (RWMA) at rest.\n- Right ventricular size and systolic function are normal (TAPSE: 22 mm).\n- Interatrial and interventricular septa are intact.\n- No pericardial effusion or intracardiac thrombus seen.",
+            'impression' => "NORMAL 2D TRANSTHORACIC ECHOCARDIOGRAM (TTE).\nNormal cardiac chamber dimensions, intact valves, and preserved LV systolic function with EF of 62%. No RWMA or pericardial effusion.",
+        ],
         'ecg_12lead' => [
             'id' => 'ecg_12lead',
             'dept' => 'ecg',

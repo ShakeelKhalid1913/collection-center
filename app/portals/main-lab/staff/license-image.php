@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../../includes/bootstrap.php';
 
+require_auth();
+
 $user = current_user();
-$orgId = trim((string)($_GET['org'] ?? ($user['organization_id'] ?? 'ORG-001')));
+$orgId = is_super_admin() && !empty($_GET['org']) ? trim((string)$_GET['org']) : ($user['organization_id'] ?? 'ORG-001');
 
 $lic = employee_repo()->getLicenseBlob($orgId);
 if (!$lic || empty($lic['license_image'])) {

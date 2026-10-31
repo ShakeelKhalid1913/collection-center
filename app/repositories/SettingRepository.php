@@ -25,6 +25,7 @@ class SettingRepository
                 "SELECT organization_id, lab_name, address, phone, email,
                         header_text, footer_text, logo_text,
                         bill_header_text, bill_footer_text,
+                        imaging_footer_text, imaging_disclaimer,
                         header_image_mime,
                         header_image_ver,
                         header_image_position,
@@ -155,6 +156,8 @@ class SettingRepository
             'email' => $data['email'] ?? ($existing['email'] ?? ''),
             'header_text' => $data['header_text'] ?? $data['header'] ?? ($existing['header_text'] ?? ''),
             'footer_text' => $data['footer_text'] ?? $data['footer'] ?? ($existing['footer_text'] ?? ''),
+            'imaging_footer_text' => $data['imaging_footer_text'] ?? $data['imaging_footer'] ?? ($existing['imaging_footer_text'] ?? ''),
+            'imaging_disclaimer' => $data['imaging_disclaimer'] ?? ($existing['imaging_disclaimer'] ?? ''),
             'logo_text' => $data['logo_text'] ?? $data['logo'] ?? ($existing['logo_text'] ?? 'HLP'),
             'bill_header_text' => $data['bill_header_text'] ?? $data['bill_header'] ?? ($existing['bill_header_text'] ?? $data['header_text'] ?? $data['header'] ?? ''),
             'bill_footer_text' => $data['bill_footer_text'] ?? $data['bill_footer'] ?? ($existing['bill_footer_text'] ?? $data['footer_text'] ?? $data['footer'] ?? ''),
@@ -177,8 +180,8 @@ class SettingRepository
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, imaging_footer_text, imaging_disclaimer, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :imaging_footer_text, :imaging_disclaimer, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size)",
                 $payload
             );
         } else {
@@ -190,6 +193,8 @@ class SettingRepository
                     email = :email,
                     header_text = :header_text,
                     footer_text = :footer_text,
+                    imaging_footer_text = :imaging_footer_text,
+                    imaging_disclaimer = :imaging_disclaimer,
                     logo_text = :logo_text,
                     bill_header_text = :bill_header_text,
                     bill_footer_text = :bill_footer_text,
@@ -312,33 +317,53 @@ class SettingRepository
             ['org_id' => $orgId]
         );
     }
-    public function getSignatories(?string $orgId = null): array
+    public function getSignatories(?string $orgId = null, string $department = 'laboratory'): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        $this->ensureHeaderImagePositionColumn();
         try {
+            $sigs = $this->db->fetchAll(
+                "SELECT * FROM report_signatories WHERE organization_id = :org_id AND department = :dept AND is_active = 1 ORDER BY sort_order ASC",
+                ['org_id' => $orgId, 'dept' => $department]
+            );
+            if (!empty($sigs) || $department !== 'laboratory') {
+                return $sigs;
+            }
             return $this->db->fetchAll(
-                "SELECT * FROM report_signatories WHERE organization_id = :org_id AND is_active = 1 ORDER BY sort_order ASC",
+                "SELECT * FROM report_signatories WHERE organization_id = :org_id AND (department IS NULL OR department = '' OR department = 'laboratory') AND is_active = 1 ORDER BY sort_order ASC",
                 ['org_id' => $orgId]
             );
         } catch (\Throwable $e) {
-            return [];
+            try {
+                return $this->db->fetchAll(
+                    "SELECT * FROM report_signatories WHERE organization_id = :org_id AND is_active = 1 ORDER BY sort_order ASC",
+                    ['org_id' => $orgId]
+                );
+            } catch (\Throwable $e2) {
+                return [];
+            }
         }
     }
 
-    public function saveSignatories(string $orgId, array $signatories): bool
+    public function saveSignatories(string $orgId, array $signatories, string $department = 'laboratory'): bool
     {
+        $this->ensureHeaderImagePositionColumn();
         try {
-            $this->db->execute("DELETE FROM report_signatories WHERE organization_id = :org_id", ['org_id' => $orgId]);
+            $this->db->execute(
+                "DELETE FROM report_signatories WHERE organization_id = :org_id AND (department = :dept OR (department IS NULL AND :dept_is_lab = 1))",
+                ['org_id' => $orgId, 'dept' => $department, 'dept_is_lab' => ($department === 'laboratory' ? 1 : 0)]
+            );
             foreach ($signatories as $index => $sig) {
                 if (empty($sig['name'])) {
                     continue;
                 }
                 $this->db->execute(
-                    "INSERT INTO report_signatories (id, organization_id, slot_number, name, qualifications, designation, sort_order)
-                     VALUES (:id, :org_id, :slot, :name, :quals, :desig, :sort)",
+                    "INSERT INTO report_signatories (id, organization_id, department, slot_number, name, qualifications, designation, sort_order)
+                     VALUES (:id, :org_id, :dept, :slot, :name, :quals, :desig, :sort)",
                     [
                         'id' => 'SIG-' . bin2hex(random_bytes(4)),
                         'org_id' => $orgId,
+                        'dept' => $department,
                         'slot' => $index + 1,
                         'name' => $sig['name'],
                         'quals' => $sig['qualifications'] ?? '',
@@ -378,6 +403,9 @@ class SettingRepository
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_font_size VARCHAR(32) NOT NULL DEFAULT 'normal'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN bill_font_size VARCHAR(32) NOT NULL DEFAULT 'normal'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_footer_text TEXT NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_disclaimer TEXT NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE report_signatories ADD COLUMN department VARCHAR(32) NOT NULL DEFAULT 'laboratory'"); } catch (\Throwable) {}
         }
     }
 }

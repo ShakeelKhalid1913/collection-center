@@ -52,8 +52,8 @@ $content .= card(
     select_field('Billing / Receipt Font Size', 'bill_font_size', array_combine(array_keys(supported_document_font_sizes()), array_column(supported_document_font_sizes(), 'name')), $s['bill_font_size'] ?? 'normal') .
     '<div class="flex flex-wrap gap-2">' .
     btn_submit('Save branding') .
-    btn_secondary('/portals/collection-center/reports/preview.php', 'Preview report') .
-    btn_secondary('/portals/collection-center/receipts.php', 'Preview receipt') .
+    btn_secondary('/portals/reports/preview.php', 'Preview report') .
+    btn_secondary('/portals/receipts.php', 'Preview receipt') .
     '</div></form>'
 );
 

@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         if (!empty($_POST['send_verify'])) {
             result_repo()->verifyAllByLabNo($postLabNo, current_user()['name'] ?? 'Laboratory Staff');
         }
-        header('Location: /portals/main-lab/reports/preview.php?lab_no=' . urlencode($postLabNo));
+        header('Location: /portals/reports/preview.php?lab_no=' . urlencode($postLabNo));
         exit;
     }
 
@@ -133,7 +133,7 @@ if (!$entry) {
     $content = page_header('Enter Results', 'No patient tests found yet.');
     $content .= card(
         '<p class="p-6 text-slate-600">Register a patient and book tests first, then open this screen to type results.</p>' .
-        '<div class="px-6 pb-6"><a class="btn btn-primary" href="/portals/main-lab/patients/records.php">Open patient list</a></div>'
+        '<div class="px-6 pb-6"><a class="btn btn-primary" href="/portals/patients/records.php">Open patient list</a></div>'
     );
     $portal = current_portal();
     $activeKey = ($portal === 'imaging') ? 'station-lab' : 'results-entry';
@@ -179,11 +179,11 @@ $testIndex = max(0, array_search($activeTest, $testNames, true));
 $prevTest = $testIndex > 0 ? $testNames[$testIndex - 1] : null;
 $nextTest = $testIndex < $testCount - 1 ? $testNames[$testIndex + 1] : null;
 
-$baseUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode($labNo);
-$previewLink = '/portals/main-lab/reports/preview.php?lab_no=' . urlencode($labNo);
-$addTestLink = '/portals/main-lab/lab-entries/edit.php?lab_no=' . urlencode($labNo);
+$baseUrl = '/portals/results/entry.php?lab_no=' . urlencode($labNo);
+$previewLink = '/portals/reports/preview.php?lab_no=' . urlencode($labNo);
+$addTestLink = '/portals/lab-entries/edit.php?lab_no=' . urlencode($labNo);
 $historyMr = (string)($patient['patient_no'] ?? ($entry['patient_id'] ?? ''));
-$historyLink = '/portals/main-lab/patients/history.php?id=' . urlencode($historyMr);
+$historyLink = '/portals/patients/history.php?id=' . urlencode($historyMr);
 
 // Patient switcher & live search dataset (searches by Lab No, MR No, or Name in real-time)
 $allEntries = lab_repo()->getEntriesWithPatients($orgId, 300);
@@ -474,11 +474,11 @@ $content .= <<<HTML
         <!-- Quick Switcher Dropdown & Patient Links -->
         <div class="flex items-center gap-2 text-xs shrink-0 flex-wrap">
             <span class="text-slate-400 hidden xl:inline font-bold">or visit:</span>
-            <select class="field text-xs py-2 max-w-[200px] text-slate-700 font-semibold" onchange="if(this.value) location.href='/portals/main-lab/results/entry.php?lab_no='+encodeURIComponent(this.value)">
+            <select class="field text-xs py-2 max-w-[200px] text-slate-700 font-semibold" onchange="if(this.value) location.href='/portals/results/entry.php?lab_no='+encodeURIComponent(this.value)">
                 {$switcherOpts}
             </select>
             <a href="{$addTestLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs border border-indigo-200 whitespace-nowrap"><i class="fa-solid fa-user-pen mr-1 text-indigo-600"></i> Edit Entry &amp; Bill</a>
-            <a href="/portals/main-lab/receipts.php?lab_no={$labNoSafe}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-receipt mr-1"></i> Patient Slip</a>
+            <a href="/portals/receipts.php?lab_no={$labNoSafe}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-receipt mr-1"></i> Patient Slip</a>
             <a href="{$previewLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-eye mr-1"></i> Preview Report</a>
             <a href="{$historyLink}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-clock-rotate-left mr-1"></i> History</a>
         </div>
@@ -492,7 +492,7 @@ $content .= <<<HTML
             <button type="submit" name="send_verify" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all"><i class="fa-solid fa-circle-check"></i> Save &amp; Verify</button>
             <button type="submit" name="goto_preview" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 transition-all"><i class="fa-solid fa-file-pdf"></i> Save &amp; View / Print</button>
             <a href="{$addTestLink}" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm border border-slate-200 transition-all"><i class="fa-solid fa-plus"></i> Add / Change Tests</a>
-            <a href="/portals/main-lab/archive.php" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-slate-500 hover:text-slate-800 font-bold text-xs transition-all">Back to History</a>
+            <a href="/portals/archive.php" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-slate-500 hover:text-slate-800 font-bold text-xs transition-all">Back to History</a>
         </div>
 
         <div class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-card space-y-3">
@@ -900,7 +900,7 @@ $content .= <<<'SCRIPT'
 
     function navigateToPatient(labNo) {
         if (!labNo) return;
-        window.location.href = '/portals/main-lab/results/entry.php?lab_no=' + encodeURIComponent(labNo);
+        window.location.href = '/portals/results/entry.php?lab_no=' + encodeURIComponent(labNo);
     }
 
     function showDropdown() {

@@ -63,10 +63,10 @@ $catalogJson = json_encode($catalogList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/main-lab/lab-entries/new.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/lab-entries/new.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-file-circle-plus mr-1"></i> New Lab Entry
     </a>
-    <a href="/portals/main-lab/tests/prices.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/tests/prices.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-tags mr-1"></i> Update Prices
     </a>
 </div>
@@ -522,7 +522,7 @@ function convertToLabEntry() {
     const pDoctor = encodeURIComponent(document.getElementById('est-doctor').value.trim());
     const testsParam = encodeURIComponent(testNames);
 
-    const targetUrl = '/portals/main-lab/lab-entries/new.php?pre_tests=' + testsParam + '&pre_discount=' + Math.round(totals.discountAmount) + '&pre_name=' + pName + '&pre_phone=' + pPhone + '&pre_doctor=' + pDoctor;
+    const targetUrl = '/portals/lab-entries/new.php?pre_tests=' + testsParam + '&pre_discount=' + Math.round(totals.discountAmount) + '&pre_name=' + pName + '&pre_phone=' + pPhone + '&pre_doctor=' + pDoctor;
     window.location.href = targetUrl;
 }
 

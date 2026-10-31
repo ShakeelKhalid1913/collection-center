@@ -30,7 +30,7 @@ $totalCount = count($mriScans);
 
 $tableRowsHtml = '';
 if (empty($mriScans)) {
-    $tableRowsHtml = '<tr><td colspan="7" class="py-12 text-center text-slate-400 italic text-sm">No MRI Scan patients in queue today. <a href="/portals/imaging/new-scan.php?modality=mri" class="text-indigo-700 font-bold underline ml-1">Book new MRI Scan</a></td></tr>';
+    $tableRowsHtml = '<tr><td colspan="7" class="py-12 text-center text-slate-400 italic text-sm">No MRI Scan patients in queue today. <a href="/portals/new-scan.php?modality=mri" class="text-indigo-700 font-bold underline ml-1">Book new MRI Scan</a></td></tr>';
 } else {
     foreach ($mriScans as $idx => $sc) {
         $scanNo = (string)($sc['scan_no'] ?? '');
@@ -49,7 +49,7 @@ if (empty($mriScans)) {
         $tableRowsHtml .= <<<TR
         <tr class="hover:bg-indigo-50/40 transition-colors border-b border-slate-100 mri-row" data-search="{$scanNo} {$patient} {$study} {$doctor}">
             <td class="py-3.5 px-3 font-mono font-bold text-indigo-900 whitespace-nowrap">
-                <a href="/portals/imaging/reports.php?scan_no={$q}" class="hover:underline">{$scanNo}</a>
+                <a href="/portals/reports.php?scan_no={$q}" class="hover:underline">{$scanNo}</a>
             </td>
             <td class="py-3.5 px-3">
                 <div class="font-extrabold text-slate-900 text-sm">{$patient}</div>
@@ -66,13 +66,13 @@ if (empty($mriScans)) {
             <td class="py-3.5 px-3 whitespace-nowrap">{$statusBadge}</td>
             <td class="py-3.5 px-3 text-right whitespace-nowrap">
                 <div class="inline-flex items-center gap-1.5">
-                    <a href="/portals/imaging/results.php?scan_no={$q}" class="btn btn-primary text-xs px-2.5 py-1 font-bold shadow-2xs" title="Enter / Edit MRI Report">
+                    <a href="/portals/results.php?scan_no={$q}" class="btn btn-primary text-xs px-2.5 py-1 font-bold shadow-2xs" title="Enter / Edit MRI Report">
                         <i class="fa-solid fa-file-pen mr-1"></i> Enter Report
                     </a>
-                    <a href="/portals/imaging/reports.php?scan_no={$q}" class="btn btn-secondary text-xs px-2 py-1 font-bold" title="Print Full Letterhead Report">
+                    <a href="/portals/reports.php?scan_no={$q}" class="btn btn-secondary text-xs px-2 py-1 font-bold" title="Print Full Letterhead Report">
                         <i class="fa-solid fa-file-waveform text-indigo-600 mr-1"></i> View Report
                     </a>
-                    <a href="/portals/imaging/receipt.php?scan_no={$q}" class="btn btn-secondary text-xs px-2 py-1" title="Print Token Slip">
+                    <a href="/portals/receipt.php?scan_no={$q}" class="btn btn-secondary text-xs px-2 py-1" title="Print Token Slip">
                         <i class="fa-solid fa-receipt text-slate-600"></i>
                     </a>
                 </div>
@@ -84,10 +84,10 @@ TR;
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/imaging/new-scan.php?modality=mri" class="btn btn-primary text-xs py-2 px-3">
+    <a href="/portals/new-scan.php?modality=mri" class="btn btn-primary text-xs py-2 px-3">
         <i class="fa-solid fa-plus mr-1"></i> Book MRI Patient
     </a>
-    <a href="/portals/imaging/results.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/results.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-notes-medical mr-1"></i> All Findings
     </a>
 </div>

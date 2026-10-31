@@ -73,6 +73,13 @@ class TemplateRepository
                 'content' => "12-LEAD ECG FINDINGS:\n\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 72 bpm\n- PR Interval: 0.16 sec (Normal: 0.12 - 0.20s)\n- QRS Duration: 0.08 sec (Normal: < 0.10s)\n- QTc: 410 ms\n- Axis: Normal cardiac axis (+45°)\n- ST-T wave changes: No significant ST elevation/depression or T wave inversion.\n\nIMPRESSION: Normal 12-lead Electrocardiogram (ECG).",
             ],
             [
+                'id' => 'TPL-ECHO-01',
+                'title' => '2D Echocardiography & Color Doppler (Normal Study)',
+                'department' => 'Cardiology',
+                'is_private' => 0,
+                'content' => "TRANSTHORACIC ECHOCARDIOGRAPHY REPORT\n\nMEASUREMENTS:\n- Left Ventricle (LVIDd): 4.6 cm (Normal: 3.5 - 5.6 cm)\n- Left Ventricle (LVIDs): 2.9 cm (Normal: 2.0 - 4.0 cm)\n- Interventricular Septum (IVSd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- Posterior Wall (PWd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- Left Atrium (LA): 3.2 cm (Normal: 1.9 - 4.0 cm)\n- Aortic Root (Ao): 2.8 cm (Normal: 2.0 - 3.7 cm)\n- Ejection Fraction (EF): 62% (Normal: 55 - 75%)\n\nVALVULAR ASSESSMENT:\n- Mitral Valve: Leaflets normal, good mobility. No MS or significant MR.\n- Aortic Valve: Trileaflet, opens well. No AS or AR.\n- Tricuspid Valve: Normal. Estimated PASP within normal limits.\n- Pulmonic Valve: Normal.\n\nCHAMBER & FUNCTION:\n- All four cardiac chambers are normal in size.\n- Left ventricular systolic function is normal.\n- No regional wall motion abnormality (RWMA) at rest.\n- No pericardial effusion or intracardiac clot/mass seen.\n\nIMPRESSION: Normal 2D Transthoracic Echocardiogram with preserved LV systolic function (EF = 62%).",
+            ],
+            [
                 'id' => 'TPL-HISTO-01',
                 'title' => 'Histopathology Biopsy Routine Narrative',
                 'department' => 'Histopathology',

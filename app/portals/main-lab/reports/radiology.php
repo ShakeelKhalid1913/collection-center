@@ -114,13 +114,13 @@ foreach ($dedicatedScans as $sc) {
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/main-lab/lab-entries/new.php" class="btn btn-primary text-xs py-2 px-3">
+    <a href="/portals/lab-entries/new.php" class="btn btn-primary text-xs py-2 px-3">
         <i class="fa-solid fa-plus mr-1"></i> New Entry
     </a>
-    <a href="/portals/imaging/new-scan.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/new-scan.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-x-ray mr-1"></i> Imaging Study
     </a>
-    <a href="/portals/main-lab/tests/estimate.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/tests/estimate.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-calculator mr-1"></i> Test Estimate
     </a>
 </div>
@@ -251,9 +251,9 @@ if (empty($imagingEntries)) {
 
         $qLab = urlencode($row['lab_no']);
         $isScan = ($row['source'] ?? '') === 'imaging';
-        $viewUrl = $isScan ? "/portals/imaging/reports.php?scan_no={$qLab}" : "/portals/main-lab/reports/preview.php?lab_no={$qLab}";
-        $editUrl = $isScan ? "/portals/imaging/results.php?scan_no={$qLab}" : "/portals/main-lab/results/entry.php?lab_no={$qLab}";
-        $slipUrl = $isScan ? "/portals/imaging/receipt.php?scan_no={$qLab}" : "/portals/main-lab/lab-entries/edit.php?lab_no={$qLab}";
+        $viewUrl = $isScan ? "/portals/reports.php?scan_no={$qLab}" : "/portals/reports/preview.php?lab_no={$qLab}";
+        $editUrl = $isScan ? "/portals/results.php?scan_no={$qLab}" : "/portals/results/entry.php?lab_no={$qLab}";
+        $slipUrl = $isScan ? "/portals/receipt.php?scan_no={$qLab}" : "/portals/lab-entries/edit.php?lab_no={$qLab}";
 
         $content .= <<<TR
         <tr class="hover:bg-slate-50/80 transition-colors imaging-row" data-modality="{$modKey}" data-search="{$lNo} {$pName} {$study} {$doc}">

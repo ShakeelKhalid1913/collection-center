@@ -11,15 +11,15 @@ $q = trim((string)($_GET['q'] ?? ''));
 $dateFrom = trim((string)($_GET['from'] ?? ''));
 $dateTo = trim((string)($_GET['to'] ?? ''));
 
-$entries = lab_repo()->searchEntries($orgId, $q, $dateFrom !== '' ? $dateFrom : null, $dateTo !== '' ? $dateTo : null, 300);
+$entries = lab_repo()->searchEntries($orgId, $q, $dateFrom !== '' ? $dateFrom : null, $dateTo !== '' ? $dateTo : null, null, 300);
 
 $rows = [];
 foreach ($entries as $e) {
     $labQ = urlencode((string)$e['lab_no']);
     $actions = '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/main-lab/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
-        '<a href="/portals/main-lab/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold">Bill</a>' .
-        '<a href="/portals/main-lab/results/entry.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold" title="Results"><i class="fa-solid fa-keyboard"></i></a>' .
+        '<a href="/portals/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
+        '<a href="/portals/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold">Bill</a>' .
+        '<a href="/portals/results/entry.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold" title="Results"><i class="fa-solid fa-keyboard"></i></a>' .
         '</div>';
 
     $rows[] = [
@@ -47,7 +47,7 @@ $content .= card(
     '<div><label class="field-label" for="to">To</label><input type="date" id="to" name="to" class="field" value="' . e($dateTo) . '"></div>' .
     '<button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>' .
     ($q !== '' || $dateFrom !== '' || $dateTo !== ''
-        ? '<a href="/portals/main-lab/archive.php" class="btn btn-secondary">Clear</a>'
+        ? '<a href="/portals/archive.php" class="btn btn-secondary">Clear</a>'
         : '') .
     '</form>'
 );

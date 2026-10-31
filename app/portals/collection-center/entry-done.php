@@ -11,8 +11,8 @@ $ctx = load_document_context($labNo !== '' ? $labNo : null);
 $entry = $ctx['entry'];
 $labNo = $entry['lab_no'] ?? $labNo;
 
-$receiptUrl = '/portals/collection-center/receipts.php?lab_no=' . urlencode((string)$labNo);
-$reportUrl = '/portals/collection-center/reports/preview.php?lab_no=' . urlencode((string)$labNo);
+$receiptUrl = '/portals/receipts.php?lab_no=' . urlencode((string)$labNo);
+$reportUrl = '/portals/reports/preview.php?lab_no=' . urlencode((string)$labNo);
 
 $content = page_header(
     'Entry saved',
@@ -27,10 +27,10 @@ $content .= card(
     '<div class="flex flex-wrap gap-2">' .
     btn_primary($receiptUrl, 'Preview / print receipt', 'fa-solid fa-receipt') .
     btn_primary($reportUrl, 'Preview / print report', 'fa-solid fa-file-medical') .
-    btn_secondary('/portals/collection-center/lab-entries/new.php', 'New entry') .
-    btn_secondary('/portals/collection-center/patients/quick-register.php', 'Quick registration') .
+    btn_secondary('/portals/lab-entries/new.php', 'New entry') .
+    btn_secondary('/portals/patients/quick-register.php', 'Quick registration') .
     '</div>' .
-    '<p class="text-xs text-slate-500">Report shows pending tests until Laboratory enters &amp; verifies results. Header/footer come from <a href="/portals/collection-center/branding.php" class="text-teal-700 font-semibold">Branding</a>.</p>' .
+    '<p class="text-xs text-slate-500">Report shows pending tests until Laboratory enters &amp; verifies results. Header/footer come from <a href="/portals/branding.php" class="text-teal-700 font-semibold">Branding</a>.</p>' .
     '</div>'
 );
 

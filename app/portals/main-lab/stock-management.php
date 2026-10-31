@@ -153,10 +153,10 @@ $tabReturnsActive = $tab === 'returns' ? 'border-slate-900 text-slate-900 bg-whi
 
 $tabsNav = <<<HTML
 <div class="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl mb-6 max-w-md border border-slate-200">
-    <a href="/portals/main-lab/stock-management.php?tab=stock" class="flex-1 text-center py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabStockActive}">
+    <a href="/portals/stock-management.php?tab=stock" class="flex-1 text-center py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabStockActive}">
         <i class="fa-solid fa-boxes-stacked mr-1.5"></i> Inventory & Reagents
     </a>
-    <a href="/portals/main-lab/stock-management.php?tab=returns" class="flex-1 text-center py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabReturnsActive}">
+    <a href="/portals/stock-management.php?tab=returns" class="flex-1 text-center py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all {$tabReturnsActive}">
         <i class="fa-solid fa-rotate-left mr-1.5"></i> Purchase Returns ({$stats['total_returns']})
     </a>
 </div>

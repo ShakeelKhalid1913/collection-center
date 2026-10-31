@@ -59,6 +59,7 @@ const TEST_DEPARTMENTS = [
     'Ultrasound' => 'Ultrasound (USG)',
     'X-Ray' => 'X-Ray (Radiology)',
     'ECG' => 'ECG (Cardiology)',
+    'Echocardiography' => 'Echocardiography (Echo)',
     'CT Scan' => 'CT Scan',
     'MRI' => 'MRI Scan',
     'Microbiology' => 'Microbiology (Lab)',
@@ -90,26 +91,26 @@ function test_departments(): array
 const PORTALS = [
     'collection-center' => [
         'label' => 'Collection Center',
-        'path' => '/portals/collection-center/dashboard.php',
+        'path' => '/portals/dashboard.php',
         'icon' => 'building',
         'staff' => true,
     ],
     'main-lab' => [
         'label' => 'Laboratory',
-        'path' => '/portals/main-lab/dashboard.php',
+        'path' => '/portals/dashboard.php',
         'icon' => 'flask',
         'staff' => true,
     ],
     'imaging' => [
-        'label' => 'Diagnostic Center',
-        'path' => '/portals/imaging/dashboard.php',
+        'label' => 'Diagnostic Center + Hospital',
+        'path' => '/portals/dashboard.php',
         'icon' => 'x-ray',
         'staff' => true,
-        'modules' => ['Laboratory', 'Ultrasound', 'X-Ray', 'ECG', 'CT Scan', 'MRI'],
+        'modules' => ['Laboratory', 'Ultrasound', 'X-Ray', 'ECG', 'Echocardiography', 'CT Scan', 'MRI', 'OPD Slips', 'Hospital Files'],
     ],
     'admin' => [
         'label' => 'Admin',
-        'path' => '/portals/admin/dashboard.php',
+        'path' => '/portals/dashboard.php',
         'icon' => 'shield',
         'staff' => false,
     ],
@@ -747,7 +748,10 @@ function user_has_permission(string $permission): bool
         // If not explicitly set, grant defaults by portal
         return true;
     }
-    return !empty($perms[$permission]);
+    if (!empty($perms['manage_all']) || in_array('manage_all', $perms, true)) {
+        return true;
+    }
+    return !empty($perms[$permission]) || in_array($permission, $perms, true);
 }
 
 function require_permission(string $permission, string $redirect = ''): void
@@ -767,7 +771,7 @@ function require_permission(string $permission, string $redirect = ''): void
     }
 }
 
-function require_auth(?string $portal = null): void
+function require_auth(string|array|null $portal = null): void
 {
     if (empty($_SESSION['user'])) {
         header('Location: /login.php');
@@ -778,6 +782,51 @@ function require_auth(?string $portal = null): void
     if (!empty($userPortal) && isset(PORTALS[$userPortal])) {
         $_SESSION['portal'] = $userPortal;
     }
+
+    if ($portal !== null) {
+        $allowedTargets = is_array($portal) ? array_map('portal_from_db', $portal) : [portal_from_db($portal)];
+        $isSuper = is_super_admin() || ($userPortal === 'admin');
+
+        $isAllowed = $isSuper;
+        if (!$isAllowed) {
+            foreach ($allowedTargets as $cleanTarget) {
+                // All staff can access clinical & operational departmental pages; admin remains strictly protected
+                if ($cleanTarget !== 'admin') {
+                    $isAllowed = true;
+                    break;
+                }
+                if ($userPortal === 'admin') {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$isAllowed) {
+            http_response_code(403);
+            $userPortalPath = PORTALS[$userPortal]['path'] ?? '/';
+            $userPortalName = PORTALS[$userPortal]['label'] ?? 'Dashboard';
+            echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Portal Access Restricted · Lab Dash Pro</title>
+            <style>body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:1.5rem}
+            .card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:2.5rem;max-width:480px;text-align:center;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)}
+            h1{font-size:1.35rem;font-weight:800;color:#f43f5e;margin-bottom:0.75rem}
+            p{color:#94a3b8;font-size:0.95rem;line-height:1.5;margin-bottom:1.5rem}
+            .btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:#0d9488;color:#ffffff;text-decoration:none;font-weight:700;padding:0.75rem 1.5rem;border-radius:10px;font-size:0.9rem}
+            .btn:hover{background:#0f766e}</style></head>
+            <body><div class="card">
+                <h1>Access Restricted (Portal Lock)</h1>
+                <p>Your account is locked to the <strong>' . htmlspecialchars($userPortalName) . '</strong> portal. You do not have permissions to access other departmental portals.</p>
+                <a href="' . htmlspecialchars($userPortalPath) . '" class="btn">Return to My Dashboard</a>
+            </div></body></html>';
+            exit;
+        }
+    }
+}
+
+function redirect(string $url): void
+{
+    header('Location: ' . $url);
+    exit;
 }
 
 function current_user(): array
@@ -788,6 +837,11 @@ function current_user(): array
 function current_org_id(): string
 {
     return current_user()['organization_id'] ?? 'ORG-001';
+}
+
+function current_organization_id(): string
+{
+    return current_org_id();
 }
 
 function current_portal(): string

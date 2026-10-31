@@ -52,6 +52,9 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN footer_layout_json TEXT NULL",
             "ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
             "ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
+            "ALTER TABLE lab_settings ADD COLUMN imaging_footer_text TEXT NULL",
+            "ALTER TABLE lab_settings ADD COLUMN imaging_disclaimer TEXT NULL",
+            "ALTER TABLE report_signatories ADD COLUMN department VARCHAR(32) NOT NULL DEFAULT 'laboratory'",
             "ALTER TABLE tests ADD COLUMN normal_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN reference_value VARCHAR(128) NULL",
             "ALTER TABLE tests ADD COLUMN methodology TEXT NULL",
@@ -264,6 +267,7 @@ function runSetup(): array
         $pdo->exec("CREATE TABLE IF NOT EXISTS report_signatories (
             id              VARCHAR(64) PRIMARY KEY,
             organization_id VARCHAR(64) NOT NULL,
+            department      VARCHAR(32) NOT NULL DEFAULT 'laboratory',
             slot_number     INT NOT NULL DEFAULT 1,
             name            VARCHAR(255) NOT NULL,
             qualifications  TEXT,
@@ -271,7 +275,8 @@ function runSetup(): array
             is_active       TINYINT(1) DEFAULT 1,
             sort_order      INT DEFAULT 0,
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_signatories_org (organization_id)
+            INDEX idx_signatories_org (organization_id),
+            INDEX idx_signatories_dept (organization_id, department)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS waste_records (
@@ -502,6 +507,25 @@ $isSetupEntry = (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'setup.php')
     || (PHP_SAPI === 'cli' && realpath($_SERVER['argv'][0] ?? '') === realpath(__FILE__));
 
 if ($isSetupEntry) {
+    if (PHP_SAPI !== 'cli') {
+        try {
+            if (Database::getInstance()->isConnected()) {
+                $hasUsers = Database::getInstance()->fetchOne("SELECT COUNT(*) AS c FROM users");
+                if (!empty($hasUsers['c']) && (int)$hasUsers['c'] > 0) {
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $cur = $_SESSION['user'] ?? [];
+                    if (empty($cur['is_super_admin']) && ($cur['portal'] ?? '') !== 'admin') {
+                        header('Content-Type: text/html; charset=utf-8');
+                        echo '<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="background:#1e293b;padding:2rem;border-radius:12px;max-width:400px;text-align:center;"><h2>Database Setup Protected</h2><p style="color:#94a3b8">Database is already initialized. Please <a href="/login.php" style="color:#38bdf8;font-weight:bold;">sign in as Admin</a> to run setup maintenance.</p></div></body></html>';
+                        exit;
+                    }
+                }
+            }
+        } catch (\Throwable) {}
+    }
+
     $res = runSetup();
     if (PHP_SAPI === 'cli') {
         foreach ($res['logs'] as $msg) {

@@ -83,7 +83,7 @@ foreach ($entries as $e) {
         <select name="transit_status" class="field text-xs py-1 px-2 w-44" onchange="this.form.submit()">
             {$opts}
         </select>
-        <a href="/portals/collection-center/barcode-label.php?lab_no={$labNo}" target="_blank" class="btn btn-secondary text-xs py-1 px-2" title="Print Barcode Sticker"><i class="fa-solid fa-barcode"></i></a>
+        <a href="/portals/barcode-label.php?lab_no={$labNo}" target="_blank" class="btn btn-secondary text-xs py-1 px-2" title="Print Barcode Sticker"><i class="fa-solid fa-barcode"></i></a>
     </form>
     HTML;
 

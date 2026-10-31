@@ -30,7 +30,7 @@ $settings = branding_settings();
 
 if (!$scan) {
     $content = page_header('Radiology Report', 'Diagnostic Center');
-    $content .= card('<p class="p-6 text-slate-600">No imaging scans recorded yet. <a href="/portals/imaging/new-scan.php" class="text-teal-700 font-bold">Book a new study</a>.</p>');
+    $content .= card('<p class="p-6 text-slate-600">No imaging scans recorded yet. <a href="/portals/new-scan.php" class="text-teal-700 font-bold">Book a new study</a>.</p>');
     render_page('Reports', 'imaging', 'reports', $content);
     exit;
 }
@@ -64,7 +64,7 @@ $clinicalIndicationHtml = $clinicalNotes !== ''
     : '';
 
 $headerHtml = render_branded_header($settings, true);
-$footerHtml = render_branded_footer($settings, true);
+$footerHtml = render_branded_footer($settings, true, 'imaging');
 $credit = software_credit_footer(true);
 
 $barcodeValue = $scanNo;
@@ -75,11 +75,17 @@ $barcodeHtml = function_exists('render_barcode_html')
 $actionsHtml = <<<HTML
 <div class="no-print mb-5 flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
     <div class="flex items-center gap-2">
-        <a href="/portals/imaging/pending-scans.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-arrow-left mr-1"></i> Pending Scans</a>
-        <a href="/portals/imaging/receipt.php?scan_no={$scanNo}" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Token Slip</a>
-        <a href="/portals/imaging/results.php?scan_no={$scanNo}" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-nib mr-1"></i> Edit Findings</a>
+        <a href="/portals/pending-scans.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-arrow-left mr-1"></i> Pending Scans</a>
+        <a href="/portals/receipt.php?scan_no={$scanNo}" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Token Slip</a>
+        <a href="/portals/results.php?scan_no={$scanNo}" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-nib mr-1"></i> Edit Findings</a>
     </div>
     <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-300 text-xs shadow-2xs">
+            <span class="text-slate-500 font-bold uppercase text-[10px] px-1.5">Print Font:</span>
+            <button type="button" onclick="document.querySelector('.print-area').style.fontFamily='ui-sans-serif, system-ui, sans-serif'" class="px-2 py-0.5 rounded hover:bg-slate-100 font-medium text-slate-700">Sans</button>
+            <button type="button" onclick="document.querySelector('.print-area').style.fontFamily='ui-serif, Georgia, Cambria, serif'" class="px-2 py-0.5 rounded hover:bg-slate-100 font-medium text-slate-700 border-x border-slate-200">Serif</button>
+            <button type="button" onclick="document.querySelector('.print-area').style.fontFamily='ui-monospace, monospace'" class="px-2 py-0.5 rounded hover:bg-slate-100 font-medium text-slate-700">Mono</button>
+        </div>
         <button type="button" onclick="window.print()" class="btn btn-primary text-xs font-bold px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white shadow-md">
             <i class="fa-solid fa-print mr-1.5"></i> Print Report
         </button>
@@ -87,13 +93,55 @@ $actionsHtml = <<<HTML
 </div>
 HTML;
 
-$findingsContent = $findings !== ''
-    ? nl2br(e($findings))
-    : '<span class="text-slate-400 italic">Findings pending radiologist review.</span>';
+$renderMedicalText = function (string $rawText, string $fallback): string {
+    $trimmed = trim($rawText);
+    if ($trimmed === '') {
+        return '<span class="text-slate-400 italic">' . htmlspecialchars($fallback) . '</span>';
+    }
+    $lines = explode("\n", $trimmed);
+    $out = [];
+    $inList = false;
 
-$impressionContent = $impression !== ''
-    ? nl2br(e($impression))
-    : '<span class="text-slate-400 italic">Impression pending.</span>';
+    foreach ($lines as $line) {
+        $l = trim($line);
+        if ($l === '') {
+            if ($inList) {
+                $out[] = '</ul>';
+                $inList = false;
+            }
+            $out[] = '<div class="h-1.5"></div>';
+            continue;
+        }
+
+        if (str_starts_with($l, '# ')) {
+            if ($inList) { $out[] = '</ul>'; $inList = false; }
+            $out[] = '<h4 class="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mt-3 mb-1">' . htmlspecialchars(substr($l, 2)) . '</h4>';
+        } elseif (str_starts_with($l, '## ')) {
+            if ($inList) { $out[] = '</ul>'; $inList = false; }
+            $out[] = '<h5 class="text-xs font-bold uppercase tracking-wide text-slate-800 mt-2 mb-0.5">' . htmlspecialchars(substr($l, 3)) . '</h5>';
+        } elseif (str_starts_with($l, '- ') || str_starts_with($l, '* ')) {
+            if (!$inList) {
+                $out[] = '<ul class="list-disc list-inside space-y-0.5 text-xs text-slate-800 my-1">';
+                $inList = true;
+            }
+            $item = htmlspecialchars(substr($l, 2));
+            $item = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $item);
+            $out[] = '<li>' . $item . '</li>';
+        } else {
+            if ($inList) { $out[] = '</ul>'; $inList = false; }
+            $escaped = htmlspecialchars($l);
+            $escaped = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $escaped);
+            $out[] = '<p class="text-xs text-slate-800 leading-relaxed m-0">' . $escaped . '</p>';
+        }
+    }
+    if ($inList) {
+        $out[] = '</ul>';
+    }
+    return implode("\n", $out);
+};
+
+$findingsContent = $renderMedicalText($findings, 'Findings pending radiologist review.');
+$impressionContent = $renderMedicalText($impression, 'Impression pending.');
 
 $doc = <<<HTML
 <div class="print-area mx-auto max-w-3xl bg-white p-8 sm:p-10 rounded-3xl border border-slate-300 shadow-xl text-slate-900" style="min-height: 900px; display: flex; flex-direction: column; justify-content: space-between;">

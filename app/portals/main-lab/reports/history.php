@@ -22,8 +22,8 @@ foreach ($sourceEntries as $e) {
     $dateVal = $e['created_at'] ?? $e['date'] ?? null;
 
     $actions = '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/main-lab/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
-        '<a href="/portals/main-lab/results/entry.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-pen-to-square mr-1"></i> Results</a>' .
+        '<a href="/portals/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
+        '<a href="/portals/results/entry.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold"><i class="fa-solid fa-pen-to-square mr-1"></i> Results</a>' .
         '</div>';
 
     $rows[] = [

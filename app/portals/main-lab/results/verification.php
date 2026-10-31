@@ -13,13 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!empty($_POST['lab_no'])) {
         result_repo()->verifyAllByLabNo(trim((string)$_POST['lab_no']), $by);
-        header('Location: /portals/main-lab/results/verification.php?verified=1&lab_no=' . urlencode(trim((string)$_POST['lab_no'])));
+        header('Location: /portals/results/verification.php?verified=1&lab_no=' . urlencode(trim((string)$_POST['lab_no'])));
         exit;
     }
 
     if (!empty($_POST['result_id'])) {
         result_repo()->verifyResult((string)$_POST['result_id'], $by);
-        header('Location: /portals/main-lab/results/verification.php?verified=1');
+        header('Location: /portals/results/verification.php?verified=1');
         exit;
     }
 }
@@ -31,8 +31,8 @@ foreach (result_repo()->getUnverifiedResults() as $r) {
     $total = (int)($r['param_count'] ?? 0);
 
     $actions = '<div class="flex flex-wrap gap-2">'
-        . '<a href="/portals/main-lab/results/entry.php?lab_no=' . urlencode($labNo) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Review</a>'
-        . '<a href="/portals/main-lab/reports/preview.php?lab_no=' . urlencode($labNo) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>'
+        . '<a href="/portals/results/entry.php?lab_no=' . urlencode($labNo) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Review</a>'
+        . '<a href="/portals/reports/preview.php?lab_no=' . urlencode($labNo) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>'
         . '<form method="post" class="inline">'
         . '<input type="hidden" name="lab_no" value="' . e($labNo) . '">'
         . '<button type="submit" class="btn btn-primary text-xs"><i class="fa-solid fa-circle-check mr-1"></i> Verify &amp; release</button>'
@@ -64,7 +64,7 @@ if (isset($_GET['verified'])) {
 if ($rows === []) {
     $content .= card(
         '<p class="p-6 text-slate-600">Nothing waiting for verification. Enter results first, then come back here to sign off.</p>' .
-        '<div class="px-6 pb-6"><a class="btn btn-primary" href="/portals/main-lab/results/entry.php">Enter Results</a></div>'
+        '<div class="px-6 pb-6"><a class="btn btn-primary" href="/portals/results/entry.php">Enter Results</a></div>'
     );
 } else {
     $content .= card(

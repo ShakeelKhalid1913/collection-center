@@ -89,17 +89,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
 
             $submitAction = trim((string)($_POST['submit_action'] ?? 'save'));
             if ($submitAction === 'print_slip') {
-                header('Location: /portals/main-lab/receipts.php?lab_no=' . urlencode($postLabNo));
+                header('Location: /portals/receipts.php?lab_no=' . urlencode($postLabNo));
                 exit;
             }
             if ($submitAction === 'edit_report') {
-                header('Location: /portals/main-lab/results/entry.php?lab_no=' . urlencode($postLabNo));
+                header('Location: /portals/results/entry.php?lab_no=' . urlencode($postLabNo));
                 exit;
             }
 
-            $slipUrl = '/portals/main-lab/receipts.php?lab_no=' . urlencode($postLabNo);
-            $reportUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode($postLabNo);
-            $previewUrl = '/portals/main-lab/reports/preview.php?lab_no=' . urlencode($postLabNo);
+            $slipUrl = '/portals/receipts.php?lab_no=' . urlencode($postLabNo);
+            $reportUrl = '/portals/results/entry.php?lab_no=' . urlencode($postLabNo);
+            $previewUrl = '/portals/reports/preview.php?lab_no=' . urlencode($postLabNo);
 
             $message = '<div class="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex flex-wrap items-center justify-between gap-3 shadow-sm">'
                 . '<div class="flex items-center gap-2">'
@@ -145,9 +145,9 @@ if (!$entry) {
         $vPaid = number_format((float)($v['paid'] ?? 0));
         $vDate = format_date($v['created_at'] ?? null);
 
-        $editUrl = '/portals/main-lab/lab-entries/edit.php?lab_no=' . urlencode((string)$v['lab_no']);
-        $slipUrl = '/portals/main-lab/receipts.php?lab_no=' . urlencode((string)$v['lab_no']);
-        $reportUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode((string)$v['lab_no']);
+        $editUrl = '/portals/lab-entries/edit.php?lab_no=' . urlencode((string)$v['lab_no']);
+        $slipUrl = '/portals/receipts.php?lab_no=' . urlencode((string)$v['lab_no']);
+        $reportUrl = '/portals/results/entry.php?lab_no=' . urlencode((string)$v['lab_no']);
 
         $rowsHtml .= <<<HTML
         <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
@@ -180,7 +180,7 @@ if (!$entry) {
     $content = page_header(
         'Edit Entry & Bill',
         'Find any patient visit to correct age, name, doctor, tests, or billing slip details.',
-        '<a href="/portals/main-lab/lab-entries/new.php" class="btn btn-primary"><i class="fa-solid fa-plus mr-1"></i> New Entry</a>'
+        '<a href="/portals/lab-entries/new.php" class="btn btn-primary"><i class="fa-solid fa-plus mr-1"></i> New Entry</a>'
     );
 
     $content .= <<<HTML
@@ -192,7 +192,7 @@ if (!$entry) {
                     <input type="text" name="q" value="{$searchQuery}" placeholder="Search Lab No / Token, MR No, or Patient Name..." class="field pl-9 w-full text-sm">
                 </div>
                 <button type="submit" class="btn btn-secondary font-semibold"><i class="fa-solid fa-filter mr-1"></i> Find Visit</button>
-                <a href="/portals/main-lab/lab-entries/edit.php" class="btn btn-secondary font-medium">Clear</a>
+                <a href="/portals/lab-entries/edit.php" class="btn btn-secondary font-medium">Clear</a>
             </form>
         </div>
 
@@ -255,15 +255,15 @@ $phoneSafe = e($patientPhone);
 $mrSafe = e((string)$mrNo);
 $doctorSafe = e((string)($entry['doctor'] ?? ''));
 
-$slipUrl = '/portals/main-lab/receipts.php?lab_no=' . urlencode((string)$entry['lab_no']);
-$reportUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode((string)$entry['lab_no']);
-$previewUrl = '/portals/main-lab/reports/preview.php?lab_no=' . urlencode((string)$entry['lab_no']);
+$slipUrl = '/portals/receipts.php?lab_no=' . urlencode((string)$entry['lab_no']);
+$reportUrl = '/portals/results/entry.php?lab_no=' . urlencode((string)$entry['lab_no']);
+$previewUrl = '/portals/reports/preview.php?lab_no=' . urlencode((string)$entry['lab_no']);
 
 $content = page_header(
     'Edit Entry & Bill Slip',
     "Lab No {$entry['lab_no']} · {$patientName} · MR {$mrNo}",
     '<div class="flex flex-wrap items-center gap-2">'
-    . '<a href="/portals/main-lab/lab-entries/edit.php" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Change Patient</a>'
+    . '<a href="/portals/lab-entries/edit.php" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Change Patient</a>'
     . '<a href="' . e($slipUrl) . '" target="_blank" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-receipt mr-1"></i> Patient Slip</a>'
     . '<a href="' . e($reportUrl) . '" class="btn btn-secondary text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300"><i class="fa-solid fa-file-pen mr-1 text-amber-600"></i> Edit Report</a>'
     . '<a href="' . e($previewUrl) . '" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-eye mr-1"></i> Preview Report</a>'

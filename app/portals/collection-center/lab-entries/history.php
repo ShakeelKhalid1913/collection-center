@@ -34,9 +34,9 @@ foreach ($sourceEntries as $e) {
         '<span class="font-semibold ' . ($due > 0 ? 'text-amber-600' : 'text-slate-400') . '">' . e(format_money($due)) . '</span>',
         '<span class="text-xs text-slate-500 whitespace-nowrap">' . e(format_date($dateVal)) . '</span>',
         '<div class="flex items-center gap-1.5 whitespace-nowrap">' .
-        '<a href="/portals/collection-center/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1" title="Edit tests"><i class="fa-solid fa-pen-to-square"></i></a>' .
-        '<a href="/portals/collection-center/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700">Receipt</a>' .
-        '<a href="/portals/collection-center/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold">Report</a>' .
+        '<a href="/portals/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1" title="Edit tests"><i class="fa-solid fa-pen-to-square"></i></a>' .
+        '<a href="/portals/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs px-2.5 py-1 font-semibold text-slate-700">Receipt</a>' .
+        '<a href="/portals/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs px-2.5 py-1 font-semibold">Report</a>' .
         '</div>',
     ];
 }
@@ -44,7 +44,7 @@ foreach ($sourceEntries as $e) {
 $content = page_header(
     'Lab Entry History',
     'All entries — open receipt or report preview without leaving Collection Center.',
-    btn_primary('/portals/collection-center/lab-entries/new.php', 'New entry')
+    btn_primary('/portals/lab-entries/new.php', 'New entry')
 );
 
 if (isset($_GET['created'])) {

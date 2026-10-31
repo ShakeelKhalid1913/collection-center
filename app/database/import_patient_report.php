@@ -534,7 +534,7 @@ if ($isCli) {
             $res = import_patient_report($rep);
             echo ($res['ok'] ? '✓ OK: ' : '✗ FAIL: ') . $res['message'] . "\n";
             if (!empty($res['lab_no'])) {
-                echo "  Preview: /portals/main-lab/reports/preview.php?lab_no=" . rawurlencode((string)$res['lab_no']) . "\n";
+                echo "  Preview: /portals/reports/preview.php?lab_no=" . rawurlencode((string)$res['lab_no']) . "\n";
             }
             if (!$res['ok']) {
                 $allOk = false;
@@ -574,8 +574,8 @@ if ($isCli) {
     $result = import_patient_report($report);
     echo ($result['ok'] ? 'OK: ' : 'FAIL: ') . $result['message'] . "\n";
     if (!empty($result['lab_no'])) {
-        echo "Preview: /portals/main-lab/reports/preview.php?lab_no=" . rawurlencode((string)$result['lab_no']) . "\n";
-        echo "Results: /portals/main-lab/results/entry.php?lab_no=" . rawurlencode((string)$result['lab_no']) . "\n";
+        echo "Preview: /portals/reports/preview.php?lab_no=" . rawurlencode((string)$result['lab_no']) . "\n";
+        echo "Results: /portals/results/entry.php?lab_no=" . rawurlencode((string)$result['lab_no']) . "\n";
     }
     exit($result['ok'] ? 0 : 1);
 }
@@ -945,10 +945,10 @@ header('Content-Type: text/html; charset=utf-8');
 
                     <div class="actions-group">
                         <?php if (!empty($item['lab_no'])): ?>
-                            <a href="/portals/main-lab/reports/preview.php?lab_no=<?= rawurlencode((string)$item['lab_no']) ?>" target="_blank" class="btn btn--primary">
+                            <a href="/portals/reports/preview.php?lab_no=<?= rawurlencode((string)$item['lab_no']) ?>" target="_blank" class="btn btn--primary">
                                 📄 View Print Preview
                             </a>
-                            <a href="/portals/main-lab/results/entry.php?lab_no=<?= rawurlencode((string)$item['lab_no']) ?>" target="_blank" class="btn btn--outline">
+                            <a href="/portals/results/entry.php?lab_no=<?= rawurlencode((string)$item['lab_no']) ?>" target="_blank" class="btn btn--outline">
                                 🧪 Enter / Edit Results
                             </a>
                         <?php endif; ?>
@@ -1022,8 +1022,8 @@ header('Content-Type: text/html; charset=utf-8');
 
         <nav class="footer-nav">
             <a href="/database/setup.php">Database Setup</a> &bull;
-            <a href="/portals/main-lab/dashboard.php">Main Lab Portal</a> &bull;
-            <a href="/portals/collection-center/dashboard.php">Collection Center</a> &bull;
+            <a href="/portals/dashboard.php">Main Lab Portal</a> &bull;
+            <a href="/portals/dashboard.php">Collection Center</a> &bull;
             <a href="/login.php">Login</a>
         </nav>
     </div>

@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../../includes/components.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['sample_id'])) {
     result_repo()->updateSampleStatus($_POST['sample_id'], $_POST['status'] ?? 'received');
-    header('Location: /portals/main-lab/samples/pending.php?updated=1');
+    header('Location: /portals/samples/pending.php?updated=1');
     exit;
 }
 

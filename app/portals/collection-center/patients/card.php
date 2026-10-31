@@ -24,7 +24,7 @@ if (!$patient) {
 
 if (!$patient) {
     $content = page_header('Patient Card', 'No patient record available.');
-    $content .= card('<div class="p-6 text-slate-600"><p class="mb-4">Please select or register a patient first.</p>' . btn_secondary('/portals/collection-center/patients/records.php', 'Patient Records') . '</div>');
+    $content .= card('<div class="p-6 text-slate-600"><p class="mb-4">Please select or register a patient first.</p>' . btn_secondary('/portals/patients/records.php', 'Patient Records') . '</div>');
     render_page('Patient Card', 'collection-center', 'records', $content);
     exit;
 }
@@ -44,7 +44,7 @@ $labAddress = $settings['address'] ?? 'Main Boulevard, Gulberg III';
 
 // QR Code for card
 $qrPayload = isset($_SERVER['HTTP_HOST'])
-    ? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/portals/collection-center/patients/history.php?id=' . rawurlencode($mrNo))
+    ? ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/portals/patients/history.php?id=' . rawurlencode($mrNo))
     : $mrNo;
 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=' . rawurlencode($qrPayload);
 
@@ -73,7 +73,7 @@ $content = <<<HTML
             <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all shadow-md">
                 <i class="fa-solid fa-print text-[#c2f13c]"></i> Print Patient Card
             </button>
-            <a href="/portals/collection-center/patients/records.php" class="btn btn-secondary text-xs sm:text-sm">
+            <a href="/portals/patients/records.php" class="btn btn-secondary text-xs sm:text-sm">
                 <i class="fa-solid fa-arrow-left mr-1"></i> Back
             </a>
         </div>
@@ -81,7 +81,7 @@ $content = <<<HTML
 
     <div class="mb-6 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 max-w-lg">
         <label class="text-xs font-bold text-slate-700 uppercase whitespace-nowrap"><i class="fa-solid fa-user mr-1 text-teal-600"></i> Select Patient:</label>
-        <select class="field text-sm" onchange="if(this.value) window.location.href='/portals/collection-center/patients/card.php?id=' + encodeURIComponent(this.value);">
+        <select class="field text-sm" onchange="if(this.value) window.location.href='/portals/patients/card.php?id=' + encodeURIComponent(this.value);">
             {$patientOpts}
         </select>
     </div>

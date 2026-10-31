@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
         if ($res['success']) {
-            header('Location: /portals/main-lab/patients/records.php?registered=1');
+            header('Location: /portals/patients/records.php?registered=1');
             exit;
         }
         $message = flash_error('Could not save patient.');

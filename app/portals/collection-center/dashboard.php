@@ -56,15 +56,15 @@ ob_start();
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <a href="/portals/collection-center/patients/quick-register.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
+            <a href="/portals/patients/quick-register.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
                 <i class="fa-solid fa-bolt"></i>
                 <span>Quick Register</span>
             </a>
-            <a href="/portals/collection-center/lab-entries/new.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
+            <a href="/portals/lab-entries/new.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
                 <i class="fa-solid fa-file-circle-plus"></i>
                 <span>New Lab Entry</span>
             </a>
-            <a href="/portals/collection-center/receipts.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
+            <a href="/portals/receipts.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
                 <i class="fa-solid fa-receipt"></i>
                 <span>All Receipts</span>
             </a>
@@ -111,7 +111,7 @@ ob_start();
 
             <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
                 <span class="text-xs text-slate-400">POS Receipts Ready</span>
-                <a href="/portals/collection-center/receipts.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
+                <a href="/portals/receipts.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
                     <span>Manage Cash</span>
                     <i class="fa-solid fa-arrow-right text-[10px]"></i>
                 </a>
@@ -147,13 +147,13 @@ ob_start();
 
                 <div class="p-3 rounded-2xl bg-blue-50/60 border border-blue-100 text-xs text-blue-900 flex items-center justify-between">
                     <span class="font-semibold"><i class="fa-solid fa-bolt text-blue-600 mr-1.5"></i> Quick Register: &lt; 30 seconds</span>
-                    <a href="/portals/collection-center/patients/quick-register.php" class="font-bold underline">Launch &rarr;</a>
+                    <a href="/portals/patients/quick-register.php" class="font-bold underline">Launch &rarr;</a>
                 </div>
             </div>
 
             <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>Auto-linked with Main Lab</span>
-                <a href="/portals/collection-center/patients/records.php" class="font-bold text-blue-600 hover:underline">Patient Directory &rarr;</a>
+                <a href="/portals/patients/records.php" class="font-bold text-blue-600 hover:underline">Patient Directory &rarr;</a>
             </div>
         </div>
 
@@ -162,7 +162,7 @@ ob_start();
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Specimen Pipeline</span>
-                    <a href="/portals/collection-center/lab-entries/pending.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">Track all &gt;</a>
+                    <a href="/portals/lab-entries/pending.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">Track all &gt;</a>
                 </div>
 
                 <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Specimen Logistics Hub</h3>
@@ -208,7 +208,7 @@ ob_start();
                 </div>
             </div>
 
-            <a href="/portals/collection-center/lab-entries/new.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
+            <a href="/portals/lab-entries/new.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
                 <i class="fa-solid fa-plus"></i>
                 <span>Create Lab Order &amp; Receipt</span>
             </a>
@@ -229,7 +229,7 @@ ob_start();
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                     <input type="search" id="ccSearch" onkeyup="searchCCOrders()" placeholder="Search patient or lab no..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                 </div>
-                <a href="/portals/collection-center/lab-entries/history.php" class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors">
+                <a href="/portals/lab-entries/history.php" class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors">
                     <i class="fa-solid fa-clock-rotate-left"></i> History
                 </a>
             </div>
@@ -252,7 +252,7 @@ ob_start();
                         <tr>
                             <td colspan="6" class="py-12 text-center text-slate-400">
                                 <i class="fa-solid fa-flask text-3xl mb-2 text-slate-300 block"></i>
-                                No entries booked yet today. Click <a href="/portals/collection-center/lab-entries/new.php" class="text-blue-600 underline font-bold">New Lab Entry</a> to register.
+                                No entries booked yet today. Click <a href="/portals/lab-entries/new.php" class="text-blue-600 underline font-bold">New Lab Entry</a> to register.
                             </td>
                         </tr>
                     <?php else: ?>
@@ -305,10 +305,10 @@ ob_start();
                                 </td>
                                 <td class="py-3.5 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1.5">
-                                        <a href="/portals/collection-center/receipts.php?lab_no=<?= $labQ ?>" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 transition-all text-xs font-bold" title="Print Receipt">
+                                        <a href="/portals/receipts.php?lab_no=<?= $labQ ?>" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 transition-all text-xs font-bold" title="Print Receipt">
                                             <i class="fa-solid fa-receipt mr-1"></i> Receipt
                                         </a>
-                                        <a href="/portals/collection-center/reports/preview.php?lab_no=<?= $labQ ?>" class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 transition-all text-xs font-bold" title="View Report">
+                                        <a href="/portals/reports/preview.php?lab_no=<?= $labQ ?>" class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 transition-all text-xs font-bold" title="View Report">
                                             <i class="fa-solid fa-file-medical mr-1"></i> Report
                                         </a>
                                     </div>

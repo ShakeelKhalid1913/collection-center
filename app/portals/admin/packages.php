@@ -6,7 +6,10 @@ require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
+require_auth('admin');
+$orgId = current_organization_id();
 $message = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = test_repo()->createPackage([
         'code' => $_POST['code'] ?? '',
@@ -14,13 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'tests' => $_POST['tests'] ?? '',
         'price' => (float)($_POST['price'] ?? 0),
         'regular' => (float)($_POST['regular'] ?? $_POST['price'] ?? 0),
-        'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
+        'organization_id' => $orgId,
     ]);
-    $message = $res['success'] ? flash_success('Package added.') : flash_error($res['error'] ?? 'Failed.');
+    $message = $res['success'] ? flash_success('Package added successfully.') : flash_error($res['error'] ?? 'Failed to add package.');
 }
 
+$dbPackages = test_repo()->getPackages($orgId);
+$pkgList = !empty($dbPackages) ? array_map(static fn($p) => [
+    'code' => $p['code'],
+    'name' => $p['name'],
+    'tests' => $p['tests_included'] ?? $p['tests'] ?? '',
+    'price' => (float)($p['price'] ?? 0),
+    'regular' => (float)($p['regular_price'] ?? $p['regular'] ?? $p['price'] ?? 0),
+], $dbPackages) : mock('mock_packages');
+
 $rows = [];
-foreach (mock('mock_packages') as $pkg) {
+foreach ($pkgList as $pkg) {
     $rows[] = [
         '<span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($pkg['code']) . '</span>',
         '<span class="font-bold text-slate-800">' . e($pkg['name']) . '</span>',
@@ -30,7 +42,7 @@ foreach (mock('mock_packages') as $pkg) {
     ];
 }
 
-$content = page_header('Test Packages', 'Manage bundled offerings.');
+$content = page_header('Test Packages', 'Manage bundled offerings across laboratory and diagnostic services.');
 $content .= $message;
 $content .= card(
     '<form method="post" class="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 border-b border-slate-200">' .

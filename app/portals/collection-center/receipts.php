@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $labNo !== '' && isset($_POST['save
             'paid' => $paid,
         ]);
         audit_log('PROCESS_PAYMENT', 'lab_entries', $labNo, "Recorded payment of Rs. {$paid} (Discount: Rs. {$discount}, Net: Rs. {$amount})");
-        $redirect = '/portals/collection-center/receipts.php?lab_no=' . urlencode($labNo);
+        $redirect = '/portals/receipts.php?lab_no=' . urlencode($labNo);
         if ($q !== '') {
             $redirect .= '&q=' . urlencode($q);
         }
@@ -70,7 +70,7 @@ if ($q !== '' && $labNo === '') {
                 . '<td class="px-4 py-3"><span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($ln) . '</span></td>'
                 . '<td class="px-4 py-3 font-bold text-slate-800">' . e((string)($ae['patient_name'] ?? ($p['full_name'] ?? ''))) . '</td>'
                 . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
-                . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+                . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
                 . '</tr>';
         }
     }
@@ -88,12 +88,12 @@ if ($q !== '' && $labNo === '') {
             . '<td class="px-4 py-3"><span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($ln) . '</span></td>'
             . '<td class="px-4 py-3 font-bold text-slate-800">' . e((string)($ae['patient_name'] ?? '')) . '</td>'
             . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
-            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/collection-center/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
             . '</tr>';
     }
 }
 
-$reportUrl = '/portals/collection-center/reports/preview.php?lab_no=' . urlencode($currentLab);
+$reportUrl = '/portals/reports/preview.php?lab_no=' . urlencode($currentLab);
 
 $content = page_header(
     'Patient Bill / Receipt',
@@ -110,12 +110,12 @@ $content .= <<<HTML
             <input type="search" id="bill-q" name="q" class="field" value="{$qVal}" placeholder="Name, phone, MR No, or Lab No…" autofocus>
         </div>
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass mr-1"></i> Search</button>
-        <a href="/portals/collection-center/receipts.php" class="btn btn-secondary">Clear</a>
+        <a href="/portals/receipts.php" class="btn btn-secondary">Clear</a>
     </form>
     <div class="flex flex-wrap gap-3 items-end border-t border-slate-100 pt-3">
         <div class="flex-1 min-w-[16rem]">
             <label class="field-label" for="bill-visit">Or open visit from list</label>
-            <select id="bill-visit" class="field text-sm" onchange="if(this.value) location.href='/portals/collection-center/receipts.php?lab_no='+encodeURIComponent(this.value)">
+            <select id="bill-visit" class="field text-sm" onchange="if(this.value) location.href='/portals/receipts.php?lab_no='+encodeURIComponent(this.value)">
                 <option value="">— Select lab number / patient —</option>
                 {$dropdownOpts}
             </select>

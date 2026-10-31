@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/head.php';
 
 if (!empty($_SESSION['user'])) {
     $portal = current_portal() ?: 'collection-center';
-    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/collection-center/dashboard.php'));
+    header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/dashboard.php'));
     exit;
 }
 
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($auth['success']) {
             start_user_session($auth['user']);
             $portal = current_portal();
-            header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/collection-center/dashboard.php'));
+            header('Location: ' . (PORTALS[$portal]['path'] ?? '/portals/dashboard.php'));
             exit;
         }
         $error = $auth['error'] ?? 'Invalid email or password.';

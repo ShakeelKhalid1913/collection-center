@@ -7,7 +7,8 @@ require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 require_once __DIR__ . '/../../includes/documents.php';
 
-$orgId = current_user()['organization_id'] ?? 'ORG-001';
+require_auth(['imaging', 'admin', 'main_lab', 'collection_center']);
+$orgId = current_organization_id();
 $scanNo = trim((string)($_GET['scan_no'] ?? $_POST['scan_no'] ?? ''));
 $labNo = trim((string)($_GET['lab_no'] ?? $_POST['lab_no'] ?? ''));
 $q = trim((string)($_GET['q'] ?? ''));
@@ -180,36 +181,36 @@ foreach ($lineItems as $item) {
 }
 
 if ($hasLab && $labNo !== '') {
-    $workstationButtons .= '<a href="/portals/imaging/laboratory.php" class="btn btn-secondary text-xs font-bold text-emerald-800 hover:bg-emerald-50"><i class="fa-solid fa-flask mr-1 text-emerald-600"></i> Laboratory Station</a>';
+    $workstationButtons .= '<a href="/portals/laboratory.php" class="btn btn-secondary text-xs font-bold text-emerald-800 hover:bg-emerald-50"><i class="fa-solid fa-flask mr-1 text-emerald-600"></i> Laboratory Station</a>';
 }
 if ($hasUS) {
-    $workstationButtons .= '<a href="/portals/imaging/ultrasound.php" class="btn btn-secondary text-xs font-bold text-teal-800 hover:bg-teal-50"><i class="fa-solid fa-wave-square mr-1 text-teal-600"></i> Ultrasound Station</a>';
+    $workstationButtons .= '<a href="/portals/ultrasound.php" class="btn btn-secondary text-xs font-bold text-teal-800 hover:bg-teal-50"><i class="fa-solid fa-wave-square mr-1 text-teal-600"></i> Ultrasound Station</a>';
 }
 if ($hasXR) {
-    $workstationButtons .= '<a href="/portals/imaging/xray.php" class="btn btn-secondary text-xs font-bold text-blue-800 hover:bg-blue-50"><i class="fa-solid fa-x-ray mr-1 text-blue-600"></i> X-Ray Station</a>';
+    $workstationButtons .= '<a href="/portals/xray.php" class="btn btn-secondary text-xs font-bold text-blue-800 hover:bg-blue-50"><i class="fa-solid fa-x-ray mr-1 text-blue-600"></i> X-Ray Station</a>';
 }
 if ($hasECG) {
-    $workstationButtons .= '<a href="/portals/imaging/ecg.php" class="btn btn-secondary text-xs font-bold text-rose-800 hover:bg-rose-50"><i class="fa-solid fa-heart-pulse mr-1 text-rose-600"></i> ECG Station</a>';
+    $workstationButtons .= '<a href="/portals/ecg.php" class="btn btn-secondary text-xs font-bold text-rose-800 hover:bg-rose-50"><i class="fa-solid fa-heart-pulse mr-1 text-rose-600"></i> ECG Station</a>';
 }
 if ($hasCT) {
-    $workstationButtons .= '<a href="/portals/imaging/ct.php" class="btn btn-secondary text-xs font-bold text-purple-800 hover:bg-purple-50"><i class="fa-solid fa-laptop-medical mr-1 text-purple-600"></i> CT Station</a>';
+    $workstationButtons .= '<a href="/portals/ct.php" class="btn btn-secondary text-xs font-bold text-purple-800 hover:bg-purple-50"><i class="fa-solid fa-laptop-medical mr-1 text-purple-600"></i> CT Station</a>';
 }
 if ($hasMRI) {
-    $workstationButtons .= '<a href="/portals/imaging/mri.php" class="btn btn-secondary text-xs font-bold text-indigo-800 hover:bg-indigo-50"><i class="fa-solid fa-magnet mr-1 text-indigo-600"></i> MRI Station</a>';
+    $workstationButtons .= '<a href="/portals/mri.php" class="btn btn-secondary text-xs font-bold text-indigo-800 hover:bg-indigo-50"><i class="fa-solid fa-magnet mr-1 text-indigo-600"></i> MRI Station</a>';
 }
 
 $actionsHtml = <<<HTML
 <div class="no-print mb-5 flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
     <div class="flex flex-wrap items-center gap-2">
-        <a href="/portals/imaging/new-scan.php" class="btn btn-primary text-xs font-bold bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a]"><i class="fa-solid fa-plus mr-1"></i> New Booking</a>
-        <a href="/portals/imaging/dashboard.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-gauge-high mr-1"></i> Dashboard</a>
+        <a href="/portals/new-scan.php" class="btn btn-primary text-xs font-bold bg-[#c2f13c] text-slate-950 hover:bg-[#b2e62a]"><i class="fa-solid fa-plus mr-1"></i> New Booking</a>
+        <a href="/portals/dashboard.php" class="btn btn-secondary text-xs"><i class="fa-solid fa-gauge-high mr-1"></i> Dashboard</a>
         {$workstationButtons}
     </div>
     <div class="flex items-center gap-2">
         <button type="button" onclick="window.print()" class="btn btn-primary text-xs font-bold px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white shadow-md">
             <i class="fa-solid fa-print mr-1.5"></i> Print Patient Slip
         </button>
-        <a href="/portals/imaging/results.php?scan_no={$scanNo}" class="btn btn-secondary text-xs font-semibold">
+        <a href="/portals/results.php?scan_no={$scanNo}" class="btn btn-secondary text-xs font-semibold">
             <i class="fa-solid fa-pen-to-square mr-1 text-teal-600"></i> Enter Findings
         </a>
     </div>

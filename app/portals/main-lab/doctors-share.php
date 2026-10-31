@@ -101,7 +101,7 @@ $content .= card(
     '</label>' .
     '<div class="flex flex-wrap gap-2">' .
     btn_submit($editing ? 'Update commission' : 'Save commission') .
-    ($editing ? btn_secondary('/portals/main-lab/doctors-share.php', 'Cancel') : '') .
+    ($editing ? btn_secondary('/portals/doctors-share.php', 'Cancel') : '') .
     '</div></form>'
 );
 

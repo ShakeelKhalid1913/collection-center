@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     if ($res['success']) {
-        header('Location: /portals/collection-center/entry-done.php?lab_no=' . urlencode($res['lab_no']));
+        header('Location: /portals/entry-done.php?lab_no=' . urlencode($res['lab_no']));
         exit;
     }
     $message = flash_error('Could not save lab entry.');
@@ -88,7 +88,7 @@ $selectedPatientId = trim((string)($_GET['patient_id'] ?? ''));
 $content = page_header(
     'New Lab Entry',
     'Patient → pick test type → choose tests → discount & save.',
-    btn_primary('/portals/collection-center/patients/quick-register.php', 'Quick registration (new patient)')
+    btn_primary('/portals/patients/quick-register.php', 'Quick registration (new patient)')
 );
 
 $content .= $message;

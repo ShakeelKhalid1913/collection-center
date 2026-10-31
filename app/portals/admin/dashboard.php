@@ -47,15 +47,15 @@ ob_start();
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <a href="/portals/admin/users.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
+            <a href="/portals/users.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs sm:text-sm hover:bg-[#b2e62a] transition-all shadow-sm">
                 <i class="fa-solid fa-user-shield"></i>
                 <span>Users &amp; Roles</span>
             </a>
-            <a href="/portals/admin/tests.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
+            <a href="/portals/tests.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-sm">
                 <i class="fa-solid fa-flask"></i>
                 <span>Tests Catalog</span>
             </a>
-            <a href="/portals/admin/branding.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
+            <a href="/portals/branding.php" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-all border border-slate-200">
                 <i class="fa-solid fa-heading"></i>
                 <span>Client Branding</span>
             </a>
@@ -113,7 +113,7 @@ ob_start();
 
             <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
                 <span class="text-xs text-slate-400">Lab Dash Pro Enterprise</span>
-                <a href="/portals/admin/labs.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
+                <a href="/portals/labs.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
                     <span>Manage Branches</span>
                     <i class="fa-solid fa-arrow-right text-[10px]"></i>
                 </a>
@@ -134,25 +134,25 @@ ob_start();
                 <p class="text-xs text-slate-500 mb-5">Core modules for configuration and customization.</p>
 
                 <div class="grid grid-cols-2 gap-2.5">
-                    <a href="/portals/admin/users.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
+                    <a href="/portals/users.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
                         <i class="fa-solid fa-user-shield text-xl text-blue-600 mb-1 block"></i>
                         <span class="text-xs font-bold text-slate-900 block">Staff Accounts</span>
                         <span class="text-[10px] text-slate-500"><?= $userCount ?> accounts</span>
                     </a>
 
-                    <a href="/portals/admin/tests.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
+                    <a href="/portals/tests.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
                         <i class="fa-solid fa-flask text-xl text-emerald-600 mb-1 block"></i>
                         <span class="text-xs font-bold text-slate-900 block">Catalog Tests</span>
                         <span class="text-[10px] text-slate-500"><?= $testCount ?> tests active</span>
                     </a>
 
-                    <a href="/portals/admin/packages.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
+                    <a href="/portals/packages.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
                         <i class="fa-solid fa-boxes-stacked text-xl text-amber-600 mb-1 block"></i>
                         <span class="text-xs font-bold text-slate-900 block">Test Packages</span>
                         <span class="text-[10px] text-slate-500"><?= $pkgCount ?> profiles</span>
                     </a>
 
-                    <a href="/portals/admin/branding.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
+                    <a href="/portals/branding.php" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-all text-left">
                         <i class="fa-solid fa-heading text-xl text-purple-600 mb-1 block"></i>
                         <span class="text-xs font-bold text-slate-900 block">Report Headers</span>
                         <span class="text-[10px] text-slate-500">Logo &amp; Footer</span>
@@ -162,7 +162,7 @@ ob_start();
 
             <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span>System Settings</span>
-                <a href="/portals/admin/settings.php" class="font-bold text-blue-600 hover:underline">Configuration &rarr;</a>
+                <a href="/portals/settings.php" class="font-bold text-blue-600 hover:underline">Configuration &rarr;</a>
             </div>
         </div>
 
@@ -171,7 +171,7 @@ ob_start();
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Diagnostic Inventory</span>
-                    <a href="/portals/admin/tests.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">Catalog &gt;</a>
+                    <a href="/portals/tests.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">Catalog &gt;</a>
                 </div>
 
                 <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Catalog &amp; Package Spectrum</h3>
@@ -209,7 +209,7 @@ ob_start();
                 </div>
             </div>
 
-            <a href="/portals/admin/tests.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
+            <a href="/portals/tests.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
                 <i class="fa-solid fa-plus"></i>
                 <span>Add New Test or Package</span>
             </a>

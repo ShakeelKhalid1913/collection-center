@@ -7,7 +7,12 @@ require_once __DIR__ . '/../../includes/barcode.php';
 
 $labNo = trim((string)($_GET['lab_no'] ?? ''));
 if ($labNo === '') {
-    die('Lab number required.');
+    $latest = lab_repo()->getAll(current_org_id(), null, 1);
+    if (!empty($latest[0]['lab_no'])) {
+        $labNo = (string)$latest[0]['lab_no'];
+    } else {
+        die('Lab number required. Pass ?lab_no=L-YYYY-XXXX in the URL.');
+    }
 }
 
 $entry = lab_repo()->findByLabNo($labNo);

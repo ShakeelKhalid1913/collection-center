@@ -11,18 +11,22 @@ $orgId = current_user()['organization_id'] ?? 'ORG-001';
 $q = trim((string)($_GET['q'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    require_permission('delete_records');
     $labNo = trim((string)($_POST['lab_no'] ?? ''));
     if ($labNo === '') {
         $message = flash_error('Lab number is required.');
     } else {
         $ok = lab_repo()->deleteByLabNo($labNo, $orgId);
-        $message = $ok
-            ? flash_success('Entry ' . $labNo . ' deleted (including results/samples).')
-            : flash_error('Could not delete entry. Check lab number and try again.');
+        if ($ok) {
+            audit_log('DELETE_ENTRY', 'lab_entries', $labNo, "Permanently deleted lab entry and associated records");
+            $message = flash_success('Entry ' . $labNo . ' deleted (including results/samples).');
+        } else {
+            $message = flash_error('Could not delete entry. Check lab number and try again.');
+        }
     }
 }
 
-$entries = lab_repo()->searchEntries($orgId, $q, null, null, 150);
+$entries = lab_repo()->searchEntries($orgId, $q, null, null, null, 150);
 $rows = [];
 foreach ($entries as $e) {
     $labNo = (string)$e['lab_no'];

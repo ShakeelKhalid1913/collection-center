@@ -46,10 +46,10 @@ if ($selectedPatient) {
     foreach ($entries as $e) {
         $labQ = urlencode($e['lab_no']);
         $actions = '<div class="flex flex-wrap gap-2">' .
-            '<a href="/portals/main-lab/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>' .
-            '<a href="/portals/main-lab/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Bill</a>' .
-            '<a href="/portals/main-lab/results/entry.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Edit Results</a>' .
-            '<a href="/portals/main-lab/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
+            '<a href="/portals/reports/preview.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>' .
+            '<a href="/portals/receipts.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Bill</a>' .
+            '<a href="/portals/results/entry.php?lab_no=' . $labQ . '" class="btn btn-primary text-xs"><i class="fa-solid fa-keyboard mr-1"></i> Edit Results</a>' .
+            '<a href="/portals/lab-entries/edit.php?lab_no=' . $labQ . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Tests</a>' .
             '</div>';
 
         $rows[] = [
@@ -71,18 +71,18 @@ $content .= <<<HTML
 <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
     <div class="flex items-center gap-2">
         <label class="text-sm font-semibold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-user text-teal-600 mr-1"></i> Select Patient:</label>
-        <select class="field text-sm max-w-md" onchange="if(this.value) window.location.href='/portals/main-lab/patients/history.php?id=' + encodeURIComponent(this.value);">
+        <select class="field text-sm max-w-md" onchange="if(this.value) window.location.href='/portals/patients/history.php?id=' + encodeURIComponent(this.value);">
             {$patientOpts}
         </select>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
-        <a href="/portals/main-lab/patients/card.php?id={$mrNo}" class="btn btn-secondary text-xs">
+        <a href="/portals/patients/card.php?id={$mrNo}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-id-card mr-1"></i> Patient Card
         </a>
-        <a href="/portals/main-lab/patients/edit.php?id={$mrNo}" class="btn btn-secondary text-xs">
+        <a href="/portals/patients/edit.php?id={$mrNo}" class="btn btn-secondary text-xs">
             <i class="fa-solid fa-user-pen mr-1"></i> Edit Patient / Doctor
         </a>
-        <a href="/portals/main-lab/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
+        <a href="/portals/lab-entries/new.php?patient_id={$mrNo}" class="btn btn-primary text-xs">
             <i class="fa-solid fa-plus mr-1"></i> Book New Test for this Patient
         </a>
     </div>

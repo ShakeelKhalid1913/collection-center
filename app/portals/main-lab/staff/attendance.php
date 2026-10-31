@@ -62,7 +62,7 @@ foreach ($employees as $e) {
     $dept = (string)$e['department'];
     $desig = (string)$e['designation'];
     $hasPhoto = !empty($e['has_photo']);
-    $photoUrl = $hasPhoto ? '/portals/main-lab/staff/photo.php?id=' . urlencode($eId) : '';
+    $photoUrl = $hasPhoto ? '/portals/staff/photo.php?id=' . urlencode($eId) : '';
 
     $empMap[$eId] = [
         'id' => $eId,
@@ -107,16 +107,16 @@ if (empty($historyRecords)) {
 
         // Check-in photo thumbnail
         $inPhotoHtml = !empty($r['has_in_photo'])
-            ? '<button type="button" onclick="viewPhotoModal(\'/portals/main-lab/staff/attendance-photo.php?id=' . $attId . '&type=in\', \'' . $empName . ' - Clock In Photo\')" class="group relative inline-block">
-                <img src="/portals/main-lab/staff/attendance-photo.php?id=' . $attId . '&type=in" alt="In Photo" class="w-9 h-9 rounded-lg object-cover border border-emerald-500 shadow-2xs group-hover:opacity-80 transition-opacity">
+            ? '<button type="button" onclick="viewPhotoModal(\'/portals/staff/attendance-photo.php?id=' . $attId . '&type=in\', \'' . $empName . ' - Clock In Photo\')" class="group relative inline-block">
+                <img src="/portals/staff/attendance-photo.php?id=' . $attId . '&type=in" alt="In Photo" class="w-9 h-9 rounded-lg object-cover border border-emerald-500 shadow-2xs group-hover:opacity-80 transition-opacity">
                 <span class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 rounded-lg text-white text-[10px]"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
                </button>'
             : '<span class="text-[11px] text-slate-300 italic">No photo</span>';
 
         // Check-out photo thumbnail
         $outPhotoHtml = !empty($r['has_out_photo'])
-            ? '<button type="button" onclick="viewPhotoModal(\'/portals/main-lab/staff/attendance-photo.php?id=' . $attId . '&type=out\', \'' . $empName . ' - Clock Out Photo\')" class="group relative inline-block">
-                <img src="/portals/main-lab/staff/attendance-photo.php?id=' . $attId . '&type=out" alt="Out Photo" class="w-9 h-9 rounded-lg object-cover border border-blue-500 shadow-2xs group-hover:opacity-80 transition-opacity">
+            ? '<button type="button" onclick="viewPhotoModal(\'/portals/staff/attendance-photo.php?id=' . $attId . '&type=out\', \'' . $empName . ' - Clock Out Photo\')" class="group relative inline-block">
+                <img src="/portals/staff/attendance-photo.php?id=' . $attId . '&type=out" alt="Out Photo" class="w-9 h-9 rounded-lg object-cover border border-blue-500 shadow-2xs group-hover:opacity-80 transition-opacity">
                 <span class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 rounded-lg text-white text-[10px]"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
                </button>'
             : '<span class="text-[11px] text-slate-300 italic">No photo</span>';
@@ -160,7 +160,7 @@ if (empty($historyRecords)) {
 
 $headerAction = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/main-lab/staff/index.php" class="btn btn-secondary text-xs py-2 px-3">
+    <a href="/portals/staff/index.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-id-badge mr-1"></i> Staff Profiles &amp; ID Cards
     </a>
     <button type="button" onclick="printMonthlyAttendance()" class="btn btn-secondary text-xs py-2 px-3">

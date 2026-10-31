@@ -71,5 +71,5 @@ if ($isEntry) {
     echo '<!DOCTYPE html><html><head><title>Reimport Tests</title></head><body style="font-family:sans-serif;padding:2rem">';
     echo $res['success'] ? '<h1>Import OK</h1>' : '<h1>Import failed</h1>';
     echo '<pre>' . htmlspecialchars(implode("\n", $res['logs'])) . '</pre>';
-    echo '<p><a href="/portals/main-lab/tests/index.php">Back to Tests</a></p></body></html>';
+    echo '<p><a href="/portals/tests/index.php">Back to Tests</a></p></body></html>';
 }

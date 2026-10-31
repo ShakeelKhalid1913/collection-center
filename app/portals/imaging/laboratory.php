@@ -54,7 +54,7 @@ $totalCount = count($labEntries);
 
 $tableRowsHtml = '';
 if (empty($labEntries)) {
-    $tableRowsHtml = '<tr><td colspan="7" class="py-12 text-center text-slate-400 italic text-sm">No Laboratory patients in queue today. <a href="/portals/imaging/new-scan.php" class="text-emerald-700 font-bold underline ml-1">Book new test</a></td></tr>';
+    $tableRowsHtml = '<tr><td colspan="7" class="py-12 text-center text-slate-400 italic text-sm">No Laboratory patients in queue today. <a href="/portals/new-scan.php" class="text-emerald-700 font-bold underline ml-1">Book new test</a></td></tr>';
 } else {
     foreach ($labEntries as $idx => $le) {
         $labNo = (string)($le['lab_no'] ?? '');
@@ -85,7 +85,7 @@ if (empty($labEntries)) {
         $tableRowsHtml .= <<<TR
         <tr class="hover:bg-emerald-50/40 transition-colors border-b border-slate-100 lab-row" data-search="{$labNo} {$patient} {$tests} {$doctor}">
             <td class="py-3.5 px-3 font-mono font-bold text-emerald-800 whitespace-nowrap">
-                <a href="/portals/main-lab/reports/preview.php?lab_no={$q}" class="hover:underline">{$labNo}</a>
+                <a href="/portals/reports/preview.php?lab_no={$q}" class="hover:underline">{$labNo}</a>
             </td>
             <td class="py-3.5 px-3">
                 <div class="font-extrabold text-slate-900 text-sm">{$patient}</div>
@@ -104,13 +104,13 @@ if (empty($labEntries)) {
             </td>
             <td class="py-3.5 px-3 text-right whitespace-nowrap">
                 <div class="inline-flex items-center gap-1">
-                    <a href="/portals/main-lab/results/entry.php?lab_no={$q}" class="btn btn-secondary text-xs px-2.5 py-1 font-bold text-emerald-800 hover:bg-emerald-100" title="Enter Results">
+                    <a href="/portals/results/entry.php?lab_no={$q}" class="btn btn-secondary text-xs px-2.5 py-1 font-bold text-emerald-800 hover:bg-emerald-100" title="Enter Results">
                         <i class="fa-solid fa-flask mr-1"></i> Results
                     </a>
-                    <a href="/portals/main-lab/reports/preview.php?lab_no={$q}" class="btn btn-primary text-xs px-2.5 py-1 font-bold bg-emerald-600 hover:bg-emerald-700 text-white" title="View Lab Report">
+                    <a href="/portals/reports/preview.php?lab_no={$q}" class="btn btn-primary text-xs px-2.5 py-1 font-bold bg-emerald-600 hover:bg-emerald-700 text-white" title="View Lab Report">
                         <i class="fa-solid fa-file-lines mr-1"></i> Report
                     </a>
-                    <a href="/portals/imaging/receipt.php?lab_no={$q}" class="btn btn-secondary text-xs px-2 py-1 font-semibold text-slate-600 hover:bg-slate-100" title="Patient Bill">
+                    <a href="/portals/receipt.php?lab_no={$q}" class="btn btn-secondary text-xs px-2 py-1 font-semibold text-slate-600 hover:bg-slate-100" title="Patient Bill">
                         <i class="fa-solid fa-receipt"></i>
                     </a>
                 </div>
@@ -122,10 +122,10 @@ TR;
 
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
-    <a href="/portals/imaging/new-scan.php" class="btn btn-primary text-xs font-bold py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+    <a href="/portals/new-scan.php" class="btn btn-primary text-xs font-bold py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
         <i class="fa-solid fa-plus mr-1"></i> Book Diagnostic Order
     </a>
-    <a href="/portals/imaging/dashboard.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
+    <a href="/portals/dashboard.php" class="btn btn-secondary text-xs font-semibold py-2 px-3">
         <i class="fa-solid fa-gauge-high mr-1"></i> Center Dashboard
     </a>
 </div>
@@ -177,22 +177,22 @@ $content .= <<<HTML
 <!-- Department Navigation Pills -->
 <div class="flex flex-wrap items-center gap-2 mb-4 p-2 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Workstations:</span>
-    <a href="/portals/imaging/laboratory.php" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm flex items-center gap-1.5">
+    <a href="/portals/laboratory.php" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm flex items-center gap-1.5">
         <i class="fa-solid fa-flask"></i> Laboratory
     </a>
-    <a href="/portals/imaging/ultrasound.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
+    <a href="/portals/ultrasound.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
         <i class="fa-solid fa-wave-square text-teal-600"></i> Ultrasound
     </a>
-    <a href="/portals/imaging/xray.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
+    <a href="/portals/xray.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
         <i class="fa-solid fa-x-ray text-blue-600"></i> X-Ray
     </a>
-    <a href="/portals/imaging/ecg.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
+    <a href="/portals/ecg.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
         <i class="fa-solid fa-heart-pulse text-rose-600"></i> ECG
     </a>
-    <a href="/portals/imaging/ct.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
+    <a href="/portals/ct.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
         <i class="fa-solid fa-laptop-medical text-purple-600"></i> CT Scan
     </a>
-    <a href="/portals/imaging/mri.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
+    <a href="/portals/mri.php" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 font-semibold text-xs transition-colors flex items-center gap-1.5">
         <i class="fa-solid fa-magnet text-indigo-600"></i> MRI
     </a>
 </div>

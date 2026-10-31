@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($labNo !== '') && isset($_POST['sa
             'discount' => $discount,
             'paid' => $paid,
         ]);
-        $redirect = '/portals/main-lab/receipts.php?lab_no=' . urlencode($labNo);
+        $redirect = '/portals/receipts.php?lab_no=' . urlencode($labNo);
         if ($q !== '') {
             $redirect .= '&q=' . urlencode($q);
         }
@@ -96,14 +96,14 @@ if ($patientId !== '') {
             }
         }
         if ($labNo === '' && count($patientVisits) === 1) {
-            header('Location: /portals/main-lab/receipts.php?lab_no=' . urlencode((string)$patientVisits[0]['lab_no']) . '&q=' . urlencode($q));
+            header('Location: /portals/receipts.php?lab_no=' . urlencode((string)$patientVisits[0]['lab_no']) . '&q=' . urlencode($q));
             exit;
         }
     }
 }
 
-$reportUrl = '/portals/main-lab/reports/preview.php?lab_no=' . urlencode($currentLab);
-$entryUrl = '/portals/main-lab/results/entry.php?lab_no=' . urlencode($currentLab);
+$reportUrl = '/portals/reports/preview.php?lab_no=' . urlencode($currentLab);
+$entryUrl = '/portals/results/entry.php?lab_no=' . urlencode($currentLab);
 $qVal = e($q);
 
 $content = page_header(
@@ -120,12 +120,12 @@ $content .= <<<HTML
             <input type="search" id="bill-q" name="q" class="field" value="{$qVal}" placeholder="Name, phone, MR No, or Lab No…" autofocus>
         </div>
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass mr-1"></i> Search</button>
-        <a href="/portals/main-lab/receipts.php" class="btn btn-secondary">Clear</a>
+        <a href="/portals/receipts.php" class="btn btn-secondary">Clear</a>
     </form>
     <div class="flex flex-wrap gap-3 items-end border-t border-slate-100 pt-3">
         <div class="flex-1 min-w-[16rem]">
             <label class="field-label" for="bill-visit">Or open visit from list</label>
-            <select id="bill-visit" class="field text-sm" onchange="if(this.value) location.href='/portals/main-lab/receipts.php?lab_no='+encodeURIComponent(this.value)">
+            <select id="bill-visit" class="field text-sm" onchange="if(this.value) location.href='/portals/receipts.php?lab_no='+encodeURIComponent(this.value)">
                 <option value="">— Select lab number / patient —</option>
                 {$dropdownOpts}
             </select>
@@ -148,7 +148,7 @@ if ($q !== '' && $labNo === '' && $patientId === '') {
             . '<td class="px-4 py-3"><span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">' . e($pid) . '</span></td>'
             . '<td class="px-4 py-3 font-bold text-slate-800">' . e($name) . '</td>'
             . '<td class="px-4 py-3 text-slate-600">' . e((string)($p['phone'] ?? '—')) . '</td>'
-            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/main-lab/receipts.php?patient_id=' . urlencode($pid) . '&q=' . urlencode($q) . '">Show visits</a></td>'
+            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/receipts.php?patient_id=' . urlencode($pid) . '&q=' . urlencode($q) . '">Show visits</a></td>'
             . '</tr>';
     }
 
@@ -165,7 +165,7 @@ if ($q !== '' && $labNo === '' && $patientId === '') {
             . '<td class="px-4 py-3 font-bold text-slate-800">' . e((string)($ae['patient_name'] ?? '')) . '</td>'
             . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
             . '<td class="px-4 py-3 text-xs font-semibold text-slate-900">' . e(format_money((float)($ae['amount'] ?? 0))) . '</td>'
-            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/main-lab/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/receipts.php?lab_no=' . urlencode($ln) . '&q=' . urlencode($q) . '">Open bill</a></td>'
             . '</tr>';
     }
 
@@ -206,7 +206,7 @@ if ($patientId !== '' && $labNo === '') {
             . '<td class="px-4 py-3 text-xs text-slate-600 font-medium">' . e(normalize_tests_list((string)($ae['tests'] ?? ''))) . '</td>'
             . '<td class="px-4 py-3 text-xs font-semibold text-slate-900">' . e(format_money((float)($ae['amount'] ?? 0))) . '</td>'
             . '<td class="px-4 py-3 text-xs text-slate-500">' . e(format_date($ae['created_at'] ?? null)) . '</td>'
-            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/main-lab/receipts.php?lab_no=' . urlencode($ln) . '&patient_id=' . urlencode($patientId) . '&q=' . urlencode($q) . '">Open bill</a></td>'
+            . '<td class="px-4 py-3"><a class="btn btn-primary text-xs py-1.5 px-3" href="/portals/receipts.php?lab_no=' . urlencode($ln) . '&patient_id=' . urlencode($patientId) . '&q=' . urlencode($q) . '">Open bill</a></td>'
             . '</tr>';
     }
     if ($visitRows === '') {

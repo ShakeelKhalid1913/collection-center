@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         $catalog = resolve_catalog_from_post($_POST);
         $doctor = resolve_doctor_name($_POST['doctor_id'] ?? '');
 
-        $newTests = $catalog['tests'];
+        $newTests = !empty($_POST['tests']) ? $catalog['tests'] : ($existingEntry['tests'] ?? '');
         $amount = $catalog['amount'] > 0 ? $catalog['amount'] : (float)($_POST['amount'] ?? $existingEntry['amount']);
         $paid = (float)($_POST['paid'] ?? $existingEntry['paid']);
         $discount = (float)($_POST['discount'] ?? $existingEntry['discount']);
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
 
 if (!$entry) {
     $content = page_header('Edit Lab Entry', 'No entry specified.');
-    $content .= card('<p class="p-6 text-slate-600">Please select an entry from <a href="/portals/collection-center/lab-entries/pending.php" class="text-teal-700 underline font-semibold">Pending Entries</a> or <a href="/portals/collection-center/lab-entries/history.php" class="text-teal-700 underline font-semibold">Entries History</a> to edit its assigned tests.</p>');
+    $content .= card('<p class="p-6 text-slate-600">Please select an entry from <a href="/portals/lab-entries/pending.php" class="text-teal-700 underline font-semibold">Pending Entries</a> or <a href="/portals/lab-entries/history.php" class="text-teal-700 underline font-semibold">Entries History</a> to edit its assigned tests.</p>');
     render_page('Edit Lab Entry', 'collection-center', 'pending', $content);
     exit;
 }
@@ -132,10 +132,10 @@ $content .= card(
     '<div class="border-t border-slate-200 pt-4 flex flex-wrap gap-3 items-center justify-between">' .
     '<div class="flex gap-2">' .
     '<button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Updated Tests</button>' .
-    '<a href="/portals/collection-center/lab-entries/pending.php" class="btn btn-secondary">Cancel</a>' .
+    '<a href="/portals/lab-entries/pending.php" class="btn btn-secondary">Cancel</a>' .
     '<div class="flex gap-2">' .
-    '<a href="/portals/collection-center/receipts.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Receipt</a>' .
-    '<a href="/portals/collection-center/reports/preview.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
+    '<a href="/portals/receipts.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-receipt mr-1"></i> Receipt</a>' .
+    '<a href="/portals/reports/preview.php?lab_no=' . urlencode($entry['lab_no']) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-file-medical mr-1"></i> Report</a>' .
     '</div>' .
     '</div>' .
 

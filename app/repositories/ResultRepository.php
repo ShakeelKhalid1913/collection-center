@@ -571,13 +571,13 @@ class ResultRepository
                AND EXISTS (
                     SELECT 1 FROM results r2
                     WHERE r2.lab_no = r.lab_no
-                      AND r2.organization_id = :org_id
+                      AND r2.organization_id = :org_id2
                       AND r2.verified_at IS NULL
                       AND r2.value IS NOT NULL AND r2.value != ''
                )
              GROUP BY r.lab_no
              ORDER BY r.lab_no DESC",
-            ['org_id' => $orgId]
+            ['org_id' => $orgId, 'org_id2' => $orgId]
         );
     }
 
@@ -782,6 +782,18 @@ class ResultRepository
             ['org_id' => $orgId]
         );
         return (int)($row['cnt'] ?? 0);
+    }
+
+    public function getCriticalResults(?string $orgId = null): array
+    {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        return $this->db->fetchAll(
+            "SELECT * FROM results
+             WHERE organization_id = :org_id
+               AND flag IN ('critical', 'H', 'L')
+             ORDER BY created_at DESC LIMIT 100",
+            ['org_id' => $orgId]
+        );
     }
 
     public function countCritical(string $orgId = 'ORG-001'): int

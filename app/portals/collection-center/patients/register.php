@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'organization_id' => current_user()['organization_id'] ?? 'ORG-001',
         ]);
         if ($res['success']) {
-            header('Location: /portals/collection-center/patients/records.php?registered=1');
+            header('Location: /portals/patients/records.php?registered=1');
             exit;
         }
         $message = flash_error('Failed to save patient.');
@@ -83,8 +83,8 @@ $form = '<form method="post">' . card(
     '</div>' .
     '<div class="sticky-actions">' .
     btn_submit('Save patient') .
-    btn_primary('/portals/collection-center/patients/quick-register.php', 'Open Quick Reg') .
-    btn_secondary('/portals/collection-center/patients/records.php', 'Back to records') .
+    btn_primary('/portals/patients/quick-register.php', 'Open Quick Reg') .
+    btn_secondary('/portals/patients/records.php', 'Back to records') .
     '</div>'
 ) . '</form>';
 

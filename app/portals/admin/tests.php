@@ -78,7 +78,7 @@ $queryBase = array_filter([
 
 $buildUrl = static function (int $p) use ($queryBase): string {
     $qs = http_build_query(array_merge($queryBase, ['page' => $p]));
-    return '/portals/admin/tests.php' . ($qs !== '' ? '?' . $qs : '');
+    return '/portals/tests.php' . ($qs !== '' ? '?' . $qs : '');
 };
 
 $filterDeptOpts = ['' => 'All departments'] + TEST_DEPARTMENTS;
@@ -89,7 +89,7 @@ $filterHtml = '<form method="get" class="grid gap-3 p-4 sm:grid-cols-3 border-b 
     . select_field('Department', 'dept', $filterDeptOpts, $deptFilter, true)
     . '<div class="sm:col-span-3 flex flex-wrap gap-2">'
     . '<button type="submit" class="btn btn-primary text-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> Filter</button>'
-    . '<a href="/portals/admin/tests.php" class="btn btn-secondary text-sm">Clear</a>'
+    . '<a href="/portals/tests.php" class="btn btn-secondary text-sm">Clear</a>'
     . '</div></form>';
 
 $paginationHtml = '';
