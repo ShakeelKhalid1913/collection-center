@@ -397,13 +397,13 @@ class ResultRepository
                 $unitVal = $obj['unit'] ?? '—';
                 $rangeVal = $obj['reference_value'] ?: ($obj['normal_value'] ?: ($obj['normal_range'] ?? '—'));
 
-                // Auto-determine initial value for qualitative serology / screening tests (HIV, HBsAg, HCV, VDRL, etc.)
+                // Auto-determine initial value for qualitative serology / screening tests (HIV, HBsAg, HCV, VDRL, H. Pylori, MP, etc.)
                 $isOptionsType = strtolower((string)($obj['result_type'] ?? '')) === 'options';
                 $isQualitative = preg_match('/non\s*reactive|negative|normal|nil/i', $rangeVal)
-                    || preg_match('/hiv|hbsag|hcv|vdrl|tpha|screening|serology/i', $label . ' ' . (string)($obj['name'] ?? ''));
+                    || preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $label . ' ' . (string)($obj['name'] ?? ''));
                 $initialDefaultVal = '';
                 if ($isOptionsType || $isQualitative) {
-                    $initialDefaultVal = ($rangeVal !== '—' && $rangeVal !== '') ? $rangeVal : 'Non Reactive';
+                    $initialDefaultVal = ($rangeVal !== '—' && $rangeVal !== '' && strcasecmp($rangeVal, 'non reactive') !== 0) ? $rangeVal : 'Negative';
                 }
 
                 // If detailed parameter rows exist from before when this test had parameters, remove them
@@ -525,14 +525,14 @@ class ResultRepository
             ['lab_no' => $labNo]
         );
 
-        // Safeguard for qualitative screening investigations (HIV, HBsAg, HCV, VDRL):
-        // Ensure they always have non-empty valid parameters, reference ranges, and default values
+        // Safeguard for qualitative screening investigations (HIV, HBsAg, HCV, VDRL, H. Pylori, Malaria / MP):
+        // Ensure they always have non-empty valid parameters, reference ranges (Negative), and default values (Negative)
         $this->db->execute(
             "UPDATE results SET 
                 parameter = CASE WHEN parameter IS NULL OR parameter = '' OR parameter = '—' THEN test ELSE parameter END,
-                reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN 'Non Reactive' ELSE reference_range END,
-                value = CASE WHEN value IS NULL OR value = '' OR LOWER(value) = 'pending' THEN (CASE WHEN reference_range IS NOT NULL AND reference_range != '' AND reference_range != '—' THEN reference_range ELSE 'Non Reactive' END) ELSE value END
-             WHERE lab_no = :lab_no AND (LOWER(test) LIKE '%hiv%' OR LOWER(test) LIKE '%hbsag%' OR LOWER(test) LIKE '%hcv%' OR LOWER(test) LIKE '%vdrl%' OR LOWER(parameter) LIKE '%hiv%' OR LOWER(parameter) LIKE '%hbsag%' OR LOWER(parameter) LIKE '%hcv%')",
+                reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' OR reference_range = 'Non Reactive' OR reference_range = 'Non-Reactive' THEN 'Negative' ELSE reference_range END,
+                value = CASE WHEN value IS NULL OR value = '' OR LOWER(value) = 'pending' OR value = 'Non Reactive' OR value = 'Non-Reactive' THEN 'Negative' ELSE value END
+             WHERE lab_no = :lab_no AND (LOWER(test) LIKE '%hiv%' OR LOWER(test) LIKE '%hbsag%' OR LOWER(test) LIKE '%hcv%' OR LOWER(test) LIKE '%vdrl%' OR LOWER(test) LIKE '%pylori%' OR LOWER(test) LIKE '%malaria%' OR LOWER(test) LIKE '%mp%' OR LOWER(parameter) LIKE '%hiv%' OR LOWER(parameter) LIKE '%hbsag%' OR LOWER(parameter) LIKE '%hcv%' OR LOWER(parameter) LIKE '%pylori%' OR LOWER(parameter) LIKE '%malaria%')",
             ['lab_no' => $labNo]
         );
 

@@ -918,19 +918,16 @@ function load_document_context(?string $labNo, ?string $orgId = null): array
             $hasRef = $deptInfo['has_reference_ranges'];
 
             $refRange = $hasRef ? (($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—')) : '';
-            $isScreening = preg_match('/hiv|hbsag|hcv|vdrl|tpha|screening|serology/i', $tTitle . ' ' . $paramName);
+            $isScreening = preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tTitle . ' ' . $paramName);
 
-            // For screening tests like HIV, HBsAg, HCV, VDRL:
-            // If result was marked DONE, empty, or pending, reliably resolve to normal reference value
+            // For screening tests like HIV, HBsAg, HCV, VDRL, H. Pylori, MP (Malaria):
+            // Reference range must always be 'Negative', and default result is 'Negative'
             if ($isScreening) {
-                if ($rawVal === '' || strcasecmp($rawVal, 'pending') === 0 || strcasecmp($rawVal, 'done') === 0) {
-                    if (preg_match('/negative/i', $refRange)) {
-                        $rawVal = 'Negative';
-                    } elseif (preg_match('/non\s*reactive/i', $refRange)) {
-                        $rawVal = 'Non Reactive';
-                    } else {
-                        $rawVal = ($refRange !== '' && $refRange !== '—') ? $refRange : 'Non Reactive';
-                    }
+                if ($refRange === '' || $refRange === '—' || strcasecmp($refRange, 'non reactive') === 0 || strcasecmp($refRange, 'non-reactive') === 0) {
+                    $refRange = 'Negative';
+                }
+                if ($rawVal === '' || strcasecmp($rawVal, 'pending') === 0 || strcasecmp($rawVal, 'done') === 0 || strcasecmp($rawVal, 'non reactive') === 0 || strcasecmp($rawVal, 'non-reactive') === 0) {
+                    $rawVal = 'Negative';
                 }
             }
 
@@ -955,14 +952,12 @@ function load_document_context(?string $labNo, ?string $orgId = null): array
 
             $resVal = $hasExplicitValue ? $rawVal : '';
             if (!$hidePending && ($resVal === '' || strcasecmp($resVal, 'pending') === 0)) {
-                if (preg_match('/negative/i', $refRange)) {
+                if ($isScreening) {
                     $resVal = 'Negative';
-                } elseif (preg_match('/non\s*reactive/i', $refRange)) {
-                    $resVal = 'Non Reactive';
+                } elseif (preg_match('/negative/i', $refRange)) {
+                    $resVal = 'Negative';
                 } elseif (preg_match('/done/i', $refRange)) {
                     $resVal = $refRange;
-                } elseif ($isScreening) {
-                    $resVal = ($refRange !== '' && $refRange !== '—') ? $refRange : 'Negative';
                 } else {
                     $resVal = 'Pending';
                 }
@@ -1009,14 +1004,13 @@ function load_document_context(?string $labNo, ?string $orgId = null): array
 
                 $fallbackRange = $hasRef ? ($meta['range'] ?? '—') : '';
                 $fallbackRes = 'Pending';
-                if (preg_match('/negative/i', $fallbackRange)) {
+                if (preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tName)) {
+                    $fallbackRange = 'Negative';
                     $fallbackRes = 'Negative';
-                } elseif (preg_match('/non\s*reactive/i', $fallbackRange)) {
-                    $fallbackRes = 'Non Reactive';
+                } elseif (preg_match('/negative/i', $fallbackRange)) {
+                    $fallbackRes = 'Negative';
                 } elseif (preg_match('/done/i', $fallbackRange)) {
                     $fallbackRes = $fallbackRange;
-                } elseif (preg_match('/hiv|hbsag|hcv|vdrl|screening|serology/i', $tName)) {
-                    $fallbackRes = ($fallbackRange !== '' && $fallbackRange !== '—') ? $fallbackRange : 'Negative';
                 }
 
                 $lines[] = [

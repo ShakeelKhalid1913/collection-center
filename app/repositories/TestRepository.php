@@ -63,11 +63,10 @@ class TestRepository
                 }
             }
 
-            // Ensure qualitative serology/screening tests include Detected & Non Detected options
+            // Ensure screening / serology tests (HIV, HBsAg, HCV, VDRL, H. Pylori, MP) are strictly Negative / Positive
             $this->db->execute(
-                "UPDATE tests SET result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline' 
-                 WHERE (code IN ('ANTI-HIV-SCREENING', '030211', '00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING') OR name LIKE '%HIV%')
-                   AND (result_options IS NULL OR result_options NOT LIKE '%Detected%')"
+                "UPDATE tests SET result_options = 'Negative, Positive', normal_range = 'Negative', reference_value = 'Negative', normal_value = 'Negative', category = 'Serology', result_type = 'options' 
+                 WHERE code IN ('ANTI-HIV-SCREENING', '030211', '00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING', 'H-PYLORI-SCREENING', 'MP-MALARIA-PARASITE') OR name LIKE '%HIV%' OR name LIKE '%HCV%' OR name LIKE '%HBSAG%' OR name LIKE '%VDRL%' OR name LIKE '%PYLORI%' OR name LIKE '%Malaria%' OR name LIKE '%MP (%'"
             );
 
             // Ensure HbA1c is strictly numeric input field (never qualitative dropdown)

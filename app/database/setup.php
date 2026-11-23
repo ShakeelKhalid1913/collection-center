@@ -164,10 +164,8 @@ function runSetup(): array
             $logs[] = 'No panel tests found for parameter seeding.';
         }
 
-        // Ensure standard serology test options (HIV, Hepatitis, VDRL, Malaria)
-        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline', normal_range = 'Negative', reference_value = 'Negative' WHERE code IN ('ANTI-HIV-SCREENING', '030211') OR name LIKE '%HIV%'");
-        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline', normal_range = 'Negative', reference_value = 'Negative' WHERE code IN ('00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING') OR name LIKE '%HCV SCREENING%' OR name LIKE '%HBSAG SCREENING%' OR name LIKE '%VDRL SCREENING%'");
-        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive', normal_range = 'Negative', reference_value = 'Negative' WHERE code = 'MP-MALARIA-PARASITE' OR name LIKE '%Malaria Parasite%'");
+        // Ensure standard screening/serology test options (HIV, HBsAg, HCV, VDRL, H. Pylori, Malaria / MP)
+        $pdo->exec("UPDATE tests SET category = 'Serology', result_type = 'options', result_options = 'Negative, Positive', normal_range = 'Negative', reference_value = 'Negative', normal_value = 'Negative' WHERE code IN ('ANTI-HIV-SCREENING', '030211', '00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING', 'H-PYLORI-SCREENING', 'MP-MALARIA-PARASITE') OR name LIKE '%HIV%' OR name LIKE '%HCV%' OR name LIKE '%HBSAG%' OR name LIKE '%VDRL%' OR name LIKE '%PYLORI%' OR name LIKE '%Malaria%' OR name LIKE '%MP (%'");
 
         // Seed Packages
         $stmtPkg = $pdo->prepare("INSERT IGNORE INTO packages (id, organization_id, code, name, tests_included, price, regular_price) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?)");

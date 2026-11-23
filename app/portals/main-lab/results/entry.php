@@ -416,7 +416,7 @@ $activeRows = $byTest[$activeTest] ?? [];
 $activeTestMeta = test_repo()->findByCode($activeTest, $orgId);
 $activeTestId = (string)($activeTestMeta['id'] ?? '');
 $activeTestMethodology = (string)($activeTestMeta['methodology'] ?? '');
-$testResultType = strtolower((string)($activeTestMeta['result_type'] ?? 'numeric'));
+$testResultType = !empty($activeTestMeta['result_type']) ? strtolower((string)$activeTestMeta['result_type']) : '';
 $testResultOptions = parse_result_options((string)($activeTestMeta['result_options'] ?? ''));
 if ($testResultOptions === null && $testResultType === 'options') {
     $testResultOptions = parse_result_options((string)($activeTestMeta['normal_range'] ?? $activeTestMeta['reference_value'] ?? ''));
@@ -741,31 +741,36 @@ foreach ($activeRows as $r) {
     $combinedName = strtolower($paramName . ' ' . $activeTest . ' ' . $rangeRaw);
     $activeCat = strtolower((string)($activeTestMeta['category'] ?? ''));
 
+    // Screening/Serology investigations (HIV, HBsAg, HCV, VDRL, H. Pylori, Malaria / MP) must always be Negative / Positive
+    $isScreeningInvestigation = preg_match('/hiv|hbsag|hbs\s*ag|hbeag|hbe\s*ag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening/i', $combinedName)
+        || in_array($activeCat, ['serology', 'immunology', 'rapid tests'], true);
+
     // Explicitly numeric investigations (HbA1c, vitamins, hormones, electrolytes, etc.) must always remain text/number input fields
-    $isExplicitlyNumeric = ($testResultType === 'numeric')
-        || preg_match('/hba1c|glycated|\ba1c\b|sugar|glucose|cholesterol|triglyceride|urea|creatinine|uric|bilirubin|tsh|ft3|ft4|vitamin|ferritin|calcium/i', $combinedName);
+    $isExplicitlyNumeric = !$isScreeningInvestigation && (
+        ($testResultType === 'numeric')
+        || preg_match('/hba1c|glycated|\ba1c\b|sugar|glucose|cholesterol|triglyceride|urea|creatinine|uric|bilirubin|tsh|ft3|ft4|vitamin|ferritin|calcium/i', $combinedName)
+    );
 
     $isQualitative = !$isExplicitlyNumeric && (
-        preg_match('/non\s*reactive|reactive|negative|positive|detected|non\s*detected|not\s*detected/i', $rangeRaw)
-        || preg_match('/hiv|hbsag|hbs\s*ag|hbeag|hbe\s*ag|hcv|vdrl|tpha|screening|serology|widal|typhidot|pregnancy|ict|rapid|covid|antigen|antibody|dengue|malaria|syphilis|chlamydia|h\.?\s*pylori/i', $combinedName)
-        || in_array($activeCat, ['serology', 'immunology', 'rapid tests'], true)
+        $isScreeningInvestigation
+        || preg_match('/non\s*reactive|reactive|negative|positive|detected|non\s*detected|not\s*detected/i', $rangeRaw)
+        || preg_match('/widal|typhidot|pregnancy|ict|rapid|covid|antigen|antibody|dengue|syphilis|chlamydia/i', $combinedName)
     );
 
     if ($isExplicitlyNumeric) {
         $rowOptions = null;
+    } elseif ($rowOptions === null && $isScreeningInvestigation) {
+        $rowOptions = ['Negative', 'Positive'];
     } elseif ($rowOptions === null && $isQualitative) {
-        if (preg_match('/non\s*reactive|reactive/i', $rangeRaw)) {
-            $rowOptions = ['Non Reactive', 'Reactive', 'Negative', 'Positive', 'Non Detected', 'Detected', 'Borderline'];
-        } else {
-            $rowOptions = ['Negative', 'Positive', 'Non Reactive', 'Reactive', 'Non Detected', 'Detected', 'Borderline'];
-        }
+        $rowOptions = ['Negative', 'Positive'];
     } elseif ($rowOptions === null && preg_match('/blood\s*group|rh\s*factor/i', $combinedName)) {
         $rowOptions = ['A Positive (A+)', 'B Positive (B+)', 'O Positive (O+)', 'AB Positive (AB+)', 'A Negative (A-)', 'B Negative (B-)', 'O Negative (O-)', 'AB Negative (AB-)'];
     }
 
-    // If options are qualitative/screening, ensure Negative/Positive, Non Reactive/Reactive, and Non Detected/Detected are available
-    if ($rowOptions !== null && $isQualitative) {
-        $qualitativeStandard = ['Negative', 'Trace', '1+ (OnePlus)', '2+ (TwoPlus)', '3+ (ThreePlus)', '4+ (FourPlus)', 'OnePlus', 'Positive', 'Non Reactive', 'Reactive', 'Non Detected', 'Detected', 'Nil'];
+    if ($rowOptions !== null && $isScreeningInvestigation) {
+        $rowOptions = ['Negative', 'Positive'];
+    } elseif ($rowOptions !== null && $isQualitative) {
+        $qualitativeStandard = ['Negative', 'Trace', '1+ (OnePlus)', '2+ (TwoPlus)', '3+ (ThreePlus)', '4+ (FourPlus)', 'OnePlus', 'Positive', 'Non Detected', 'Detected', 'Nil'];
         foreach ($qualitativeStandard as $qs) {
             $exists = false;
             foreach ($rowOptions as $ro) {
@@ -781,9 +786,8 @@ foreach ($activeRows as $r) {
     }
 
     if ($rowOptions !== null) {
-        // Also add OnePlus, 1+, 2+, 3+, Trace, Nil for urine, chemical examinations, or whenever negative/positive options exist
-        if (preg_match('/protein|glucose|sugar|urine|urinalysis|chemical|albumin|ketone|bile|blood|leukocyte|nitrite|urobilinogen/i', $combinedName)
-            || in_array('Negative', $rowOptions, true) || in_array('Positive', $rowOptions, true)) {
+        // Also add OnePlus, 1+, 2+, 3+, Trace, Nil for urine, chemical examinations
+        if (!$isScreeningInvestigation && (preg_match('/protein|glucose|sugar|urine|urinalysis|chemical|albumin|ketone|bile|blood|leukocyte|nitrite|urobilinogen/i', $combinedName))) {
             $urineStandard = ['Negative', 'Trace', '1+ (OnePlus)', '2+ (TwoPlus)', '3+ (ThreePlus)', '4+ (FourPlus)', 'OnePlus', 'Positive', 'Nil'];
             foreach ($urineStandard as $us) {
                 $exists = false;
