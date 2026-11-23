@@ -1,0 +1,22 @@
+# Lab Dash Pro — Hostinger / Apache / LiteSpeed Configuration
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Prevent access to sensitive files
+    <FilesMatch "^\.env|composer\.(json|lock)|Dockerfile|render\.yaml">
+        Require all denied
+    </FilesMatch>
+
+    # Serve existing files (e.g. assets, CSS, JS, images) directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Route all other URLs through api/index.php
+    RewriteRule ^(.*)$ api/index.php [QSA,L]
+</IfModule>
+
+# Ensure UTF-8 default charset
+AddDefaultCharset UTF-8

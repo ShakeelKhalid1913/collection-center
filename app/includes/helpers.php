@@ -41,9 +41,10 @@ function nav_item(string $href, string $label, string $activeKey, string $key, ?
         : '';
     $iconHtml = '<i class="' . e($icon) . ' nav-link__icon" aria-hidden="true"></i>';
     return sprintf(
-        '<a href="%s" class="nav-link%s">%s<span class="nav-link__text">%s</span>%s</a>',
+        '<a href="%s" class="nav-link%s" title="%s">%s<span class="nav-link__text">%s</span>%s</a>',
         e($href),
         $active,
+        e($label),
         $iconHtml,
         e($label),
         $badgeHtml
@@ -106,18 +107,13 @@ function page_header(string $title, string $subtitle = '', ?string $actionHtml =
 {
     $title = e($title);
     $subtitle = e($subtitle);
-    $action = $actionHtml ? '<div class="flex shrink-0 flex-wrap items-center gap-2.5">' . $actionHtml . '</div>' : '';
-    $subHtml = $subtitle !== '' ? '<p class="text-xs sm:text-sm text-slate-500 font-medium">' . $subtitle . '</p>' : '';
+    $action = $actionHtml ? '<div class="flex shrink-0 flex-wrap items-center gap-2">' . $actionHtml . '</div>' : '';
+    $subHtml = $subtitle !== '' ? '<p class="text-xs text-slate-500 font-medium mt-0.5">' . $subtitle . '</p>' : '';
     return <<<HTML
-    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-card">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 text-[#c2f13c] flex items-center justify-center text-xl font-black shadow-md shrink-0">
-                <i class="{$icon}"></i>
-            </div>
-            <div>
-                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{$title}</h1>
-                {$subHtml}
-            </div>
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-200">
+        <div>
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{$title}</h1>
+            {$subHtml}
         </div>
         {$action}
     </div>
@@ -126,12 +122,12 @@ function page_header(string $title, string $subtitle = '', ?string $actionHtml =
 
 function btn_primary(string $href, string $label, string $icon = 'fa-solid fa-arrow-right'): string
 {
-    return '<a href="' . e($href) . '" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all shadow-md border border-slate-700/60"><i class="' . e($icon) . ' text-[#c2f13c]" aria-hidden="true"></i> ' . e($label) . '</a>';
+    return '<a href="' . e($href) . '" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs"><i class="' . e($icon) . ' text-xs" aria-hidden="true"></i> ' . e($label) . '</a>';
 }
 
 function btn_secondary(string $href, string $label, string $icon = 'fa-solid fa-arrow-up-right-from-square'): string
 {
-    return '<a href="' . e($href) . '" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm transition-all border border-slate-300 shadow-sm"><i class="' . e($icon) . ' text-slate-500" aria-hidden="true"></i> ' . e($label) . '</a>';
+    return '<a href="' . e($href) . '" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors border border-slate-300 shadow-2xs"><i class="' . e($icon) . ' text-slate-400 text-xs" aria-hidden="true"></i> ' . e($label) . '</a>';
 }
 
 function btn_submit(string $label, string $extraClass = '', string $icon = 'fa-solid fa-floppy-disk'): string
@@ -698,5 +694,379 @@ function get_default_imaging_template(string $studyName, ?string $deptId = null)
         'impression' => "No significant abnormality detected on this examination.",
     ];
 }
+
+/**
+ * Interactive Diagnostic Workflow Stepper
+ * Renders an accessible, responsive progress bar with direct links across operational stages:
+ * 1. Patient -> 2. Book Tests -> 3. Enter Results -> 4. Final Report -> 5. Bill & Token
+ */
+function workflow_stepper(string $currentStep, ?string $labNo = null, ?string $patientId = null): string
+{
+    $qLab = $labNo !== null && $labNo !== '' ? urlencode($labNo) : '';
+    $qPid = $patientId !== null && $patientId !== '' ? urlencode($patientId) : '';
+
+    $steps = [
+        'patient' => [
+            'num' => '1',
+            'label' => 'Register Patient',
+            'icon' => 'fa-solid fa-user-plus',
+            'url' => '/portals/patients/register.php',
+        ],
+        'booking' => [
+            'num' => '2',
+            'label' => 'Book Tests',
+            'icon' => 'fa-solid fa-flask-vial',
+            'url' => '/portals/lab-entries/new.php' . ($qPid !== '' ? '?patient_id=' . $qPid : ''),
+        ],
+        'results' => [
+            'num' => '3',
+            'label' => 'Enter Results',
+            'icon' => 'fa-solid fa-square-poll-horizontal',
+            'url' => ($qLab !== '' ? '/portals/results/entry.php?lab_no=' . $qLab : '/portals/results/pending.php'),
+        ],
+        'report' => [
+            'num' => '4',
+            'label' => 'Final Report',
+            'icon' => 'fa-solid fa-file-medical',
+            'url' => ($qLab !== '' ? '/portals/reports/preview.php?lab_no=' . $qLab : '/portals/reports/generate.php'),
+        ],
+        'billing' => [
+            'num' => '5',
+            'label' => 'Patient Bill',
+            'icon' => 'fa-solid fa-receipt',
+            'url' => ($qLab !== '' ? '/portals/receipts.php?lab_no=' . $qLab : '/portals/receipts.php'),
+        ],
+    ];
+
+    $html = '<div class="no-print mb-4 p-2 sm:p-2.5 bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-x-auto">';
+    $html .= '<div class="flex items-center min-w-max gap-1 sm:gap-2 text-xs font-semibold">';
+    $stepKeys = array_keys($steps);
+    $currIdx = array_search($currentStep, $stepKeys, true);
+    if ($currIdx === false) $currIdx = -1;
+
+    $i = 0;
+    foreach ($steps as $key => $s) {
+        $idx = array_search($key, $stepKeys, true);
+        $isPassed = ($currIdx !== -1 && $idx < $currIdx);
+        $isActive = ($key === $currentStep);
+
+        if ($i > 0) {
+            $html .= '<i class="fa-solid fa-chevron-right text-[10px] text-slate-300 mx-0.5"></i>';
+        }
+        $i++;
+
+        if ($isActive) {
+            $badge = '<span class="w-5 h-5 rounded-full bg-white text-slate-900 inline-flex items-center justify-center text-[10px] font-bold shadow-xs mr-1.5">' . $s['num'] . '</span>';
+            $html .= '<span class="inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-900 text-white font-bold shadow-xs">';
+            $html .= $badge . '<span>' . e($s['label']) . '</span>';
+            $html .= '</span>';
+        } elseif ($isPassed) {
+            $badge = '<span class="text-emerald-600 inline-flex items-center text-sm mr-1"><i class="fa-solid fa-circle-check"></i></span>';
+            $html .= '<a href="' . e($s['url']) . '" class="inline-flex items-center px-2.5 py-1.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all">';
+            $html .= $badge . '<span class="text-slate-600">' . e($s['label']) . '</span>';
+            $html .= '</a>';
+        } else {
+            $badge = '<span class="w-5 h-5 rounded-full bg-slate-100 text-slate-400 inline-flex items-center justify-center text-[10px] font-bold border border-slate-200 mr-1.5">' . $s['num'] . '</span>';
+            if ($s['url'] !== '') {
+                $html .= '<a href="' . e($s['url']) . '" class="inline-flex items-center px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all">';
+                $html .= $badge . '<span>' . e($s['label']) . '</span>';
+                $html .= '</a>';
+            } else {
+                $html .= '<span class="inline-flex items-center px-2.5 py-1.5 rounded-xl text-slate-300 cursor-not-allowed">';
+                $html .= $badge . '<span>' . e($s['label']) . '</span>';
+                $html .= '</span>';
+            }
+        }
+    }
+
+    $html .= '</div></div>';
+    return $html;
+}
+
+/**
+ * Accurately allocates an order's gross, discount, and paid amounts across
+ * individual test investigations and departments (Pathology Laboratory vs Imaging Modalities).
+ *
+ * Ensures:
+ * 1. Sum of all allocated items equals the exact order amount, discount, and paid (0 residual discrepancy).
+ * 2. If an order has only radiology/imaging tests (e.g. Chest X-Ray), has_lab is false (no phantom duplicate lab row).
+ * 3. If an order has multi-department tests (CBC + USG + X-Ray + ECG + Echo), each department receives
+ *    its exact proportional or catalog share instead of cloning the full total amount on each line.
+ */
+function allocate_order_breakdown(array $entry, string $orgId = 'ORG-001'): array
+{
+    $testsStr = (string)($entry['tests'] ?? '');
+    $orderGross = (float)($entry['amount'] ?? 0);
+    $orderDiscount = (float)($entry['discount'] ?? 0);
+    $orderPaid = (float)($entry['paid'] ?? 0);
+
+    // Use receipt line items resolver to get catalog prices & departments
+    $lines = function_exists('receipt_line_items') ? receipt_line_items($entry, $orgId) : ['items' => [], 'subtotal' => 0.0];
+    $items = $lines['items'] ?? [];
+
+    // Fallback if receipt_line_items returned empty
+    if (empty($items) && $testsStr !== '') {
+        $rawNames = array_filter(array_map('trim', explode(',', $testsStr)));
+        foreach ($rawNames as $rName) {
+            $meta = get_department_meta($rName);
+            $items[] = [
+                'name' => $rName,
+                'price' => 0.0,
+                'vial' => $meta['name'],
+                'department' => $meta['name'],
+                'dept_id' => $meta['id'],
+                'expected' => '—',
+            ];
+        }
+    }
+
+    $count = count($items);
+    if ($count === 0) {
+        return [
+            'items' => [],
+            'lab' => [
+                'has_lab' => false,
+                'dept' => 'Laboratory',
+                'studies' => '',
+                'gross' => 0.0,
+                'discount' => 0.0,
+                'paid' => 0.0,
+                'due' => 0.0,
+                'items' => [],
+            ],
+            'imaging' => [],
+        ];
+    }
+
+    $catSub = (float)($lines['subtotal'] ?? 0);
+    // If any investigations had 0 catalog price (e.g. ECG, Echo, or unlisted test), assign standard modality baseline weight
+    $hasZeroPrice = false;
+    foreach ($items as &$it) {
+        if ((float)($it['price'] ?? 0) <= 0) {
+            $hasZeroPrice = true;
+            $meta = get_department_meta((string)($it['name'] ?? ''), (string)($it['department'] ?? ''));
+            $it['price'] = match ($meta['id'] ?? '') {
+                'ecg' => 500.0,
+                'echo' => 2000.0,
+                'xray' => 1000.0,
+                'ultrasound' => 1500.0,
+                'ct' => 5000.0,
+                'mri' => 8000.0,
+                default => 500.0,
+            };
+        }
+    }
+    unset($it);
+    if ($hasZeroPrice || $catSub <= 0) {
+        $catSub = array_sum(array_column($items, 'price'));
+    }
+
+    // If order stored amount was net (i.e. discount was already subtracted from amount), or orderGross was 0, resolve true gross
+    if ($catSub > 0 && ($orderGross <= 0 || $catSub >= ($orderGross + $orderDiscount))) {
+        $orderGross = $catSub;
+    } elseif ($orderDiscount > 0 && ($orderGross + $orderDiscount >= $orderPaid)) {
+        $orderGross = $orderGross + $orderDiscount;
+    } elseif ($orderGross <= 0 && $catSub > 0) {
+        $orderGross = $catSub;
+    }
+
+    $allocatedItems = [];
+    $runningGross = 0.0;
+    $runningDisc = 0.0;
+    $runningPaid = 0.0;
+
+    foreach ($items as $idx => $it) {
+        $price = (float)($it['price'] ?? 0);
+        if ($catSub > 0) {
+            $ratio = $price / $catSub;
+        } else {
+            $ratio = 1.0 / $count;
+        }
+
+        if ($idx === $count - 1) {
+            // Last item absorbs remaining cents to guarantee 100% exact mathematical balance
+            $iGross = round($orderGross - $runningGross, 2);
+            $iDisc = round($orderDiscount - $runningDisc, 2);
+            $iPaid = round($orderPaid - $runningPaid, 2);
+        } else {
+            $iGross = round($orderGross * $ratio, 2);
+            $iDisc = round($orderDiscount * $ratio, 2);
+            $iPaid = round($orderPaid * $ratio, 2);
+            $runningGross += $iGross;
+            $runningDisc += $iDisc;
+            $runningPaid += $iPaid;
+        }
+
+        $iNet = max(0.0, $iGross - $iDisc);
+        $iDue = max(0.0, $iNet - $iPaid);
+
+        $it['allocated_gross'] = $iGross;
+        $it['allocated_discount'] = $iDisc;
+        $it['allocated_paid'] = $iPaid;
+        $it['allocated_due'] = $iDue;
+        $allocatedItems[] = $it;
+    }
+
+    $labItems = [];
+    $imagingItems = [];
+
+    foreach ($allocatedItems as $it) {
+        $deptId = strtolower((string)($it['dept_id'] ?? 'lab'));
+        if ($deptId === 'lab') {
+            $labItems[] = $it;
+        } else {
+            $imagingItems[] = $it;
+        }
+    }
+
+    $hasLab = !empty($labItems);
+    $labGross = $hasLab ? array_sum(array_column($labItems, 'allocated_gross')) : 0.0;
+    $labDisc = $hasLab ? array_sum(array_column($labItems, 'allocated_discount')) : 0.0;
+    $labPaid = $hasLab ? array_sum(array_column($labItems, 'allocated_paid')) : 0.0;
+    $labDue = max(0.0, ($labGross - $labDisc) - $labPaid);
+    $labStudies = $hasLab ? implode(', ', array_column($labItems, 'name')) : '';
+
+    return [
+        'items' => $allocatedItems,
+        'lab' => [
+            'has_lab' => $hasLab,
+            'dept' => 'Laboratory',
+            'studies' => $labStudies,
+            'gross' => $labGross,
+            'discount' => $labDisc,
+            'paid' => $labPaid,
+            'due' => $labDue,
+            'items' => $labItems,
+        ],
+        'imaging' => $imagingItems,
+    ];
+}
+
+/**
+ * Render clinical narrative findings into rich HTML supporting Markdown & Word-like formatting.
+ * Supports:
+ * - Bold: **text** or <b>text</b> or <strong>text</strong>
+ * - Italic: *text* or <i>text</i> or <em>text</em>
+ * - Underline: <u>text</u>
+ * - Headings: # Heading (H1), ## Heading (H2), ### Heading (H3)
+ * - Lists: - bullet or 1. numbered
+ * - Empty lines: preserved as clean section spacers
+ * - Auto-detection of clinical uppercase headers: e.g. "LIVER:", "IMPRESSION:"
+ * - Highlights: ==critical / abnormal==
+ */
+function render_narrative_markdown(string $rawText): string
+{
+    if (trim($rawText) === '') {
+        return '';
+    }
+
+    $text = str_replace(["\r\n", "\r"], "\n", $rawText);
+    $lines = explode("\n", $text);
+
+    $html = [];
+    $inUl = false;
+    $inOl = false;
+
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+
+        if ($trimmed === '') {
+            if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+            if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+            $html[] = '<div class="narrative-spacer" style="height: 10px; min-height: 10px;"></div>';
+            continue;
+        }
+
+        // Escape HTML to prevent XSS
+        $lineSafe = htmlspecialchars($trimmed, ENT_QUOTES, 'UTF-8');
+
+        // Restore whitelisted formatting tags
+        $lineSafe = preg_replace('/&lt;u&gt;(.*?)&lt;\/u&gt;/iu', '<u style="text-decoration: underline; text-underline-offset: 2.5px;">$1</u>', $lineSafe);
+        $lineSafe = preg_replace('/&lt;(b|strong)&gt;(.*?)&lt;\/\1&gt;/iu', '<strong style="font-weight: 700; color: #0f172a;">$2</strong>', $lineSafe);
+        $lineSafe = preg_replace('/&lt;(i|em)&gt;(.*?)&lt;\/\1&gt;/iu', '<em>$2</em>', $lineSafe);
+        $lineSafe = preg_replace('/&lt;mark&gt;(.*?)&lt;\/mark&gt;/iu', '<mark style="background: #fef08a; padding: 1px 4px; border-radius: 3px; font-weight: 600;">$1</mark>', $lineSafe);
+
+        // Markdown inline formats
+        $lineSafe = preg_replace('/\*\*(.*?)\*\*/u', '<strong style="font-weight: 700; color: #0f172a;">$1</strong>', $lineSafe);
+        $lineSafe = preg_replace('/__(.*?)__/u', '<strong style="font-weight: 700; color: #0f172a;">$1</strong>', $lineSafe);
+        $lineSafe = preg_replace('/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/u', '<em>$1</em>', $lineSafe);
+        $lineSafe = preg_replace('/==(.*?)==/u', '<mark style="background: #fef08a; padding: 1px 4px; border-radius: 3px; font-weight: 600;">$1</mark>', $lineSafe);
+
+        // Headings (#, ##, ###)
+        if (preg_match('/^###\s+(.+)$/u', $trimmed, $m)) {
+            if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+            if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+            $hContent = preg_replace('/^###\s+/u', '', $lineSafe);
+            $html[] = '<div style="font-size: 1.05em; font-weight: 700; color: #1e293b; margin: 8px 0 3px 0;">' . $hContent . '</div>';
+            continue;
+        }
+        if (preg_match('/^##\s+(.+)$/u', $trimmed, $m)) {
+            if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+            if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+            $hContent = preg_replace('/^##\s+/u', '', $lineSafe);
+            $html[] = '<div style="font-size: 1.15em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin: 10px 0 4px 0; letter-spacing: 0.3px;">' . $hContent . '</div>';
+            continue;
+        }
+        if (preg_match('/^#\s+(.+)$/u', $trimmed, $m)) {
+            if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+            if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+            $hContent = preg_replace('/^#\s+/u', '', $lineSafe);
+            $html[] = '<div style="font-size: 1.25em; font-weight: 900; color: #0f172a; text-transform: uppercase; margin: 12px 0 5px 0; letter-spacing: 0.5px; border-bottom: 1.5px solid #0f172a; padding-bottom: 3px;">' . $hContent . '</div>';
+            continue;
+        }
+
+        // Bullet lists
+        if (preg_match('/^[\-\*•]\s+(.+)$/u', $trimmed, $m)) {
+            if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+            if (!$inUl) { $html[] = '<ul style="margin: 4px 0 6px 0; padding-left: 20px; list-style-type: disc;">'; $inUl = true; }
+            $itemContent = preg_replace('/^[\-\*•]\s+/u', '', $lineSafe);
+            if (preg_match('/^([^:]+):\s+(.+)$/u', $itemContent, $im)) {
+                $itemContent = '<strong style="font-weight: 700; color: #0f172a;">' . $im[1] . ':</strong> ' . $im[2];
+            }
+            $html[] = '<li style="margin-bottom: 3px;">' . $itemContent . '</li>';
+            continue;
+        }
+
+        // Numbered lists
+        if (preg_match('/^([0-9]+)[\.\)]\s+(.+)$/u', $trimmed, $m)) {
+            if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+            if (!$inOl) { $html[] = '<ol style="margin: 4px 0 6px 0; padding-left: 20px; list-style-type: decimal;">'; $inOl = true; }
+            $itemContent = preg_replace('/^[0-9]+[\.\)]\s+/u', '', $lineSafe);
+            $html[] = '<li style="margin-bottom: 3px;">' . $itemContent . '</li>';
+            continue;
+        }
+
+        if ($inUl) { $html[] = '</ul>'; $inUl = false; }
+        if ($inOl) { $html[] = '</ol>'; $inOl = false; }
+
+        // Prominent Impression / Conclusion block
+        if (preg_match('/^(IMPRESSION|CONCLUSION|DIAGNOSTIC OPINION|RECOMMENDATIONS):/i', $trimmed)) {
+            $html[] = '<div style="font-size: 1.1em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-top: 14px; margin-bottom: 5px; border-top: 1.5px dashed #94a3b8; padding-top: 6px;">' . $lineSafe . '</div>';
+            continue;
+        }
+
+        // Auto-bold uppercase organ / section headers (e.g. "LIVER: Normal size" or "GALLBLADDER:")
+        if (preg_match('/^([A-Z0-9\s\/\-\(\)&]{2,45}):(\s*.*)$/u', $lineSafe, $hm)) {
+            $sectionTitle = trim($hm[1]);
+            $sectionBody = trim($hm[2]);
+            if ($sectionBody === '') {
+                $html[] = '<div style="font-size: 1.05em; font-weight: 800; color: #0f172a; margin-top: 8px; margin-bottom: 3px;">' . $sectionTitle . ':</div>';
+            } else {
+                $html[] = '<div style="margin-bottom: 3px;"><strong style="font-weight: 700; color: #0f172a;">' . $sectionTitle . ':</strong> ' . $sectionBody . '</div>';
+            }
+            continue;
+        }
+
+        // Standard text line
+        $html[] = '<div style="margin-bottom: 3px;">' . $lineSafe . '</div>';
+    }
+
+    if ($inUl) { $html[] = '</ul>'; }
+    if ($inOl) { $html[] = '</ol>'; }
+
+    return implode("\n", $html);
+}
+
+
 
 

@@ -96,18 +96,8 @@ class OrganizationRepository
             ]
         );
 
-        // Seed independent test catalog from CSV for this new company so their catalog is isolated
-        try {
-            require_once dirname(__DIR__) . '/database/import_tests_csv.php';
-            $csvPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'tests.csv';
-            $pdo = $this->db->getPdo();
-            if ($pdo !== null && is_file($csvPath) && function_exists('import_tests_from_csv')) {
-                import_tests_from_csv($pdo, $csvPath, $id);
-                if (function_exists('seed_panel_parameters_for_imported_catalog')) {
-                    seed_panel_parameters_for_imported_catalog($pdo, $id);
-                }
-            }
-        } catch (\Throwable $ignored) {}
+        // Test catalog and parameters are globally shared across all organizations,
+        // with per-organization isolated pricing stored in organization_test_prices.
 
         // Copy default packages for this new company
         try {
@@ -168,5 +158,13 @@ class OrganizationRepository
             "UPDATE organizations SET " . implode(', ', $fields) . " WHERE id = :id",
             $params
         );
+    }
+
+    public function deleteOrganization(string $id): bool
+    {
+        if ($id === 'ORG-001') {
+            return false;
+        }
+        return $this->db->execute("DELETE FROM organizations WHERE id = :id", ['id' => $id]);
     }
 }

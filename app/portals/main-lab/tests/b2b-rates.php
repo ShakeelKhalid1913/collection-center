@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../includes/layout.php';
 require_once __DIR__ . '/../../../includes/components.php';
 
 require_auth('main-lab');
+require_permission('rates_edit');
 
 $user = current_user();
 $orgId = $user['organization_id'] ?? 'ORG-001';
@@ -98,7 +99,7 @@ $headerActions = '<div class="flex items-center gap-2">'
     . '<a href="/portals/lab-entries/new.php?type=b2b" class="btn btn-primary text-xs"><i class="fa-solid fa-plus mr-1"></i> New B2B Entry</a>'
     . '</div>';
 
-$content = page_header('B2B (Lab-to-Lab) Rates & Contracts', 'Dedicated wholesale test pricing for partner referring laboratories and hospital contracts.', $headerActions);
+$content = page_header('B2B Wholesale Rates & Contracts', '', $headerActions);
 $content .= $message;
 
 // Tabs

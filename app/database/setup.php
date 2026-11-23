@@ -16,20 +16,28 @@ function runSetup(): array
     $logs = [];
 
     try {
-        // Step 1: Connect to server without DB selected
-        $logs[] = "Connecting to MariaDB server at {$config['host']}:{$config['port']}...";
-        $serverPdo = Database::connectServer($config);
-
-        // Step 2: Create Database if not exists
         $dbName = $config['dbname'];
-        $logs[] = "Creating database `{$dbName}` if not exists...";
-        $serverPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-
-        // Step 3: Connect to newly created DB & Run Schema
         $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $config['host'], $config['port'], $dbName, $config['charset']);
-        $pdo = new PDO($dsn, $config['username'], $config['password'], $config['options']);
 
-        $logs[] = "Executing database schema (schema.sql)...";
+        // Step 1: Connect directly to the database (works reliably on Hostinger / shared hosting)
+        try {
+            $pdo = new PDO($dsn, $config['username'], $config['password'], $config['options']);
+            $logs[] = "Connected directly to database `{$dbName}`.";
+        } catch (PDOException $e) {
+            // Step 1b: If database does not exist, try creating it (local dev / Docker / root MySQL)
+            try {
+                $logs[] = "Connecting to MySQL server at {$config['host']}:{$config['port']} to create database...";
+                $serverPdo = Database::connectServer($config);
+                $serverPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                $pdo = new PDO($dsn, $config['username'], $config['password'], $config['options']);
+                $logs[] = "Created database `{$dbName}`.";
+            } catch (PDOException $serverEx) {
+                throw new PDOException("Database connection failed: " . $e->getMessage());
+            }
+        }
+
+        // Step 3: Run Schema if tables do not exist
+        $logs[] = "Checking and executing database schema (schema.sql)...";
         $schemaSql = file_get_contents(__DIR__ . '/schema.sql');
         $pdo->exec($schemaSql);
         // Step 4: Run column migrations for older DB schemas
@@ -50,6 +58,7 @@ function runSetup(): array
             "ALTER TABLE lab_settings ADD COLUMN footer_image_mime VARCHAR(64) NULL",
             "ALTER TABLE lab_settings ADD COLUMN footer_image_ver INT NOT NULL DEFAULT 0",
             "ALTER TABLE lab_settings ADD COLUMN footer_layout_json TEXT NULL",
+            "ALTER TABLE users ADD COLUMN password_plain VARCHAR(255) NULL",
             "ALTER TABLE lab_settings ADD COLUMN report_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
             "ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'",
             "ALTER TABLE lab_settings ADD COLUMN imaging_footer_text TEXT NULL",
@@ -106,13 +115,13 @@ function runSetup(): array
 
         // Seed Default Users (Password: 1913)
         $defaultPassword = password_hash('1913', PASSWORD_BCRYPT);
-        $stmtUser = $pdo->prepare("INSERT IGNORE INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)");
+        $stmtUser = $pdo->prepare("INSERT IGNORE INTO users (id, organization_id, branch_id, email, password_hash, password_plain, name, role, portal, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
 
         $defaultUsers = [
-            ['USR-01', 'ORG-001', 'BR-GULBERG', 'staff@citylab.pk', $defaultPassword, 'Collection Staff', 'Collection Center Staff', 'collection_center'],
-            ['USR-02', 'ORG-001', 'BR-MAIN-LAB', 'lab@citylab.pk', $defaultPassword, 'Dr. Main Lab', 'Laboratory Staff', 'main_lab'],
-            ['USR-03', 'ORG-001', 'BR-IMAGING', 'imaging@citylab.pk', $defaultPassword, 'Radiology Dept', 'Diagnostic Center Staff', 'imaging'],
-            ['USR-04', 'ORG-001', 'BR-MAIN-LAB', 'admin@citylab.pk', $defaultPassword, 'System Administrator', 'Admin', 'admin'],
+            ['USR-01', 'ORG-001', 'BR-GULBERG', 'staff@citylab.pk', $defaultPassword, '1913', 'Collection Staff', 'Collection Center Staff', 'collection_center'],
+            ['USR-02', 'ORG-001', 'BR-MAIN-LAB', 'lab@citylab.pk', $defaultPassword, '1913', 'Dr. Main Lab', 'Laboratory Staff', 'main_lab'],
+            ['USR-03', 'ORG-001', 'BR-IMAGING', 'imaging@citylab.pk', $defaultPassword, '1913', 'Radiology Dept', 'Diagnostic Center Staff', 'imaging'],
+            ['USR-04', 'ORG-001', 'BR-MAIN-LAB', 'admin@citylab.pk', $defaultPassword, '1913', 'System Administrator', 'Admin', 'admin'],
         ];
         foreach ($defaultUsers as $userRow) {
             $stmtUser->execute($userRow);
@@ -120,9 +129,9 @@ function runSetup(): array
 
         // Seed Super Admin (admin@ldp.com / admin123)
         $superAdminPass = password_hash('admin123', PASSWORD_BCRYPT);
-        $stmtSuper = $pdo->prepare("INSERT INTO users (id, organization_id, branch_id, email, password_hash, name, role, portal, is_super_admin, is_active)
-            VALUES ('USR-SUPER-01', 'ORG-001', 'BR-MAIN-LAB', 'admin@ldp.com', ?, 'LDP Super Admin', 'Super Admin', 'admin', 1, 1)
-            ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), is_super_admin = 1, is_active = 1");
+        $stmtSuper = $pdo->prepare("INSERT INTO users (id, organization_id, branch_id, email, password_hash, password_plain, name, role, portal, is_super_admin, is_active)
+            VALUES ('USR-SUPER-01', 'ORG-001', 'BR-MAIN-LAB', 'admin@ldp.com', ?, 'admin123', 'LDP Super Admin', 'Super Admin', 'admin', 1, 1)
+            ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), password_plain = 'admin123', is_super_admin = 1, is_active = 1");
         $stmtSuper->execute([$superAdminPass]);
         $logs[] = "Default staff users seeded with password '1913'.";
         $logs[] = "Super Admin initialized.";
@@ -154,6 +163,11 @@ function runSetup(): array
         } else {
             $logs[] = 'No panel tests found for parameter seeding.';
         }
+
+        // Ensure standard serology test options (HIV, Hepatitis, VDRL, Malaria)
+        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline', normal_range = 'Negative', reference_value = 'Negative' WHERE code IN ('ANTI-HIV-SCREENING', '030211') OR name LIKE '%HIV%'");
+        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline', normal_range = 'Negative', reference_value = 'Negative' WHERE code IN ('00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING') OR name LIKE '%HCV SCREENING%' OR name LIKE '%HBSAG SCREENING%' OR name LIKE '%VDRL SCREENING%'");
+        $pdo->exec("UPDATE tests SET result_type = 'options', result_options = 'Negative, Positive', normal_range = 'Negative', reference_value = 'Negative' WHERE code = 'MP-MALARIA-PARASITE' OR name LIKE '%Malaria Parasite%'");
 
         // Seed Packages
         $stmtPkg = $pdo->prepare("INSERT IGNORE INTO packages (id, organization_id, code, name, tests_included, price, regular_price) VALUES (?, 'ORG-001', ?, ?, ?, ?, ?)");
@@ -511,14 +525,20 @@ if ($isSetupEntry) {
         try {
             if (Database::getInstance()->isConnected()) {
                 $hasUsers = Database::getInstance()->fetchOne("SELECT COUNT(*) AS c FROM users");
-                if (!empty($hasUsers['c']) && (int)$hasUsers['c'] > 0) {
+                $hasTests = Database::getInstance()->fetchOne("SELECT COUNT(*) AS c FROM tests");
+                $usersCount = (int)($hasUsers['c'] ?? 0);
+                $testsCount = (int)($hasTests['c'] ?? 0);
+
+                $force = isset($_GET['force']) || isset($_GET['seed']);
+                // Only lock out if BOTH users and tests are already populated (so 0 tests can always be populated!)
+                if (!$force && $usersCount > 0 && $testsCount > 0) {
                     if (session_status() === PHP_SESSION_NONE) {
                         session_start();
                     }
                     $cur = $_SESSION['user'] ?? [];
                     if (empty($cur['is_super_admin']) && ($cur['portal'] ?? '') !== 'admin') {
                         header('Content-Type: text/html; charset=utf-8');
-                        echo '<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="background:#1e293b;padding:2rem;border-radius:12px;max-width:400px;text-align:center;"><h2>Database Setup Protected</h2><p style="color:#94a3b8">Database is already initialized. Please <a href="/login.php" style="color:#38bdf8;font-weight:bold;">sign in as Admin</a> to run setup maintenance.</p></div></body></html>';
+                        echo '<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="background:#1e293b;padding:2rem;border-radius:12px;max-width:440px;text-align:center;"><h2>Database Setup Protected</h2><p style="color:#94a3b8">Database is already initialized with ' . $testsCount . ' tests and ' . $usersCount . ' users.</p><p><a href="/database/setup.php?force=1" style="display:inline-block;background:#c2f13c;color:#020617;font-weight:bold;padding:10px 18px;border-radius:6px;text-decoration:none;margin-top:8px;">Force Re-seed Tests & Data</a></p><p style="margin-top:12px;"><a href="/login.php" style="color:#38bdf8;font-weight:bold;">Go to Login</a></p></div></body></html>';
                         exit;
                     }
                 }

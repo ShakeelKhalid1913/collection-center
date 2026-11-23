@@ -62,7 +62,7 @@ if (!empty($_SESSION['user'])) {
 
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
                         Precise Diagnostics. <br>
-                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#c2f13c] via-emerald-300 to-teal-200">
+                        <span class="text-[#c2f13c]">
                             Unified in Real Time.
                         </span>
                     </h1>
@@ -96,7 +96,7 @@ if (!empty($_SESSION['user'])) {
                             <div class="text-[11px] font-bold uppercase tracking-wider text-slate-300 mt-0.5">Average TAT</div>
                         </div>
                         <div>
-                            <div class="text-2xl sm:text-3xl font-black text-teal-300">99.4%</div>
+                            <div class="text-2xl sm:text-3xl font-black text-slate-100">99.4%</div>
                             <div class="text-[11px] font-bold uppercase tracking-wider text-slate-300 mt-0.5">Verified Precision</div>
                         </div>
                     </div>
@@ -122,7 +122,7 @@ if (!empty($_SESSION['user'])) {
                                         <span class="w-2.5 h-2.5 rounded-full bg-[#c2f13c] animate-pulse"></span>
                                         <span class="text-xs font-bold text-white uppercase tracking-wider">Automated Chemistry &amp; CBC</span>
                                     </div>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">STAT Active</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-[#c2f13c] border border-white/20">STAT Active</span>
                                 </div>
                                 <p class="text-xs text-slate-300 font-medium">Direct bidirectional analyzer interfacing with automated abnormal flag detection.</p>
                             </div>
@@ -146,87 +146,184 @@ if (!empty($_SESSION['user'])) {
         </div>
     </section>
 
-    <!-- The 3 Core Portals Section -->
-    <section class="lp-section bg-white" id="portals">
-        <div class="lp-wrap space-y-12">
-            <div class="text-center max-w-2xl mx-auto space-y-3">
-                <span class="lp-eyebrow">Enterprise Architecture</span>
-                <h2 class="lp-section__title">Three Unified Portals. One Source of Truth.</h2>
-                <p class="lp-section__lead">Staff sign in under their specific operational role with strict permission boundaries, while patient histories stay synchronized across all branches.</p>
+    <!-- Unified Specialist Workstation Portals (Bespoke Lab Dash Pro Architecture) -->
+    <section class="lp-section bg-slate-50 relative overflow-hidden" id="portals">
+        <div class="lp-wrap space-y-10 relative z-10">
+            
+            <!-- Section Header -->
+            <div class="text-center max-w-4xl mx-auto space-y-4">
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]">
+                    Cloud Laboratory &amp; Diagnostic <br>
+                    <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-rose-500 bg-clip-text text-transparent">Management Software</span>
+                </h2>
+
+                <!-- Ticker Pill -->
+                <div class="flex items-center justify-center pt-2">
+                    <div class="inline-flex items-center gap-2.5 sm:gap-3 px-4 py-2 rounded-full bg-white border border-emerald-300 shadow-xs max-w-full text-xs">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-emerald-400 text-[10px] font-black uppercase tracking-wider shrink-0">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            NEXTLAB 2026
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 uppercase tracking-wide shrink-0">
+                            DOCTOR OPD EMR
+                        </span>
+                        <span class="text-xs font-semibold text-slate-700 truncate">
+                            Smart Doctor OPD Queue Calling, Electronic Prescriptions &amp; Patient History
+                        </span>
+                        <div class="hidden sm:flex items-center gap-1 shrink-0 pl-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                            <span class="w-3.5 h-1.5 rounded-full bg-blue-600"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-7">
+            <!-- 4 Workstation Portals Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch max-w-7xl mx-auto">
                 
-                <!-- Portal 1: Laboratory -->
-                <div class="lp-portal-card border-t-4 border-t-slate-900">
+                <!-- Card 1: Laboratory Login -->
+                <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between">
                     <div>
-                        <div class="lp-portal-card__icon bg-slate-900 text-[#c2f13c]">
-                            <i class="fa-solid fa-flask-vial"></i>
+                        <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center text-xl mb-4 shadow-xs">
+                            <i class="fa-solid fa-flask"></i>
                         </div>
-                        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-800">Pathology Engine</span>
-                        <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-3 mb-2">Main Laboratory</h3>
-                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                            Specimen queue management, automated biomarker calculations, reference range auto-flagging, critical value alerts, and multi-parameter test sheets.
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60 inline-block mb-3">
+                            Pathology &amp; Lab
+                        </span>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Laboratory Login</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-6">
+                            Pathology, blood tests, biochemistry, cultures, and complete clinical lab workflow.
                         </p>
-                        <ul class="space-y-2 mt-5 text-xs font-medium text-slate-700">
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Auto-expanding panels (CBC, LFT, RFT)</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Pathologist electronic sign-offs</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Automated Normal/High/Critical flags</li>
-                        </ul>
                     </div>
-                    <div class="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between">
-                        <span class="text-xs font-mono text-slate-400">lab@citylab.pk</span>
-                        <a href="/login.php" class="text-xs font-extrabold text-slate-900 hover:text-emerald-700 flex items-center gap-1">Open Portal &rarr;</a>
+                    <div class="pt-4">
+                        <a href="/login.php?portal=main_lab" class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm transition-all group">
+                            <span>Access Lab Portal</span>
+                            <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                        </a>
                     </div>
                 </div>
 
-                <!-- Portal 2: Diagnostic Imaging -->
-                <div class="lp-portal-card border-t-4 border-t-[#c2f13c]">
+                <!-- Card 2: Diagnostic Portal -->
+                <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between">
                     <div>
-                        <div class="lp-portal-card__icon bg-slate-900 text-[#c2f13c]">
-                            <i class="fa-solid fa-x-ray"></i>
+                        <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center text-xl mb-4 shadow-xs">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
                         </div>
-                        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-900 text-[#c2f13c]">Radiology PACS</span>
-                        <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-3 mb-2">Diagnostic Center</h3>
-                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                            Full workflow for Digital X-Ray, Multi-Slice CT Scan, 4D Ultrasound, and 12-Lead ECG. Structured consultant findings and printable impressions.
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 inline-block mb-3">
+                            Radiology &amp; Imaging
+                        </span>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Diagnostic Portal</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-6">
+                            Radiology, Ultrasound, X-Ray, CT Scan, MRI, ECG &amp; Cardiology imaging reports.
                         </p>
-                        <ul class="space-y-2 mt-5 text-xs font-medium text-slate-700">
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Modality queue (X-Ray, CT, US, ECG)</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Consultant radiologist impressions</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-slate-900"></i> Branded diagnostic reports with QR</li>
-                        </ul>
                     </div>
-                    <div class="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between">
-                        <span class="text-xs font-mono text-slate-400">imaging@citylab.pk</span>
-                        <a href="/login.php" class="text-xs font-extrabold text-slate-900 hover:text-emerald-700 flex items-center gap-1">Open Portal &rarr;</a>
+                    <div class="pt-4">
+                        <a href="/login.php?portal=imaging" class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#7c3aed] hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition-all group">
+                            <span>Access Diagnostic</span>
+                            <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                        </a>
                     </div>
                 </div>
 
-                <!-- Portal 3: Collection Center -->
-                <div class="lp-portal-card border-t-4 border-t-emerald-600">
+                <!-- Card 3: Clinic Login -->
+                <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between">
                     <div>
-                        <div class="lp-portal-card__icon bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            <i class="fa-solid fa-hospital-user"></i>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-xl mb-4 shadow-xs">
+                            <i class="fa-solid fa-graduation-cap"></i>
                         </div>
-                        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800">Front Desk &amp; Billing</span>
-                        <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-3 mb-2">Collection Center</h3>
-                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                            Walk-in patient registration, test catalog search, discount calculation, thermal payment slips, tube barcode tagging, and WhatsApp report sending.
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 inline-block mb-3">
+                            Doctor &amp; OPD
+                        </span>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Clinic Login</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-6">
+                            Doctor OPD consultations, queue tokens, electronic prescriptions &amp; history.
                         </p>
-                        <ul class="space-y-2 mt-5 text-xs font-medium text-slate-700">
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-700"></i> Quick registration in under 30 seconds</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-700"></i> Instant thermal bill &amp; catalog pricing</li>
-                            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-700"></i> Sample collection &amp; batch transit tracking</li>
-                        </ul>
                     </div>
-                    <div class="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between">
-                        <span class="text-xs font-mono text-slate-400">staff@citylab.pk</span>
-                        <a href="/login.php" class="text-xs font-extrabold text-emerald-700 hover:text-emerald-900 flex items-center gap-1">Open Portal &rarr;</a>
+                    <div class="pt-4">
+                        <a href="/login.php?portal=collection_center" class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all group">
+                            <span>Access Clinic</span>
+                            <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 4: Pharmacy Login -->
+                <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center text-xl mb-4 shadow-xs">
+                            <i class="fa-solid fa-prescription-bottle-medical"></i>
+                        </div>
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 inline-block mb-3">
+                            Pharmacy &amp; POS
+                        </span>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Pharmacy Login</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-6">
+                            Point of sale, medicine inventory, customer billing &amp; dispensing management.
+                        </p>
+                    </div>
+                    <div class="pt-4">
+                        <a href="/login.php?portal=pharmacy" class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#c25e1a] hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition-all group">
+                            <span>Access Pharmacy</span>
+                            <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                        </a>
                     </div>
                 </div>
 
             </div>
+
+            <!-- Bottom Action CTAs -->
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-4">
+                <a href="/signup.php" class="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all group">
+                    <span>Start Free 14-Day Trial</span>
+                    <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="https://wa.me/923283070070" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm border border-slate-200/90 shadow-sm transition-all">
+                    <i class="fa-solid fa-phone text-xs text-slate-500"></i>
+                    <span>Contact Sales</span>
+                </a>
+            </div>
+
+            <!-- Executive Super Admin & Governance Strip -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-800 text-white shadow-lg max-w-6xl mx-auto">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 text-[#c2f13c] border border-slate-700 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black uppercase tracking-wider text-[#c2f13c]">Executive Governance</span>
+                                <span class="text-xs text-slate-400">• Multi-Branch Management</span>
+                            </div>
+                            <h4 class="text-base sm:text-lg font-black text-white mt-0.5">Administration &amp; Super Admin Console</h4>
+                            <p class="text-xs text-slate-300 max-w-2xl mt-0.5">
+                                Centralized master controls: staff accounts, credential visibility (Show Password), Delete ID, branch networks, granular RBAC permissions, and financial audit logs.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <a href="/login.php?portal=admin" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 hover:text-indigo-600 font-extrabold text-xs shadow-sm transition-all">
+                            <span>Launch Admin Portal</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact & Help Row -->
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <a href="/login.php" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white hover:text-[#c2f13c] font-bold text-xs shadow-sm transition-all">
+                    <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                    <span>General Staff Login</span>
+                </a>
+                <a href="https://wa.me/923283070070" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-emerald-700 font-bold text-xs border border-emerald-200 shadow-2xs transition-all">
+                    <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i>
+                    <span>WhatsApp Support: +92 328 3070070</span>
+                </a>
+            </div>
+
         </div>
     </section>
 
@@ -242,48 +339,48 @@ if (!empty($_SESSION['user'])) {
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-droplet"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Hematology</h4>
                     <p class="text-[11px] text-slate-500 mt-1">CBC, ESR, Blood Group, TLC</p>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-shield-virus"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Liver Function</h4>
                     <p class="text-[11px] text-slate-500 mt-1">ALT, AST, Bilirubin, Albumin</p>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-vial-circle-check"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Renal Profile</h4>
                     <p class="text-[11px] text-slate-500 mt-1">Creatinine, Urea, Uric Acid</p>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-cube"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Diabetes</h4>
                     <p class="text-[11px] text-slate-500 mt-1">HbA1c, Fasting Sugar, RBS</p>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-heart-pulse"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Lipid Profile</h4>
                     <p class="text-[11px] text-slate-500 mt-1">Cholesterol, HDL, LDL, Trig</p>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-center">
-                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2 text-lg">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all text-center group">
+                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center mx-auto mb-2.5 text-base group-hover:scale-105 transition-transform shadow-xs">
                         <i class="fa-solid fa-x-ray"></i>
                     </div>
                     <h4 class="font-extrabold text-slate-900 text-sm">Imaging</h4>
@@ -335,8 +432,8 @@ if (!empty($_SESSION['user'])) {
                     </div>
                     <div class="p-5 space-y-2">
                         <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                            <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Automated Analyzers</span>
+                            <span class="w-2 h-2 rounded-full bg-[#c2f13c]"></span>
+                            <span class="text-[11px] font-bold text-[#c2f13c] uppercase tracking-wider">Automated Analyzers</span>
                         </div>
                         <h4 class="text-base font-bold text-white">Clinical Biochemistry Bench</h4>
                         <p class="text-xs text-slate-400 leading-relaxed">Direct bi-directional machine interfacing for multi-channel chemistry, electrolytes, and automated LFT/RFT panels.</p>
@@ -355,8 +452,8 @@ if (!empty($_SESSION['user'])) {
                     </div>
                     <div class="p-5 space-y-2">
                         <div class="flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-teal-400"></span>
-                            <span class="text-[11px] font-bold text-teal-400 uppercase tracking-wider">Cold-Chain Transit</span>
+                            <span class="w-2 h-2 rounded-full bg-[#c2f13c]"></span>
+                            <span class="text-[11px] font-bold text-[#c2f13c] uppercase tracking-wider">Cold-Chain Transit</span>
                         </div>
                         <h4 class="text-base font-bold text-white">Specimen Barcode Logistics</h4>
                         <p class="text-xs text-slate-400 leading-relaxed">Barcode-tracked specimen vacutainers with timestamped phlebotomy collection and temperature-controlled batch transit.</p>
@@ -425,10 +522,10 @@ if (!empty($_SESSION['user'])) {
                             </div>
 
                             <div class="flex items-center gap-3 text-xs sm:text-sm text-slate-700 font-semibold">
-                                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                                    <i class="fa-brands fa-whatsapp text-base"></i>
+                                <div class="w-8 h-8 rounded-xl bg-slate-900 text-[#c2f13c] flex items-center justify-center shrink-0">
+                                    <i class="fa-brands fa-whatsapp text-sm"></i>
                                 </div>
-                                <a href="https://wa.me/923065193582" target="_blank" rel="noopener" class="hover:underline text-emerald-700 font-bold">
+                                <a href="https://wa.me/923065193582" target="_blank" rel="noopener" class="hover:underline text-slate-900 font-bold">
                                     +92 306 5193582 (Client WhatsApp)
                                 </a>
                             </div>
@@ -466,12 +563,13 @@ if (!empty($_SESSION['user'])) {
                                 <button type="submit" class="btn btn-primary px-6 py-2.5">
                                     <i class="fa-solid fa-paper-plane mr-1"></i> Send Inquiry
                                 </button>
-                                <a href="https://wa.me/923065193582" target="_blank" rel="noopener" class="btn btn-whatsapp text-xs py-2 px-4">
-                                    <i class="fa-brands fa-whatsapp mr-1"></i> Direct WhatsApp
+                                <a href="https://wa.me/923065193582" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition-all">
+                                    <i class="fa-brands fa-whatsapp text-[#c2f13c] text-sm"></i>
+                                    <span>Direct WhatsApp</span>
                                 </a>
                             </div>
-                            <div id="msg-sent" class="hidden p-3 rounded-xl bg-emerald-100 border border-emerald-200 text-xs font-bold text-emerald-800 flex items-center gap-2">
-                                <i class="fa-solid fa-circle-check"></i>
+                            <div id="msg-sent" class="hidden p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-[#c2f13c]"></i>
                                 <span>Inquiry transmitted successfully. Our diagnostic desk will respond promptly.</span>
                             </div>
                         </form>
@@ -512,7 +610,7 @@ if (!empty($_SESSION['user'])) {
                     <h4 class="font-extrabold text-white text-xs uppercase tracking-wider mb-3">Support &amp; Location</h4>
                     <p class="text-slate-400">12-A Main Boulevard, Faisalabad</p>
                     <p><a href="tel:+9242111222333" class="hover:text-white">+92 42 111 222 333</a></p>
-                    <p><a href="https://wa.me/923065193582" class="text-emerald-400 hover:underline">WhatsApp: +92 306 5193582</a></p>
+                    <p><a href="https://wa.me/923065193582" class="text-slate-300 hover:text-[#c2f13c]">WhatsApp: +92 306 5193582</a></p>
                     <p><a href="/database/setup.php" class="text-slate-500 hover:text-slate-300">Database Setup Utility</a></p>
                 </div>
 
@@ -522,7 +620,7 @@ if (!empty($_SESSION['user'])) {
                 <p>&copy; <?= date('Y') ?> Lab Dash Pro. All rights reserved.</p>
                 <p class="text-slate-400">
                     Software created by <strong>Shakeel Khalid</strong>
-                    &middot; <a href="https://wa.me/923283070070" target="_blank" rel="noopener" class="text-emerald-400 font-bold hover:underline">WhatsApp 0328-3070070</a>
+                    &middot; <a href="https://wa.me/923283070070" target="_blank" rel="noopener" class="text-white hover:text-[#c2f13c] font-bold">WhatsApp 0328-3070070</a>
                 </p>
             </div>
         </div>

@@ -24,6 +24,29 @@ class TestRepository
         }
         $done = true;
         try {
+            $this->db->execute(
+                "CREATE TABLE IF NOT EXISTS organization_test_prices (
+                    organization_id VARCHAR(64) NOT NULL,
+                    test_id VARCHAR(64) NOT NULL,
+                    price DECIMAL(10,2) NOT NULL,
+                    b2b_price DECIMAL(10,2) NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (organization_id, test_id),
+                    KEY idx_org_test_org (organization_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+            );
+            $this->db->execute(
+                "CREATE TABLE IF NOT EXISTS organization_package_prices (
+                    organization_id VARCHAR(64) NOT NULL,
+                    package_id VARCHAR(64) NOT NULL,
+                    price DECIMAL(10,2) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (organization_id, package_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+            );
+
             $cols = $this->db->fetchAll("SHOW COLUMNS FROM tests");
             $existing = array_column($cols, 'Field');
             $toAdd = [
@@ -39,6 +62,19 @@ class TestRepository
                     $this->db->execute($sql);
                 }
             }
+
+            // Ensure qualitative serology/screening tests include Detected & Non Detected options
+            $this->db->execute(
+                "UPDATE tests SET result_options = 'Negative, Positive, Non Reactive, Reactive, Non Detected, Detected, Borderline' 
+                 WHERE (code IN ('ANTI-HIV-SCREENING', '030211', '00291', '00290', 'ANTI-HCV-SCREENING', 'HBSAG-SCREENING', 'VDRL-SCREENING') OR name LIKE '%HIV%')
+                   AND (result_options IS NULL OR result_options NOT LIKE '%Detected%')"
+            );
+
+            // Ensure HbA1c is strictly numeric input field (never qualitative dropdown)
+            $this->db->execute(
+                "UPDATE tests SET result_type = 'numeric', result_options = NULL, unit = '%', reference_value = '< 5.7 %', normal_value = '< 5.7'
+                 WHERE code LIKE '%hba1c%' OR name LIKE '%hba1c%' OR name LIKE '%glycated%'"
+            );
         } catch (\Throwable $ignored) {
         }
     }
@@ -51,11 +87,52 @@ class TestRepository
         );
     }
 
+    public function updateOrganizationPrice(string $orgId, string $testId, float $price, ?float $b2bPrice = null): bool
+    {
+        return $this->db->execute(
+            "INSERT INTO organization_test_prices (organization_id, test_id, price, b2b_price)
+             VALUES (:org_id, :test_id, :price, :b2b_price)
+             ON DUPLICATE KEY UPDATE 
+                price = VALUES(price),
+                b2b_price = VALUES(b2b_price),
+                updated_at = CURRENT_TIMESTAMP",
+            [
+                'org_id' => $orgId,
+                'test_id' => $testId,
+                'price' => $price,
+                'b2b_price' => $b2bPrice,
+            ]
+        );
+    }
+
+    public function updateOrganizationPackagePrice(string $orgId, string $packageId, float $price): bool
+    {
+        return $this->db->execute(
+            "INSERT INTO organization_package_prices (organization_id, package_id, price)
+             VALUES (:org_id, :package_id, :price)
+             ON DUPLICATE KEY UPDATE 
+                price = VALUES(price),
+                updated_at = CURRENT_TIMESTAMP",
+            [
+                'org_id' => $orgId,
+                'package_id' => $packageId,
+                'price' => $price,
+            ]
+        );
+    }
+
     public function getTests(?string $orgId = null): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
-            "SELECT * FROM tests WHERE organization_id = :org_id ORDER BY category, name",
+            "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
+                    CASE WHEN otp.price IS NOT NULL THEN 1 ELSE 0 END AS has_custom_price
+             FROM tests t
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             ORDER BY t.category, t.name",
             ['org_id' => $orgId]
         );
     }
@@ -64,28 +141,26 @@ class TestRepository
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         return $this->db->fetchAll(
-            "SELECT * FROM packages WHERE organization_id = :org_id ORDER BY name",
+            "SELECT p.*,
+                    COALESCE(opp.price, p.price) AS price,
+                    CASE WHEN opp.price IS NOT NULL THEN 1 ELSE 0 END AS has_custom_price
+             FROM packages p
+             LEFT JOIN organization_package_prices opp
+                 ON opp.package_id = p.id AND opp.organization_id = :org_id
+             ORDER BY p.name",
             ['org_id' => $orgId]
         );
     }
 
     public function countTests(?string $orgId = null): int
     {
-        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
-        $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM tests WHERE organization_id = :org_id",
-            ['org_id' => $orgId]
-        );
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM tests");
         return (int)($row['cnt'] ?? 0);
     }
 
     public function countPackages(?string $orgId = null): int
     {
-        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
-        $row = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt FROM packages WHERE organization_id = :org_id",
-            ['org_id' => $orgId]
-        );
+        $row = $this->db->fetchOne("SELECT COUNT(*) AS cnt FROM packages");
         return (int)($row['cnt'] ?? 0);
     }
 
@@ -99,7 +174,13 @@ class TestRepository
         $params = array_values($codes);
         $params[] = $orgId;
         return $this->db->fetchAll(
-            "SELECT * FROM tests WHERE code IN ({$placeholders}) AND organization_id = ?",
+            "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price
+             FROM tests t
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = ?
+             WHERE t.code IN ({$placeholders})",
             $params
         );
     }
@@ -156,6 +237,35 @@ class TestRepository
             ]
         );
         return ['success' => $ok, 'id' => $id];
+    }
+
+    public function updatePackage(string $id, array $data, ?string $orgId = null): bool
+    {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        return $this->db->execute(
+            "UPDATE packages 
+             SET code = :code, name = :name, tests_included = :tests, price = :price, regular_price = :regular 
+             WHERE (id = :id OR code = :id2) AND organization_id = :org_id",
+            [
+                'id' => $id,
+                'id2' => $id,
+                'org_id' => $orgId,
+                'code' => strtoupper(trim((string)($data['code'] ?? ''))),
+                'name' => trim((string)($data['name'] ?? '')),
+                'tests' => trim((string)($data['tests_included'] ?? $data['tests'] ?? '')),
+                'price' => (float)($data['price'] ?? 0),
+                'regular' => (float)($data['regular_price'] ?? $data['regular'] ?? $data['price'] ?? 0),
+            ]
+        );
+    }
+
+    public function deletePackage(string $id, ?string $orgId = null): bool
+    {
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        return $this->db->execute(
+            "DELETE FROM packages WHERE (id = :id OR code = :id2) AND organization_id = :org_id",
+            ['id' => $id, 'id2' => $id, 'org_id' => $orgId]
+        );
     }
 
     public function getParameters(string $testId): array
@@ -268,7 +378,14 @@ class TestRepository
 
         // 1) Exact code (case-insensitive)
         $row = $this->db->fetchOne(
-            "SELECT * FROM tests WHERE organization_id = :org_id AND UPPER(code) = UPPER(:code) LIMIT 1",
+            "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price
+             FROM tests t
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             WHERE UPPER(t.code) = UPPER(:code)
+             LIMIT 1",
             ['code' => $code, 'org_id' => $orgId]
         );
         if ($row) {
@@ -277,26 +394,81 @@ class TestRepository
 
         // 2) Exact name
         $row = $this->db->fetchOne(
-            "SELECT * FROM tests WHERE organization_id = :org_id AND name = :name LIMIT 1",
+            "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price
+             FROM tests t
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             WHERE t.name = :name
+             LIMIT 1",
             ['name' => $code, 'org_id' => $orgId]
         );
         if ($row) {
             return $row;
         }
 
+        // 2b) High-accuracy Serology Aliases (HIV, HCV, HBsAg, VDRL, etc.)
+        $cleanSearch = preg_replace('/[-\/_]+/', ' ', strtolower($code));
+        $cleanSearch = preg_replace('/\s+/', ' ', trim((string)$cleanSearch));
+
+        if (preg_match('/\b(elisa|antibodies\s+elisa)\b/i', $cleanSearch) && preg_match('/\bhiv\b/i', $cleanSearch)) {
+            $row = $this->db->fetchOne(
+                "SELECT t.*, COALESCE(otp.price, t.price) AS price, COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
+                        (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+                 FROM tests t LEFT JOIN organization_test_prices otp ON otp.test_id = t.id AND otp.organization_id = :org_id
+                 WHERE t.code = '030211' OR t.name LIKE '%Anti HIV Antibodies Elisa%' LIMIT 1",
+                ['org_id' => $orgId]
+            );
+            if ($row) return $row;
+        }
+        if (preg_match('/^(anti\s*)?hiv(\s*(screening|rapid|test|1\s*2|antibodies|strip|card))?$/i', $cleanSearch) || preg_match('/\bhiv\b/i', $cleanSearch)) {
+            $row = $this->db->fetchOne(
+                "SELECT t.*, COALESCE(otp.price, t.price) AS price, COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
+                        (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+                 FROM tests t LEFT JOIN organization_test_prices otp ON otp.test_id = t.id AND otp.organization_id = :org_id
+                 WHERE t.code = 'ANTI-HIV-SCREENING' OR t.name = 'ANTI HIV SCREENING' LIMIT 1",
+                ['org_id' => $orgId]
+            );
+            if ($row) return $row;
+        }
+        if (preg_match('/^(anti\s*)?hcv(\s*(screening|rapid|test|antibodies|strip|card))?$/i', $cleanSearch) || preg_match('/\bhcv\b/i', $cleanSearch)) {
+            $row = $this->db->fetchOne(
+                "SELECT t.*, COALESCE(otp.price, t.price) AS price, COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
+                        (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+                 FROM tests t LEFT JOIN organization_test_prices otp ON otp.test_id = t.id AND otp.organization_id = :org_id
+                 WHERE t.code = 'ANTI-HCV-SCREENING' OR t.name = 'ANTI HCV SCREENING' LIMIT 1",
+                ['org_id' => $orgId]
+            );
+            if ($row) return $row;
+        }
+        if (preg_match('/^(hbs\s*ag|hbsag)(\s*(screening|rapid|test|strip|card))?$/i', $cleanSearch) || preg_match('/\bhbsag\b/i', $cleanSearch)) {
+            $row = $this->db->fetchOne(
+                "SELECT t.*, COALESCE(otp.price, t.price) AS price, COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
+                        (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
+                 FROM tests t LEFT JOIN organization_test_prices otp ON otp.test_id = t.id AND otp.organization_id = :org_id
+                 WHERE t.code = 'HBSAG-SCREENING' OR t.name = 'HBSAG SCREENING' LIMIT 1",
+                ['org_id' => $orgId]
+            );
+            if ($row) return $row;
+        }
+
         // 3) Smart prefix: "CBC" → "CBC (Complete Blood Count)", never "CBC For (Dengue)"
         // Prefer: name starts with "CODE (", then tests that have parameters, then shorter names.
         $row = $this->db->fetchOne(
             "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
                     (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
              FROM tests t
-             WHERE t.organization_id = :org_id
-               AND (
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             WHERE (
                     t.name LIKE :paren
                     OR t.name LIKE :space
                     OR t.name LIKE :paren_s
                     OR t.name LIKE :space_s
-               )
+             )
              ORDER BY
                 CASE
                     WHEN t.name LIKE :paren2 THEN 0
@@ -325,10 +497,13 @@ class TestRepository
         //    "Liver Function Test" → "LFTs (Liver Function Tests)"
         $row = $this->db->fetchOne(
             "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price,
                     (SELECT COUNT(*) FROM test_parameters tp WHERE tp.test_id = t.id) AS param_count
              FROM tests t
-             WHERE t.organization_id = :org_id
-               AND LOWER(t.name) LIKE :contains
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             WHERE LOWER(t.name) LIKE :contains
              ORDER BY param_count DESC, LENGTH(t.name) ASC
              LIMIT 1",
             [
@@ -359,9 +534,20 @@ class TestRepository
         return $this->db->execute("UPDATE tests SET " . implode(', ', $sets) . " WHERE id = :id", $params);
     }
 
-    public function findById(string $testId): ?array
+    public function findById(string $testId, ?string $orgId = null): ?array
     {
-        $row = $this->db->fetchOne("SELECT * FROM tests WHERE id = :id", ['id' => $testId]);
+        $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
+        $row = $this->db->fetchOne(
+            "SELECT t.*,
+                    COALESCE(otp.price, t.price) AS price,
+                    COALESCE(otp.b2b_price, ROUND(COALESCE(otp.price, t.price) * 0.75, 0)) AS b2b_price
+             FROM tests t
+             LEFT JOIN organization_test_prices otp 
+                 ON otp.test_id = t.id AND otp.organization_id = :org_id
+             WHERE t.id = :id
+             LIMIT 1",
+            ['id' => $testId, 'org_id' => $orgId]
+        );
         return $row ?: null;
     }
 }

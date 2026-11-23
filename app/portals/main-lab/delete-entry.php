@@ -16,12 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     if ($labNo === '') {
         $message = flash_error('Lab number is required.');
     } else {
-        $ok = lab_repo()->deleteByLabNo($labNo, $orgId);
-        if ($ok) {
-            audit_log('DELETE_ENTRY', 'lab_entries', $labNo, "Permanently deleted lab entry and associated records");
-            $message = flash_success('Entry ' . $labNo . ' deleted (including results/samples).');
+        $entryToDelete = lab_repo()->findByLabNo($labNo, $orgId);
+        $isLocked = !empty($entryToDelete['is_bill_locked']) || !empty($entryToDelete['is_report_locked']);
+        if ($isLocked && !is_admin_user()) {
+            $message = flash_error('Security Restriction: This record is locked (Bill/Report Lock). Only an Admin account can unlock or delete locked records.');
         } else {
-            $message = flash_error('Could not delete entry. Check lab number and try again.');
+            $ok = lab_repo()->deleteByLabNo($labNo, $orgId);
+            if ($ok) {
+                audit_log('DELETE_ENTRY', 'lab_entries', $labNo, "Permanently deleted lab entry and associated records");
+                $message = flash_success('Entry ' . $labNo . ' deleted (including results/samples).');
+            } else {
+                $message = flash_error('Could not delete entry. Check lab number and try again.');
+            }
         }
     }
 }
@@ -46,10 +52,7 @@ foreach ($entries as $e) {
     ];
 }
 
-$content = page_header(
-    'Delete Entry',
-    'Find and permanently remove entered patient lab records.'
-);
+$content = page_header('Delete Entry');
 $content .= $message;
 $content .= card(
     '<form method="get" class="flex flex-wrap items-end gap-3 p-4">' .

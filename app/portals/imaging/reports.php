@@ -65,7 +65,7 @@ $clinicalIndicationHtml = $clinicalNotes !== ''
 
 $headerHtml = render_branded_header($settings, true);
 $footerHtml = render_branded_footer($settings, true, 'imaging');
-$credit = software_credit_footer(true);
+$credit = '';
 
 $barcodeValue = $scanNo;
 $barcodeHtml = function_exists('render_barcode_html')

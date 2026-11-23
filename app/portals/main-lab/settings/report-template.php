@@ -6,44 +6,79 @@ require_once __DIR__ . '/../../../includes/bootstrap.php';
 require_once __DIR__ . '/../../../includes/layout.php';
 require_once __DIR__ . '/../../../includes/components.php';
 
+require_permission('header_footer_edit');
+
 $message = '';
-$orgId = current_user()['organization_id'] ?? 'ORG-001';
+$isSuper = is_admin_user();
+$userOrgId = current_user()['organization_id'] ?? 'ORG-001';
+
+$requestedOrgId = trim((string)($_GET['org'] ?? $_POST['org_id'] ?? ''));
+if ($isSuper && $requestedOrgId !== '') {
+    $orgId = $requestedOrgId;
+} else {
+    $orgId = $userOrgId;
+}
+
+$allOrgs = $isSuper ? org_repo()->getAll() : [];
+$currentOrgName = 'Diagnostic Organization';
+$orgOptions = '';
+if ($isSuper) {
+    $found = false;
+    foreach ($allOrgs as $o) {
+        $oid = (string)$o['id'];
+        $oname = (string)$o['name'];
+        if ($oid === $orgId) {
+            $currentOrgName = $oname;
+            $found = true;
+        }
+        $sel = ($oid === $orgId) ? ' selected' : '';
+        $orgOptions .= '<option value="' . e($oid) . '"' . $sel . '>' . e($oname) . ' (' . e($oid) . ')</option>';
+    }
+    if (!$found && !empty($allOrgs[0])) {
+        $orgId = (string)$allOrgs[0]['id'];
+        $currentOrgName = (string)$allOrgs[0]['name'];
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    require_permission('header_footer_edit');
-    if (isset($_POST['action']) && in_array($_POST['action'], ['save_signatories', 'save_imaging_signatories'], true)) {
-        $dept = ($_POST['action'] === 'save_imaging_signatories' || ($_POST['sig_department'] ?? '') === 'imaging') ? 'imaging' : 'laboratory';
-        $sigs = [];
-        $prefix = $dept === 'imaging' ? 'imaging_sig_' : 'sig_';
+
+    // 1. Save branding & letterhead settings
+    $result = save_branding_request($orgId);
+
+    // 2. Save Laboratory Signatories
+    if (isset($_POST['sig_name']) && is_array($_POST['sig_name'])) {
+        $labSigs = [];
         for ($i = 0; $i < 5; $i++) {
-            $name = $_POST[$prefix . 'name'][$i] ?? ($_POST['sig_name'][$i] ?? '');
-            $quals = $_POST[$prefix . 'quals'][$i] ?? ($_POST['sig_quals'][$i] ?? '');
-            $desig = $_POST[$prefix . 'desig'][$i] ?? ($_POST['sig_desig'][$i] ?? '');
-            $sigs[] = [
-                'name' => $name,
-                'qualifications' => $quals,
-                'designation' => $desig,
+            $labSigs[] = [
+                'name' => trim((string)($_POST['sig_name'][$i] ?? '')),
+                'qualifications' => trim((string)($_POST['sig_quals'][$i] ?? '')),
+                'designation' => trim((string)($_POST['sig_desig'][$i] ?? '')),
             ];
         }
-        $ok = setting_repo()->saveSignatories($orgId, $sigs, $dept);
-        $label = $dept === 'imaging' ? 'Diagnostic Center / Imaging' : 'Laboratory';
-        $message = $ok ? flash_success("{$label} doctor signatories saved successfully.") : flash_error('Could not save signatories.');
-    } else {
-        $result = save_branding_request($orgId);
-        $message = $result['ok'] ? flash_success($result['message']) : flash_error($result['message']);
+        setting_repo()->saveSignatories($orgId, $labSigs, 'laboratory');
     }
+
+    // 3. Save Diagnostic Imaging Signatories
+    if (isset($_POST['imaging_sig_name']) && is_array($_POST['imaging_sig_name'])) {
+        $imgSigs = [];
+        for ($i = 0; $i < 5; $i++) {
+            $imgSigs[] = [
+                'name' => trim((string)($_POST['imaging_sig_name'][$i] ?? '')),
+                'qualifications' => trim((string)($_POST['imaging_sig_quals'][$i] ?? '')),
+                'designation' => trim((string)($_POST['imaging_sig_desig'][$i] ?? '')),
+            ];
+        }
+        setting_repo()->saveSignatories($orgId, $imgSigs, 'imaging');
+    }
+
+    $message = $result['ok']
+        ? flash_success('Letterhead branding and doctor signatories saved successfully for ' . $currentOrgName . ' (' . $orgId . ').')
+        : flash_error($result['message']);
 }
 
 $s = branding_settings($orgId);
 $labSignatories = setting_repo()->getSignatories($orgId, 'laboratory');
 $imagingSignatories = setting_repo()->getSignatories($orgId, 'imaging');
-
-$content = page_header(
-    'Report & Bill Letterhead',
-    'Design and customize your laboratory header, footer, contact branding, and doctor signatories.',
-    '<a href="/portals/reports/preview.php" class="btn btn-secondary text-sm"><i class="fa-solid fa-eye mr-1.5"></i> Preview Sample Report</a>'
-);
-$content .= $message;
 
 $headerBuilderHtml = branding_header_image_field($s);
 $footerBuilderHtml = branding_footer_image_field($s);
@@ -94,211 +129,41 @@ foreach ($supportedFontSizes as $key => $sz) {
     $billFontSizeOpts .= '<option value="' . e($key) . '"' . $sel . '>' . e($sz['name']) . '</option>';
 }
 
+$showSingleHeadersChecked = !empty($s['show_single_test_headers']) ? ' checked' : '';
+$hidePendingTestsChecked = (!isset($s['hide_pending_tests']) || !empty($s['hide_pending_tests'])) ? ' checked' : '';
+$sReportHeadingTitle = e((string)($s['report_heading_title'] ?? 'DIAGNOSTIC REPORT'));
+$hideReportTitleBarChecked = !empty($s['hide_report_title_bar']) ? ' checked' : '';
+
+$currentReportParamSize = $s['report_param_size'] ?? '15px';
+$currentReportParamSizeNum = (float)str_replace('px', '', $currentReportParamSize);
+if ($currentReportParamSizeNum < 11 || $currentReportParamSizeNum > 24) {
+    $currentReportParamSizeNum = 15.0;
+}
+$currentReportParamWeight = $s['report_param_weight'] ?? '700';
+
+$weightOptions = [
+    '300' => 'Thin / Light (300)',
+    '400' => 'Normal / Regular (400)',
+    '500' => 'Medium (500)',
+    '600' => 'Semi-Bold (600)',
+    '700' => 'Bold (700) — Standard',
+    '800' => 'Extra Bold (800)',
+    '900' => 'Black / Heavy (900)',
+    '700_italic' => 'Bold Italic (700 Italic)',
+    'italic' => 'Normal Italic (400 Italic)',
+];
+
+$reportParamWeightOpts = '';
+foreach ($weightOptions as $wKey => $wLabel) {
+    $wKeyStr = (string)$wKey;
+    $sel = $wKeyStr === (string)$currentReportParamWeight ? ' selected' : '';
+    $reportParamWeightOpts .= '<option value="' . e($wKeyStr) . '"' . $sel . '>' . e((string)$wLabel) . '</option>';
+}
+
 $fontMapJson = json_encode($supportedFonts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 $fontSizeMapJson = json_encode($supportedFontSizes, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
-$content .= <<<HTML
-<form method="post" enctype="multipart/form-data" class="space-y-6">
-    <input type="hidden" name="action" value="save_branding">
-
-    <!-- Section 1: Lab Organization Details -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-700 font-bold text-sm">
-                    <i class="fa-solid fa-hospital"></i>
-                </span>
-                <div>
-                    <h2 class="text-sm font-bold text-slate-800">Lab Contact &amp; Organization Details</h2>
-                    <p class="text-xs text-slate-500">Contact information displayed on letterheads and reports</p>
-                </div>
-            </div>
-            <span class="badge badge-teal">Shared Branding</span>
-        </div>
-        <div class="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-                <label class="field-label text-xs">Laboratory Name <span class="text-red-500">*</span></label>
-                <input type="text" name="name" class="field text-sm font-semibold" value="{$sName}" required>
-            </div>
-            <div>
-                <label class="field-label text-xs">Contact Phone</label>
-                <input type="text" name="phone" class="field text-sm" value="{$sPhone}" placeholder="+92 300 1234567">
-            </div>
-            <div>
-                <label class="field-label text-xs">Email Address</label>
-                <input type="email" name="email" class="field text-sm" value="{$sEmail}" placeholder="info@lab.com">
-            </div>
-            <div class="sm:col-span-2">
-                <label class="field-label text-xs">Laboratory Physical Address</label>
-                <input type="text" name="address" class="field text-sm" value="{$sAddress}" placeholder="Main Boulevard, City, Country">
-            </div>
-            <div>
-                <label class="field-label text-xs">Logo Monogram / Short Text</label>
-                <input type="text" name="logo" class="field text-sm font-mono" value="{$sLogo}" placeholder="e.g. LDP">
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 2: Header Builder -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-700 font-bold text-sm">
-                <i class="fa-solid fa-heading"></i>
-            </span>
-            <div>
-                <h2 class="text-sm font-bold text-slate-800">Header Letterhead &amp; Logo Design</h2>
-                <p class="text-xs text-slate-500">Drag and position your logo and QR verification stamp</p>
-            </div>
-        </div>
-        <div class="p-5">
-            {$headerBuilderHtml}
-        </div>
-    </div>
-
-    <!-- Section 3: Footer Builder -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-sky-100 text-sky-700 font-bold text-sm">
-                <i class="fa-solid fa-shoe-prints"></i>
-            </span>
-            <div>
-                <h2 class="text-sm font-bold text-slate-800">Footer Letterhead &amp; Graphic Banner</h2>
-                <p class="text-xs text-slate-500">Upload and position custom footer image banners across reports and bills</p>
-            </div>
-        </div>
-        <div class="p-5">
-            {$footerBuilderHtml}
-        </div>
-    </div>
-
-    <!-- Section 4: Header & Footer Text Messages -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-sm">
-                    <i class="fa-solid fa-quote-left"></i>
-                </span>
-                <div>
-                    <h2 class="text-sm font-bold text-slate-800">Print Notes &amp; Custom Messages</h2>
-                    <p class="text-xs text-slate-500">Shared header note with department-specific footers for Laboratory vs. Diagnostic Imaging</p>
-                </div>
-            </div>
-            <span class="badge badge-purple">Header &amp; Footer Notes</span>
-        </div>
-        <div class="p-5 grid gap-4 sm:grid-cols-2">
-            <div>
-                <label class="field-label text-xs">Report Header Note <span class="text-slate-400 font-normal">(Top Header — Identical Across All Departments)</span></label>
-                <input type="text" name="header" class="field text-sm" value="{$sHeader}" placeholder="e.g. ISO 9001:2015 Certified Diagnostic Center">
-                <span class="text-[11px] text-slate-400 mt-0.5 block">Appears on Lab, Ultrasound, X-Ray, ECG, Echo, CT &amp; MRI reports</span>
-            </div>
-            <div>
-                <label class="field-label text-xs">Patient Bill Header Note <span class="text-slate-400 font-normal">(Receipts &amp; Tokens)</span></label>
-                <input type="text" name="bill_header" class="field text-sm" value="{$sBillHeader}" placeholder="e.g. Official Patient Receipt">
-            </div>
-            <div class="p-3 bg-teal-50/50 rounded-xl border border-teal-200/60">
-                <label class="field-label text-xs font-bold text-teal-900"><i class="fa-solid fa-flask-vial mr-1 text-teal-600"></i> Laboratory Report Footer Message</label>
-                <input type="text" name="footer" class="field text-sm bg-white" value="{$sFooter}" placeholder="e.g. Get well soon.">
-                <span class="text-[11px] text-teal-700/80 mt-1 block">Printed exclusively at the bottom of Pathology &amp; Lab Medicine reports</span>
-            </div>
-            <div class="p-3 bg-sky-50/50 rounded-xl border border-sky-200/60">
-                <label class="field-label text-xs font-bold text-sky-900"><i class="fa-solid fa-wave-square mr-1 text-sky-600"></i> Diagnostic Imaging / Modality Footer Message</label>
-                <input type="text" name="imaging_footer" class="field text-sm bg-white" value="{$sImagingFooter}" placeholder="e.g. Diagnostic Center &amp; Imaging — For scan inquiries contact reception.">
-                <span class="text-[11px] text-sky-700/80 mt-1 block">Printed at the bottom of Ultrasound, X-Ray, ECG, Echo, CT &amp; MRI reports</span>
-            </div>
-            <div>
-                <label class="field-label text-xs">Patient Bill Footer Message</label>
-                <input type="text" name="bill_footer" class="field text-sm" value="{$sBillFooter}" placeholder="e.g. Get well soon.">
-            </div>
-            <div>
-                <label class="field-label text-xs">Custom Imaging Clinical Disclaimer <span class="text-slate-400 font-normal">(optional override)</span></label>
-                <input type="text" name="imaging_disclaimer" class="field text-sm" value="{$sImagingDisclaimer}" placeholder="Leave blank for automatic modality disclaimer">
-                <span class="text-[11px] text-slate-400 mt-0.5 block">Overrides default clinical correlation note for imaging</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 5: Typography & Font Selection (Below Patient Info) -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 text-purple-700 font-bold text-sm">
-                    <i class="fa-solid fa-font"></i>
-                </span>
-                <div>
-                    <h2 class="text-sm font-bold text-slate-800">Typography &amp; Document Fonts (Below Patient Info)</h2>
-                    <p class="text-xs text-slate-500">Choose the font styling used across the test results, reference ranges, and billing table</p>
-                </div>
-            </div>
-            <span class="badge badge-purple">Typography</span>
-        </div>
-        <div class="p-5 grid gap-6 sm:grid-cols-2">
-            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-file-medical text-blue-600"></i>
-                    <label class="field-label text-xs font-bold text-slate-800 mb-0">Lab Report Font (Below Patient Info)</label>
-                </div>
-                <p class="text-xs text-slate-500 leading-normal">Applied to the test parameters, reference values, units, and clinical findings on generated lab reports.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Font Family &amp; Style</label>
-                        <select name="report_font" id="report_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                            {$reportFontOpts}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Text Size</label>
-                        <select name="report_font_size" id="report_font_size_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                            {$reportFontSizeOpts}
-                        </select>
-                    </div>
-                </div>
-                <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
-                    <div id="report-font-preview-text" class="text-slate-900 transition-all p-1">CBC / Hemoglobin: 14.2 g/dL &nbsp;|&nbsp; Ref: 12.0 - 16.0 &nbsp;|&nbsp; Unit: g/dL</div>
-                </div>
-            </div>
-
-            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-file-invoice text-emerald-600"></i>
-                    <label class="field-label text-xs font-bold text-slate-800 mb-0">Billing / Receipt Font (Below Patient Info)</label>
-                </div>
-                <p class="text-xs text-slate-500 leading-normal">Applied to the billed tests table, prices, discounts, and payment summary on patient bills/receipts.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Font Family &amp; Style</label>
-                        <select name="bill_font" id="bill_font_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                            {$billFontOpts}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Text Size</label>
-                        <select name="bill_font_size" id="bill_font_size_select" class="field text-sm font-semibold" onchange="updateFontPreviews()">
-                            {$billFontSizeOpts}
-                        </select>
-                    </div>
-                </div>
-                <div class="p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Live Preview Sample</span>
-                    <div id="bill-font-preview-text" class="text-slate-900 transition-all p-1">Complete Blood Count: Rs 900 &nbsp;|&nbsp; Total Due: Rs 0 (PAID)</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Submit Branding Buttons -->
-    <div class="flex flex-wrap items-center gap-3 pt-2">
-        <button type="submit" class="btn btn-primary text-sm py-2.5 px-5 shadow-sm">
-            <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Branding &amp; Letterhead
-        </button>
-        <a href="/portals/reports/preview.php" class="btn btn-secondary text-sm py-2.5 px-4">
-            <i class="fa-solid fa-eye mr-1.5"></i> Preview Sample Report
-        </a>
-    </div>
-</form>
-HTML;
-
-// Section 6A: Laboratory Medicine Signatories Form
+// Lab signatories fields
 $labSigFormFields = '';
 for ($i = 0; $i < 5; $i++) {
     $sig = $labSignatories[$i] ?? ['name' => '', 'qualifications' => '', 'designation' => ''];
@@ -308,30 +173,28 @@ for ($i = 0; $i < 5; $i++) {
     $sDesig = e($sig['designation']);
 
     $labSigFormFields .= <<<HTML
-    <div class="p-4 border border-teal-200/80 rounded-xl bg-teal-50/20 shadow-xs space-y-3 relative">
-        <div class="flex items-center justify-between border-b border-teal-100 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800">
-                <i class="fa-solid fa-flask-vial text-teal-600"></i> Lab Signatory #{$slotNum}
-            </span>
-            <span class="text-[10px] uppercase font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">Slot {$slotNum}</span>
+    <div class="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2.5">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/70">
+            <span class="text-xs font-bold text-slate-700">Doctor Slot {$slotNum}</span>
+            <span class="text-[10px] font-semibold text-slate-400">Pathology</span>
         </div>
         <div>
-            <label class="field-label text-xs">Pathologist / Doctor Name</label>
-            <input type="text" name="sig_name[]" class="field text-sm font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. A. K. Khan">
+            <label class="field-label text-[11px] mb-1">Doctor Name</label>
+            <input type="text" name="sig_name[]" class="field text-xs font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. A. K. Khan">
         </div>
         <div>
-            <label class="field-label text-xs">Qualifications <span class="text-slate-400 font-normal">(optional)</span></label>
-            <textarea name="sig_quals[]" rows="2" class="field text-xs bg-white" placeholder="e.g. M.B.B.S, M.Phil, F.C.P.S (Pathology)">{$sQuals}</textarea>
+            <label class="field-label text-[11px] mb-1">Qualifications</label>
+            <input type="text" name="sig_quals[]" class="field text-xs bg-white" value="{$sQuals}" placeholder="e.g. M.B.B.S, F.C.P.S (Pathology)">
         </div>
         <div>
-            <label class="field-label text-xs">Designation <span class="text-slate-400 font-normal">(optional)</span></label>
+            <label class="field-label text-[11px] mb-1">Designation</label>
             <input type="text" name="sig_desig[]" class="field text-xs bg-white" value="{$sDesig}" placeholder="e.g. Consultant Pathologist">
         </div>
     </div>
     HTML;
 }
 
-// Section 6B: Diagnostic Center & Imaging Signatories Form
+// Imaging signatories fields
 $imagingSigFormFields = '';
 for ($i = 0; $i < 5; $i++) {
     $sig = $imagingSignatories[$i] ?? ['name' => '', 'qualifications' => '', 'designation' => ''];
@@ -341,88 +204,418 @@ for ($i = 0; $i < 5; $i++) {
     $sDesig = e($sig['designation']);
 
     $imagingSigFormFields .= <<<HTML
-    <div class="p-4 border border-sky-200/80 rounded-xl bg-sky-50/20 shadow-xs space-y-3 relative">
-        <div class="flex items-center justify-between border-b border-sky-100 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-sky-900">
-                <i class="fa-solid fa-user-doctor text-sky-600"></i> Imaging Specialist #{$slotNum}
-            </span>
-            <span class="text-[10px] uppercase font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">Slot {$slotNum}</span>
+    <div class="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2.5">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/70">
+            <span class="text-xs font-bold text-slate-700">Specialist Slot {$slotNum}</span>
+            <span class="text-[10px] font-semibold text-slate-400">Imaging / Scan</span>
         </div>
         <div>
-            <label class="field-label text-xs">Radiologist / Sonologist Name</label>
-            <input type="text" name="imaging_sig_name[]" class="field text-sm font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. Imran Sheikh">
+            <label class="field-label text-[11px] mb-1">Doctor / Specialist Name</label>
+            <input type="text" name="imaging_sig_name[]" class="field text-xs font-semibold bg-white" value="{$sDocName}" placeholder="e.g. Dr. Imran Sheikh">
         </div>
         <div>
-            <label class="field-label text-xs">Qualifications <span class="text-slate-400 font-normal">(optional)</span></label>
-            <textarea name="imaging_sig_quals[]" rows="2" class="field text-xs bg-white" placeholder="e.g. M.B.B.S, F.C.P.S (Radiology)">{$sQuals}</textarea>
+            <label class="field-label text-[11px] mb-1">Qualifications</label>
+            <input type="text" name="imaging_sig_quals[]" class="field text-xs bg-white" value="{$sQuals}" placeholder="e.g. M.B.B.S, F.C.P.S (Radiology)">
         </div>
         <div>
-            <label class="field-label text-xs">Designation <span class="text-slate-400 font-normal">(optional)</span></label>
-            <input type="text" name="imaging_sig_desig[]" class="field text-xs bg-white" value="{$sDesig}" placeholder="e.g. Consultant Radiologist / Sonologist">
+            <label class="field-label text-[11px] mb-1">Designation</label>
+            <input type="text" name="imaging_sig_desig[]" class="field text-xs bg-white" value="{$sDesig}" placeholder="e.g. Consultant Radiologist">
         </div>
     </div>
     HTML;
 }
 
-$content .= <<<HTML
-<!-- Section 6A: Laboratory Medicine Signatories -->
-<div class="mt-8 bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-700 font-bold text-sm">
-                <i class="fa-solid fa-flask-vial"></i>
-            </span>
+$orgSwitcherHtml = '';
+if ($isSuper && count($allOrgs) > 1) {
+    $orgSwitcherHtml = <<<HTML
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-3xl shadow-md flex flex-wrap items-center justify-between gap-3 border border-indigo-800/40">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-lg border border-indigo-400/30">
+                <i class="fa-solid fa-building-columns"></i>
+            </div>
             <div>
-                <h2 class="text-sm font-bold text-slate-800">Laboratory Medicine Footer — Doctor Signatories</h2>
-                <p class="text-xs text-slate-500">Signatures printed exclusively at the bottom of Pathology &amp; Laboratory Medicine reports</p>
+                <div class="text-[10px] uppercase tracking-wider text-indigo-300 font-extrabold">Diagnostic Multi-Tenant Letterhead Studio</div>
+                <div class="text-sm font-bold text-white flex items-center gap-2">
+                    Configuring Company: <span class="text-emerald-400">{$currentOrgName}</span> <code class="text-xs bg-slate-800 px-1.5 py-0.5 rounded text-indigo-200">{$orgId}</code>
+                </div>
             </div>
         </div>
-        <span class="badge badge-teal">Lab Sign-offs</span>
+        <div class="flex items-center gap-2">
+            <label for="super_org_switcher" class="text-xs font-semibold text-slate-300">Switch Company / Lab:</label>
+            <select id="super_org_switcher" onchange="if(this.value) location.href='/portals/branding.php?org='+encodeURIComponent(this.value)" class="text-xs font-bold text-slate-900 bg-white rounded-xl py-2 px-3 border-0 shadow-sm cursor-pointer focus:ring-2 focus:ring-indigo-400">
+                {$orgOptions}
+            </select>
+        </div>
     </div>
-    <form method="post" class="p-5 space-y-4">
-        <input type="hidden" name="action" value="save_signatories">
-        <input type="hidden" name="sig_department" value="laboratory">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {$labSigFormFields}
-        </div>
-        <div class="pt-2">
-            <button type="submit" class="btn btn-primary text-sm py-2 px-4 shadow-sm">
-                <i class="fa-solid fa-check mr-1.5"></i> Save Laboratory Signatories
-            </button>
-        </div>
-    </form>
-</div>
+HTML;
+}
 
-<!-- Section 6B: Diagnostic Center & Imaging Signatories -->
-<div class="mt-6 bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-sky-100 text-sky-700 font-bold text-sm">
-                <i class="fa-solid fa-wave-square"></i>
-            </span>
-            <div>
-                <h2 class="text-sm font-bold text-slate-800">Diagnostic Center &amp; Imaging Footer — Specialist Signatories</h2>
-                <p class="text-xs text-slate-500">Signatures printed exclusively at the bottom of Ultrasound, X-Ray, ECG, Echo, CT Scan &amp; MRI reports</p>
+$reportPreviewUrl = '/portals/reports/preview.php' . ($isSuper ? '?org=' . urlencode($orgId) : '');
+$receiptPreviewUrl = '/portals/receipts.php' . ($isSuper ? '?org=' . urlencode($orgId) : '');
+
+$content = <<<HTML
+<div class="space-y-5">
+    {$message}
+    {$orgSwitcherHtml}
+
+    <!-- Top Action / Navigation Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+        <div>
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Header &amp; Footer Settings</h1>
+            <p class="text-xs text-slate-500 font-medium">Letterhead branding, report footers, doctor signatories, and typography for <strong>{$currentOrgName}</strong></p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{$reportPreviewUrl}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors shadow-2xs">
+                <i class="fa-solid fa-file-pdf text-slate-500 text-xs"></i>
+                <span>Preview Report</span>
+            </a>
+            <a href="{$receiptPreviewUrl}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors shadow-2xs">
+                <i class="fa-solid fa-receipt text-slate-500 text-xs"></i>
+                <span>Preview Receipt</span>
+            </a>
+            <button type="submit" form="master-branding-form" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors">
+                <i class="fa-solid fa-floppy-disk text-xs"></i>
+                <span>Save All Changes</span>
+            </button>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="master-branding-form" class="space-y-6">
+        <input type="hidden" name="action" value="save_branding">
+        <input type="hidden" name="org_id" value="{$orgId}">
+
+        <!-- Modern Tabs -->
+        <div class="border-b border-slate-200 flex items-center gap-2 text-xs font-bold overflow-x-auto">
+            <button type="button" onclick="switchSettingsTab('header')" id="tab-btn-header" class="px-4 py-2.5 border-b-2 border-slate-900 text-slate-900 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-heading mr-1.5 text-slate-600"></i> Header &amp; Logo
+            </button>
+            <button type="button" onclick="switchSettingsTab('footer')" id="tab-btn-footer" class="px-4 py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-shoe-prints mr-1.5 text-slate-400"></i> Footer &amp; Disclaimers
+            </button>
+            <button type="button" onclick="switchSettingsTab('signatories')" id="tab-btn-signatories" class="px-4 py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-signature mr-1.5 text-slate-400"></i> Doctor Signatories
+            </button>
+            <button type="button" onclick="switchSettingsTab('organization')" id="tab-btn-organization" class="px-4 py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-hospital mr-1.5 text-slate-400"></i> Contact &amp; Typography
+            </button>
+        </div>
+
+        <!-- TAB 1: HEADER & LOGO -->
+        <div id="tab-panel-header" class="space-y-5">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="field-label text-xs">Report Header Subtitle / Tagline</label>
+                        <input type="text" name="header" class="field text-sm" value="{$sHeader}" placeholder="e.g. Quality Diagnostics &bull; Pathology &bull; Ultrasound">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Patient Bill Header Note</label>
+                        <input type="text" name="bill_header" class="field text-sm" value="{$sBillHeader}" placeholder="e.g. Official Receipt">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    {$headerBuilderHtml}
+                </div>
             </div>
         </div>
-        <span class="badge badge-sky">Imaging Sign-offs</span>
-    </div>
-    <form method="post" class="p-5 space-y-4">
-        <input type="hidden" name="action" value="save_imaging_signatories">
-        <input type="hidden" name="sig_department" value="imaging">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {$imagingSigFormFields}
+
+        <!-- TAB 2: FOOTER & DISCLAIMERS -->
+        <div id="tab-panel-footer" class="space-y-5 hidden">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="field-label text-xs">Laboratory Report Footer</label>
+                        <input type="text" name="footer" class="field text-sm" value="{$sFooter}" placeholder="e.g. Pathology findings should be correlated clinically.">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Diagnostic Imaging Footer</label>
+                        <input type="text" name="imaging_footer" class="field text-sm" value="{$sImagingFooter}" placeholder="e.g. Ultrasound &amp; X-Ray reports require clinical correlation.">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Patient Bill Footer</label>
+                        <input type="text" name="bill_footer" class="field text-sm" value="{$sBillFooter}" placeholder="e.g. Thank you for choosing our center.">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Imaging Clinical Disclaimer (Optional)</label>
+                        <input type="text" name="imaging_disclaimer" class="field text-sm" value="{$sImagingDisclaimer}" placeholder="Leave blank for automatic default">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    {$footerBuilderHtml}
+                </div>
+            </div>
         </div>
-        <div class="pt-2">
-            <button type="submit" class="btn btn-primary text-sm py-2 px-4 shadow-sm bg-sky-600 hover:bg-sky-700 border-sky-600">
-                <i class="fa-solid fa-check mr-1.5"></i> Save Diagnostic Imaging Signatories
-            </button>
+
+        <!-- TAB 3: DOCTOR SIGNATORIES -->
+        <div id="tab-panel-signatories" class="space-y-5 hidden">
+            <!-- Sub-switcher between Lab and Imaging Signatories -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800">Laboratory Medicine Signatories</h2>
+                        <p class="text-xs text-slate-500">Printed at the bottom of Pathology &amp; Laboratory Medicine reports</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {$labSigFormFields}
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800">Diagnostic Imaging Signatories</h2>
+                        <p class="text-xs text-slate-500">Printed at the bottom of Ultrasound, X-Ray, ECG, Echo, CT &amp; MRI reports</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {$imagingSigFormFields}
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: CONTACT & TYPOGRAPHY -->
+        <div id="tab-panel-organization" class="space-y-5 hidden">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <label class="field-label text-xs">Center / Hospital Name</label>
+                        <input type="text" name="name" class="field text-sm font-semibold" value="{$sName}" required>
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Phone Number</label>
+                        <input type="text" name="phone" class="field text-sm" value="{$sPhone}">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Email Address</label>
+                        <input type="email" name="email" class="field text-sm" value="{$sEmail}">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="field-label text-xs">Physical Address</label>
+                        <input type="text" name="address" class="field text-sm" value="{$sAddress}">
+                    </div>
+                    <div>
+                        <label class="field-label text-xs">Monogram / Abbreviation</label>
+                        <input type="text" name="logo" class="field text-sm font-mono" value="{$sLogo}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <h2 class="text-sm font-bold text-slate-800 pb-2 border-b border-slate-100">Document Typography &amp; Font Sizes</h2>
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div class="p-3.5 bg-slate-50/60 rounded-xl border border-slate-200 space-y-2.5">
+                        <label class="field-label text-xs font-bold text-slate-800 mb-0">Lab Report Body Font</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Font Family</label>
+                                <select name="report_font" id="report_font_select" class="field text-xs font-semibold" onchange="updateFontPreviews()">
+                                    {$reportFontOpts}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Font Size</label>
+                                <select name="report_font_size" id="report_font_size_select" class="field text-xs font-semibold" onchange="updateFontPreviews()">
+                                    {$reportFontSizeOpts}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-white rounded-lg border border-slate-200 text-xs">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Sample</span>
+                            <div id="report-font-preview-text" class="text-slate-900 p-0.5">CBC / Hemoglobin: 14.2 g/dL &nbsp;|&nbsp; Ref: 12.0 - 16.0</div>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 bg-slate-50/60 rounded-xl border border-slate-200 space-y-2.5">
+                        <label class="field-label text-xs font-bold text-slate-800 mb-0">Patient Bill / Receipt Font</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Font Family</label>
+                                <select name="bill_font" id="bill_font_select" class="field text-xs font-semibold" onchange="updateFontPreviews()">
+                                    {$billFontOpts}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Font Size</label>
+                                <select name="bill_font_size" id="bill_font_size_select" class="field text-xs font-semibold" onchange="updateFontPreviews()">
+                                    {$billFontSizeOpts}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-white rounded-lg border border-slate-200 text-xs">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Sample</span>
+                            <div id="bill-font-preview-text" class="text-slate-900 p-0.5">Complete Blood Count: Rs 900 &nbsp;|&nbsp; PAID</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Body Test Parameters & Results Typography (Dedicated Slider & Weight) -->
+                    <div class="p-4 bg-indigo-50/70 rounded-2xl border-2 border-indigo-200 space-y-3.5 sm:col-span-2 shadow-2xs">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <label class="field-label text-xs font-bold text-indigo-950 mb-0 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-sliders text-indigo-600"></i> Main Body Test Parameters &amp; Results Font Size &amp; Weight
+                                </label>
+                                <p class="text-[11px] text-indigo-800/80 mt-0.5">Use the slider and weight dropdown below to adjust the main test parameters and results text. <strong>Only affects the main test body table rows</strong> (does not alter letterhead, patient demographics, or footers).</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase font-bold text-indigo-900 tracking-wider">Active Body Size:</span>
+                                <span id="param_size_badge" class="font-mono font-black text-xs bg-indigo-600 text-white px-2.5 py-1 rounded-lg shadow-xs">{$currentReportParamSize}</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                            <!-- Range Slider -->
+                            <div class="bg-white p-3.5 rounded-xl border border-indigo-200/90 shadow-2xs space-y-2">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-slate-700">Body Font Size Slider</span>
+                                    <span class="text-[10px] text-slate-400 font-mono">11px &longleftrightarrow; 22px</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    name="report_param_size" 
+                                    id="report_param_size_slider" 
+                                    min="11" 
+                                    max="22" 
+                                    step="0.5" 
+                                    value="{$currentReportParamSizeNum}" 
+                                    class="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                                    oninput="updateParamSizeSlider(this.value)"
+                                >
+                                <div class="flex justify-between text-[10px] text-slate-400 font-medium px-0.5">
+                                    <span>11px (Fine)</span>
+                                    <span>15px (Standard)</span>
+                                    <span>18px (Large)</span>
+                                    <span>22px (Max)</span>
+                                </div>
+                            </div>
+
+                            <!-- Weight Dropdown -->
+                            <div class="bg-white p-3.5 rounded-xl border border-indigo-200/90 shadow-2xs space-y-2">
+                                <label class="text-xs font-bold text-slate-700 block">Font Weight &amp; Style (Thin, Bold, Italic)</label>
+                                <select name="report_param_weight" id="report_param_weight_select" class="field text-xs font-semibold w-full" onchange="updateParamFontPreview()">
+                                    {$reportParamWeightOpts}
+                                </select>
+                                <span class="text-[10px] text-slate-400 block">Bold (700) or Extra Bold (800) is recommended for clear reading by doctors.</span>
+                            </div>
+                        </div>
+
+                        <!-- Live Interactive Table Sample -->
+                        <div class="bg-white p-3 rounded-xl border border-indigo-200/90 shadow-2xs space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-indigo-700 tracking-wider block">Live Test Table Preview</span>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                            <th class="py-1 px-2">Test / Parameter</th>
+                                            <th class="py-1 px-2 text-right">Reference Range</th>
+                                            <th class="py-1 px-2 text-right">Unit</th>
+                                            <th class="py-1 px-2 text-right">Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-100">
+                                            <td id="sample_param_name" class="py-1.5 px-2 text-slate-900 font-bold" style="font-size: {$currentReportParamSize};">Hemoglobin (HB)</td>
+                                            <td id="sample_param_range" class="py-1.5 px-2 text-right text-slate-900" style="font-size: calc({$currentReportParamSize} - 1px);">12.0 - 16.5</td>
+                                            <td id="sample_param_unit" class="py-1.5 px-2 text-right text-slate-900" style="font-size: calc({$currentReportParamSize} - 1px);">g/dl</td>
+                                            <td id="sample_param_result" class="py-1.5 px-2 text-right text-slate-900 font-bold" style="font-size: {$currentReportParamSize};">14.2</td>
+                                        </tr>
+                                        <tr>
+                                            <td id="sample_param_name2" class="py-1.5 px-2 text-slate-900 font-bold" style="font-size: {$currentReportParamSize};">ANTI HIV SCREENING</td>
+                                            <td id="sample_param_range2" class="py-1.5 px-2 text-right text-slate-900" style="font-size: calc({$currentReportParamSize} - 1px);">Negative</td>
+                                            <td id="sample_param_unit2" class="py-1.5 px-2 text-right text-slate-900" style="font-size: calc({$currentReportParamSize} - 1px);">—</td>
+                                            <td id="sample_param_result2" class="py-1.5 px-2 text-right text-slate-900 font-bold" style="font-size: {$currentReportParamSize};">Negative</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 mt-4">
+                    <label class="inline-flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" name="show_single_test_headers" value="1" class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4"{$showSingleHeadersChecked}>
+                        <div>
+                            <span class="text-xs font-bold text-slate-800">Section Banner Headings Above Single Tests</span>
+                            <p class="text-[11px] text-slate-500 mt-0.5">When unchecked (default &amp; recommended), single tests like Anti-HCV, Hepatitis B (HBsAg), Anti-HIV, and Blood Sugar print cleanly without redundant section banners. Check this only if you want individual banners above every test.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200 mt-3">
+                    <label class="inline-flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" name="hide_pending_tests" value="1" class="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-600 w-4 h-4"{$hidePendingTestsChecked}>
+                        <div>
+                            <span class="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                <span>Only Print Tests with Entered Results (Hide "Pending" Tests)</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Recommended</span>
+                            </span>
+                            <p class="text-[11px] text-slate-600 mt-0.5">When checked (default &amp; recommended), tests whose results have not been entered yet will not appear on the patient report. This allows handing over clean partial reports without displaying "Pending" for unentered tests. When unchecked, all booked tests are printed with "Pending" status.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 mt-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800 mb-1">
+                            Report Sub-Heading Title (Bar Below Patient Info)
+                        </label>
+                        <p class="text-[11px] text-slate-500 mb-2">
+                            The title bar printed directly below the patient metadata block (e.g. <code>DIAGNOSTIC REPORT</code>). You can customize this to your preferred title or your lab's name, or click the quick presets below. (Previously showed "DEPARTMENT OF LABORATORY MEDICINE").
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" name="report_heading_title" id="report_heading_title_input" value="{$sReportHeadingTitle}" class="w-full max-w-md px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-slate-900 focus:border-slate-900 font-semibold" placeholder="e.g. DIAGNOSTIC REPORT or LABORATORY REPORT">
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <span class="text-[11px] font-semibold text-slate-400 py-0.5">Quick Presets:</span>
+                            <button type="button" class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('report_heading_title_input').value='DIAGNOSTIC REPORT'">DIAGNOSTIC REPORT (Standard)</button>
+                            <button type="button" class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('report_heading_title_input').value='LABORATORY REPORT'">LABORATORY REPORT</button>
+                            <button type="button" class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('report_heading_title_input').value='PATHOLOGY REPORT'">PATHOLOGY REPORT</button>
+                            <button type="button" class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('report_heading_title_input').value='auto'">Auto (Per Department)</button>
+                        </div>
+                    </div>
+                    <div class="pt-2.5 border-t border-slate-200">
+                        <label class="inline-flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" name="hide_report_title_bar" value="1" class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4"{$hideReportTitleBarChecked}>
+                            <span class="text-xs font-semibold text-slate-700">Hide title bar completely (do not print any sub-heading bar below patient info)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Save Action Bar -->
+        <div class="sticky bottom-4 z-20 flex items-center justify-between p-3.5 bg-white/95 backdrop-blur-md border border-slate-300 rounded-2xl shadow-lg">
+            <span class="text-xs text-slate-500">All changes across tabs will be saved at once.</span>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="btn btn-primary text-xs py-2 px-5 font-bold shadow-sm">
+                    <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save All Changes
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
 <script>
 (function() {
+    window.switchSettingsTab = function(tabName) {
+        ['header', 'footer', 'signatories', 'organization'].forEach(function(t) {
+            const panel = document.getElementById('tab-panel-' + t);
+            const btn = document.getElementById('tab-btn-' + t);
+            if (panel && btn) {
+                if (t === tabName) {
+                    panel.classList.remove('hidden');
+                    btn.className = 'px-4 py-2.5 border-b-2 border-slate-900 text-slate-900 transition-colors whitespace-nowrap';
+                } else {
+                    panel.classList.add('hidden');
+                    btn.className = 'px-4 py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap';
+                }
+            }
+        });
+    };
+
     const fontMap = {$fontMapJson};
     const fontSizeMap = {$fontSizeMapJson};
 
@@ -458,13 +651,65 @@ $content .= <<<HTML
         }
     };
 
+    window.updateParamSizeSlider = function(val) {
+        const sizeStr = val + 'px';
+        const badge = document.getElementById('param_size_badge');
+        if (badge) badge.textContent = sizeStr;
+        window.updateParamFontPreview();
+    };
+
+    window.updateParamFontPreview = function() {
+        const slider = document.getElementById('report_param_size_slider');
+        const weightSel = document.getElementById('report_param_weight_select');
+        if (!slider || !weightSel) return;
+
+        const size = slider.value + 'px';
+        const subSize = (parseFloat(slider.value) - 1) + 'px';
+        const weightVal = weightSel.value;
+        
+        let weight = '700';
+        let style = 'normal';
+        if (weightVal.endsWith('_italic') || weightVal === 'italic') {
+            style = 'italic';
+            weight = weightVal === 'italic' ? '400' : weightVal.replace('_italic', '');
+        } else {
+            weight = weightVal;
+        }
+
+        const els = ['sample_param_name', 'sample_param_result', 'sample_param_name2', 'sample_param_result2'];
+        els.forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.fontSize = size;
+                el.style.fontWeight = weight;
+                el.style.fontStyle = style;
+            }
+        });
+
+        const subEls = ['sample_param_range', 'sample_param_unit', 'sample_param_range2', 'sample_param_unit2'];
+        subEls.forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.fontSize = subSize;
+                el.style.fontWeight = weight;
+                el.style.fontStyle = style;
+            }
+        });
+    };
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateFontPreviews);
+        document.addEventListener('DOMContentLoaded', function() {
+            updateFontPreviews();
+            updateParamFontPreview();
+        });
     } else {
         updateFontPreviews();
+        updateParamFontPreview();
     }
 })();
 </script>
 HTML;
 
-render_page('Report Template', 'main-lab', 'settings-report', $content);
+$portal = current_portal();
+$activeKey = ($portal === 'imaging') ? 'settings-report' : 'settings-report';
+render_page('Header & Footer Settings', $portal, $activeKey, $content);

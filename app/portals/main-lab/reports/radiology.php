@@ -115,7 +115,7 @@ foreach ($dedicatedScans as $sc) {
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
     <a href="/portals/lab-entries/new.php" class="btn btn-primary text-xs py-2 px-3">
-        <i class="fa-solid fa-plus mr-1"></i> New Entry
+        <i class="fa-solid fa-plus mr-1"></i> Register Patient
     </a>
     <a href="/portals/new-scan.php" class="btn btn-secondary text-xs py-2 px-3">
         <i class="fa-solid fa-x-ray mr-1"></i> Imaging Study

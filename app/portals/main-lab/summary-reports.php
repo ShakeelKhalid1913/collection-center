@@ -142,7 +142,8 @@ $sqlImg = "SELECT s.modality AS default_dept, s.id, s.scan_no AS ref_no, s.patie
                   'IMG-01' AS branch, s.branch_id,
                   COALESCE(p.phone, '—') AS patient_phone,
                   COALESCE(p.age, '—') AS patient_age,
-                  COALESCE(p.gender, '—') AS patient_gender
+                  COALESCE(p.gender, '—') AS patient_gender,
+                  s.lab_no
            FROM imaging_scans s
            LEFT JOIN patients p ON (p.id = s.patient_id OR p.patient_no = s.patient_id)
            WHERE s.organization_id = :org AND (
@@ -167,76 +168,181 @@ if ($userFilter !== '') {
 }
 $rawImg = db()->fetchAll($sqlImg, $paramsImg);
 
-// Combine all patient transactions
-$allTransactions = [];
-foreach ($rawLab as $row) {
-    $amount = (float)($row['amount'] ?? 0);
-    $discount = (float)($row['discount'] ?? 0);
-    $paid = (float)($row['paid'] ?? 0);
-    $due = max(0.0, ($amount - $discount) - $paid);
-
-    // Classify department
-    $meta = get_department_meta($row['study_title'] ?? 'Lab');
-    $deptName = $meta['name'];
-    if ($deptName === 'Ultrasound') $deptName = 'Ultrasound (USG)';
-    if ($deptName === 'Echocardiography') $deptName = 'Echocardiography (Echo)';
-
-    $allTransactions[] = [
-        'source'        => 'Laboratory',
-        'dept'          => $deptName,
-        'ref_no'        => (string)$row['ref_no'],
-        'patient_id'    => (string)($row['patient_id'] ?: '—'),
-        'patient_name'  => (string)$row['patient_name'],
-        'patient_phone' => (string)$row['patient_phone'],
-        'patient_age'   => (string)$row['patient_age'],
-        'patient_gender'=> (string)$row['patient_gender'],
-        'study_title'   => (string)$row['study_title'],
-        'doctor'        => (string)($row['doctor'] ?: 'Self / Walk-in'),
-        'created_by'    => (string)($row['created_by'] ?: 'Reception / Staff'),
-        'created_at'    => (string)$row['created_at'],
-        'date'          => substr((string)$row['created_at'], 0, 10),
-        'status'        => (string)$row['status'],
-        'amount'        => $amount,
-        'discount'      => $discount,
-        'net'           => max(0.0, $amount - $discount),
-        'paid'          => $paid,
-        'due'           => $due,
-    ];
+// Group imaging scans by parent lab order number
+$imgByLab = [];
+foreach ($rawImg as $rRow) {
+    $ln = trim((string)($rRow['lab_no'] ?? ''));
+    if ($ln !== '') {
+        $imgByLab[$ln][] = $rRow;
+    }
 }
 
-foreach ($rawImg as $row) {
-    $amount = (float)($row['amount'] ?? 0);
-    $discount = (float)($row['discount'] ?? 0);
-    $paid = (float)($row['paid'] ?? 0);
-    $due = max(0.0, ($amount - $discount) - $paid);
+// Combine all patient transactions with accurate department allocation (no duplicates, no double counting)
+$allTransactions = [];
+$handledScanNos = [];
 
-    $mod = trim((string)$row['dept']);
-    if ($mod === '') $mod = 'Ultrasound';
-    if (strcasecmp($mod, 'Echo') === 0 || strcasecmp($mod, 'Echocardiography') === 0) {
-        $mod = 'Echocardiography (Echo)';
+foreach ($rawLab as $row) {
+    $lNo = (string)$row['ref_no'];
+    $bd = allocate_order_breakdown([
+        'tests' => $row['study_title'],
+        'amount' => $row['amount'],
+        'discount' => $row['discount'],
+        'paid' => $row['paid'],
+    ], $orgId);
+
+    // 1. If this visit has Pathology tests, add 1 Laboratory transaction with exact pathology share
+    if (!empty($bd['lab']['has_lab'])) {
+        $amount = (float)$bd['lab']['gross'];
+        $discount = (float)$bd['lab']['discount'];
+        $paid = (float)$bd['lab']['paid'];
+        $due = (float)$bd['lab']['due'];
+
+        $allTransactions[] = [
+            'source'        => 'Laboratory',
+            'dept'          => 'Laboratory',
+            'ref_no'        => (string)$row['ref_no'],
+            'patient_id'    => (string)($row['patient_id'] ?: '—'),
+            'patient_name'  => (string)$row['patient_name'],
+            'patient_phone' => (string)$row['patient_phone'],
+            'patient_age'   => (string)$row['patient_age'],
+            'patient_gender'=> (string)$row['patient_gender'],
+            'study_title'   => (string)$bd['lab']['studies'],
+            'doctor'        => (string)($row['doctor'] ?: 'Self / Walk-in'),
+            'created_by'    => (string)($row['created_by'] ?: 'Reception / Staff'),
+            'created_at'    => (string)$row['created_at'],
+            'date'          => substr((string)$row['created_at'], 0, 10),
+            'status'        => (string)$row['status'],
+            'amount'        => $amount,
+            'discount'      => $discount,
+            'net'           => max(0.0, $amount - $discount),
+            'paid'          => $paid,
+            'due'           => $due,
+        ];
     }
 
-    $allTransactions[] = [
-        'source'        => 'Diagnostic Imaging',
-        'dept'          => $mod,
-        'ref_no'        => (string)$row['ref_no'],
-        'patient_id'    => (string)($row['patient_id'] ?: '—'),
-        'patient_name'  => (string)$row['patient_name'],
-        'patient_phone' => (string)$row['patient_phone'],
-        'patient_age'   => (string)$row['patient_age'],
-        'patient_gender'=> (string)$row['patient_gender'],
-        'study_title'   => (string)$row['study_title'],
-        'doctor'        => (string)($row['doctor'] ?: 'Consultant / Self'),
-        'created_by'    => (string)($row['created_by'] ?: 'Radiology Staff'),
-        'created_at'    => (string)$row['created_at'],
-        'date'          => substr((string)$row['created_at'], 0, 10),
-        'status'        => (string)$row['status'],
-        'amount'        => $amount,
-        'discount'      => $discount,
-        'net'           => max(0.0, $amount - $discount),
-        'paid'          => $paid,
-        'due'           => $due,
-    ];
+    // 2. Imaging scans for this visit with their exact allocated share
+    $linkedScans = $imgByLab[$lNo] ?? [];
+    if (!empty($linkedScans)) {
+        $imAllocMap = [];
+        foreach ($bd['imaging'] as $im) {
+            $imAllocMap[strtolower(trim((string)$im['name']))] = $im;
+        }
+
+        foreach ($linkedScans as $sRow) {
+            $handledScanNos[$sRow['ref_no']] = true;
+            $sKey = strtolower(trim((string)$sRow['study_title']));
+            $alloc = $imAllocMap[$sKey] ?? null;
+            if (!$alloc) {
+                foreach ($imAllocMap as $k => $candidate) {
+                    if (str_contains($sKey, $k) || str_contains($k, $sKey)) {
+                        $alloc = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            $amount = $alloc ? (float)$alloc['allocated_gross'] : (float)($sRow['amount'] ?? 0);
+            $discount = $alloc ? (float)$alloc['allocated_discount'] : (float)($sRow['discount'] ?? 0);
+            $paid = $alloc ? (float)$alloc['allocated_paid'] : (float)($sRow['paid'] ?? 0);
+            $due = max(0.0, ($amount - $discount) - $paid);
+
+            $mod = trim((string)$sRow['dept']);
+            if ($mod === '') $mod = 'Ultrasound';
+            if (strcasecmp($mod, 'Echo') === 0 || strcasecmp($mod, 'Echocardiography') === 0) {
+                $mod = 'Echocardiography (Echo)';
+            }
+
+            $allTransactions[] = [
+                'source'        => 'Diagnostic Imaging',
+                'dept'          => $mod,
+                'ref_no'        => (string)$sRow['ref_no'],
+                'patient_id'    => (string)($sRow['patient_id'] ?: '—'),
+                'patient_name'  => (string)$sRow['patient_name'],
+                'patient_phone' => (string)$sRow['patient_phone'],
+                'patient_age'   => (string)$sRow['patient_age'],
+                'patient_gender'=> (string)$sRow['patient_gender'],
+                'study_title'   => (string)$sRow['study_title'],
+                'doctor'        => (string)($sRow['doctor'] ?: 'Consultant / Self'),
+                'created_by'    => (string)($sRow['created_by'] ?: 'Radiology Staff'),
+                'created_at'    => (string)$sRow['created_at'],
+                'date'          => substr((string)$sRow['created_at'], 0, 10),
+                'status'        => (string)$sRow['status'],
+                'amount'        => $amount,
+                'discount'      => $discount,
+                'net'           => max(0.0, $amount - $discount),
+                'paid'          => $paid,
+                'due'           => $due,
+            ];
+        }
+    } else {
+        // Fallback for imaging items not yet in imaging_scans table
+        foreach ($bd['imaging'] as $im) {
+            $amount = (float)$im['allocated_gross'];
+            $discount = (float)$im['allocated_discount'];
+            $paid = (float)$im['allocated_paid'];
+            $due = (float)$im['allocated_due'];
+
+            $allTransactions[] = [
+                'source'        => 'Diagnostic Imaging',
+                'dept'          => $im['department'],
+                'ref_no'        => (string)$row['ref_no'],
+                'patient_id'    => (string)($row['patient_id'] ?: '—'),
+                'patient_name'  => (string)$row['patient_name'],
+                'patient_phone' => (string)$row['patient_phone'],
+                'patient_age'   => (string)$row['patient_age'],
+                'patient_gender'=> (string)$row['patient_gender'],
+                'study_title'   => (string)$im['name'],
+                'doctor'        => (string)($row['doctor'] ?: 'Consultant / Self'),
+                'created_by'    => (string)($row['created_by'] ?: 'Staff'),
+                'created_at'    => (string)$row['created_at'],
+                'date'          => substr((string)$row['created_at'], 0, 10),
+                'status'        => (string)$row['status'],
+                'amount'        => $amount,
+                'discount'      => $discount,
+                'net'           => max(0.0, $amount - $discount),
+                'paid'          => $paid,
+                'due'           => $due,
+            ];
+        }
+    }
+}
+
+// 3. Standalone imaging scans not linked to a lab entry
+foreach ($rawImg as $row) {
+    if (!isset($handledScanNos[$row['ref_no']])) {
+        $amount = (float)($row['amount'] ?? 0);
+        $discount = (float)($row['discount'] ?? 0);
+        $paid = (float)($row['paid'] ?? 0);
+        $due = max(0.0, ($amount - $discount) - $paid);
+
+        $mod = trim((string)$row['dept']);
+        if ($mod === '') $mod = 'Ultrasound';
+        if (strcasecmp($mod, 'Echo') === 0 || strcasecmp($mod, 'Echocardiography') === 0) {
+            $mod = 'Echocardiography (Echo)';
+        }
+
+        $allTransactions[] = [
+            'source'        => 'Diagnostic Imaging',
+            'dept'          => $mod,
+            'ref_no'        => (string)$row['ref_no'],
+            'patient_id'    => (string)($row['patient_id'] ?: '—'),
+            'patient_name'  => (string)$row['patient_name'],
+            'patient_phone' => (string)$row['patient_phone'],
+            'patient_age'   => (string)$row['patient_age'],
+            'patient_gender'=> (string)$row['patient_gender'],
+            'study_title'   => (string)$row['study_title'],
+            'doctor'        => (string)($row['doctor'] ?: 'Consultant / Self'),
+            'created_by'    => (string)($row['created_by'] ?: 'Radiology Staff'),
+            'created_at'    => (string)$row['created_at'],
+            'date'          => substr((string)$row['created_at'], 0, 10),
+            'status'        => (string)$row['status'],
+            'amount'        => $amount,
+            'discount'      => $discount,
+            'net'           => max(0.0, $amount - $discount),
+            'paid'          => $paid,
+            'due'           => $due,
+        ];
+    }
 }
 
 // 3. Expenses
@@ -335,9 +441,37 @@ switch ($reportType) {
     case 'registrations':
         $reportColumns = ['#', 'Date & Time', 'Ref / Lab No.', 'MR No.', 'Patient Name & Contact', 'Department', 'Tests / Investigation', 'Doctor', 'Gross (Rs.)', 'Discount', 'Paid', 'Due', 'Status'];
         $idx = 1;
+        // In consolidated view (all departments), group by invoice so each patient visit is exactly 1 row
+        $regTransactions = $allTransactions;
+        if ($deptFilter === 'all') {
+            $byRef = [];
+            foreach ($allTransactions as $t) {
+                $ref = (string)$t['ref_no'];
+                if (!isset($byRef[$ref])) {
+                    $byRef[$ref] = $t;
+                    $byRef[$ref]['studies_arr'] = [$t['study_title']];
+                    $byRef[$ref]['depts_arr'] = [$t['dept']];
+                } else {
+                    $byRef[$ref]['studies_arr'][] = $t['study_title'];
+                    $byRef[$ref]['depts_arr'][] = $t['dept'];
+                    $byRef[$ref]['amount'] += $t['amount'];
+                    $byRef[$ref]['discount'] += $t['discount'];
+                    $byRef[$ref]['paid'] += $t['paid'];
+                    $byRef[$ref]['due'] += $t['due'];
+                }
+            }
+            foreach ($byRef as &$br) {
+                $uniqDepts = array_unique($br['depts_arr']);
+                $br['dept'] = count($uniqDepts) > 1 ? 'Multi-Dept' : reset($uniqDepts);
+                $br['study_title'] = implode(', ', array_unique($br['studies_arr']));
+            }
+            unset($br);
+            $regTransactions = array_values($byRef);
+        }
+
         // Sort newest first
-        usort($allTransactions, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
-        foreach ($allTransactions as $t) {
+        usort($regTransactions, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        foreach ($regTransactions as $t) {
             $reportRows[] = [
                 $idx++,
                 date('d M Y, h:i A', strtotime($t['created_at'])),
@@ -356,7 +490,7 @@ switch ($reportType) {
         }
         $reportTotals = [
             'Total',
-            count($allTransactions) . ' Registrations',
+            count($regTransactions) . ' Registrations',
             '—', '—', '—', '—', '—', '—',
             number_format($totalGross, 2),
             number_format($totalDiscount, 2),
@@ -871,20 +1005,16 @@ ob_start();
     </div>
 
     <!-- Header bar (No-Print) -->
-    <div class="no-print bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="no-print pb-3 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Financial &amp; Operational Analytics</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Summary Reports Engine</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Comprehensive audit reports, department gross volume, cash collections, dues, and doctor share breakdown.</p>
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Summary Reports Engine</h1>
+            <p class="text-xs text-slate-500 font-medium">Department gross volume, cash collections, patient dues, and doctor shares.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button type="button" onclick="window.print()" class="btn btn-secondary text-xs sm:text-sm py-2 px-3.5 shadow-xs font-bold">
-                <i class="fa-solid fa-print text-slate-500 mr-1.5"></i> Print Report
+            <button type="button" onclick="window.print()" class="btn btn-secondary text-xs py-2 px-3.5 shadow-xs font-bold">
+                <i class="fa-solid fa-print text-slate-500 mr-1.5"></i> Print
             </button>
-            <a href="?<?= $currentQs ?>&export=csv" class="btn btn-primary text-xs sm:text-sm py-2 px-3.5 shadow-xs font-bold">
+            <a href="?<?= $currentQs ?>&export=csv" class="btn btn-primary text-xs py-2 px-3.5 shadow-xs font-bold">
                 <i class="fa-solid fa-file-excel mr-1.5"></i> Export CSV
             </a>
         </div>

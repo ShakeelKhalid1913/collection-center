@@ -88,7 +88,7 @@ $filters = filter_bar([
 $content = page_header(
     'Pending Entries',
     'Filter by sample status, priority, route, payment, and referral.',
-    btn_primary('/portals/lab-entries/new.php', 'New entry')
+    btn_primary('/portals/lab-entries/new.php', 'Register Patient', 'fa-solid fa-plus')
 );
 
 $content .= card(

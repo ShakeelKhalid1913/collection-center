@@ -68,10 +68,13 @@ class ResultRepository
     public function getResultsByLabNo(string $labNo, ?string $orgId = null): array
     {
         if ($orgId !== null && $orgId !== '') {
-            return $this->db->fetchAll(
+            $rows = $this->db->fetchAll(
                 "SELECT * FROM results WHERE lab_no = :lab_no AND organization_id = :org_id ORDER BY print_page ASC, sort_order ASC, id ASC",
                 ['lab_no' => $labNo, 'org_id' => $orgId]
             );
+            if (!empty($rows)) {
+                return $rows;
+            }
         }
         return $this->db->fetchAll(
             "SELECT * FROM results WHERE lab_no = :lab_no ORDER BY print_page ASC, sort_order ASC, id ASC",
@@ -176,6 +179,12 @@ class ResultRepository
     public function ensureResultsInitialized(string $labNo, string $testsString, string $patientName, string $orgId = 'ORG-001'): array
     {
         $testRepo = new TestRepository();
+        if ($orgId !== '' && $orgId !== null) {
+            $this->db->execute(
+                "UPDATE results SET organization_id = :org WHERE lab_no = :lab_no AND (organization_id IS NULL OR organization_id = '' OR organization_id = 'ORG-001')",
+                ['org' => $orgId, 'lab_no' => $labNo]
+            );
+        }
         $existing = $this->getResultsByLabNo($labNo);
         $savedPages = $this->getPrintPageByTest($labNo);
 
@@ -230,6 +239,7 @@ class ResultRepository
             $sortOrder = max($sortOrder, ((int)($r['sort_order'] ?? 0)) + 1);
         }
 
+        $autoPage = 1;
         foreach ($resolvedTests as $rt) {
             $label = $rt['label'];
             $obj = $rt['obj'];
@@ -247,6 +257,16 @@ class ResultRepository
                 }
             }
             $alsoKeys[] = rtrim(strtolower($bookedAs), 's');
+            if (preg_match('/hiv/i', $label . ' ' . $bookedAs)) {
+                $alsoKeys[] = 'anti hiv screening';
+                $alsoKeys[] = 'anti-hiv-screening';
+                $alsoKeys[] = 'anti hiv';
+                $alsoKeys[] = 'anti-hiv';
+                $alsoKeys[] = 'hiv';
+                $alsoKeys[] = 'hiv screening';
+                $alsoKeys[] = 'hiv 1/2';
+                $alsoKeys[] = 'anti hiv antibodies elisa';
+            }
 
             $existingForTest = $byTest[$key] ?? [];
             foreach (array_unique(array_filter($alsoKeys)) as $ak) {
@@ -281,13 +301,18 @@ class ResultRepository
                 }
             }
 
-            $keepPage = 1;
-            foreach (array_merge($detailed, $stubs) as $old) {
-                $keepPage = max($keepPage, (int)($old['print_page'] ?? 1));
-            }
+            $keepPage = $autoPage;
             if (isset($savedPages[$label])) {
                 $keepPage = max(1, (int)$savedPages[$label]);
+            } else {
+                foreach (array_merge($detailed, $stubs) as $old) {
+                    if (isset($old['print_page']) && (int)$old['print_page'] > 0) {
+                        $keepPage = (int)$old['print_page'];
+                        break;
+                    }
+                }
             }
+            $autoPage++;
 
             if (!empty($params)) {
                 // Multi-parameter test in catalog
@@ -322,10 +347,11 @@ class ResultRepository
                     if (!isset($existingParamMap[$pName]) || empty($existingParamMap[$pName])) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
-                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, result_note, flag, sort_order, is_visible, print_page)
-                             VALUES (:id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, :result_note, '', :sort, 1, :print_page)",
+                            "INSERT INTO results (id, organization_id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, result_note, flag, sort_order, is_visible, print_page)
+                             VALUES (:id, :org_id, :lab_no, :patient, :test, :section, :param, '', :unit, :range, :sub_table, :result_note, '', :sort, 1, :print_page)",
                             [
                                 'id' => $resId,
+                                'org_id' => $orgId,
                                 'lab_no' => $labNo,
                                 'patient' => $patientName,
                                 'test' => $label,
@@ -371,6 +397,15 @@ class ResultRepository
                 $unitVal = $obj['unit'] ?? '—';
                 $rangeVal = $obj['reference_value'] ?: ($obj['normal_value'] ?: ($obj['normal_range'] ?? '—'));
 
+                // Auto-determine initial value for qualitative serology / screening tests (HIV, HBsAg, HCV, VDRL, etc.)
+                $isOptionsType = strtolower((string)($obj['result_type'] ?? '')) === 'options';
+                $isQualitative = preg_match('/non\s*reactive|negative|normal|nil/i', $rangeVal)
+                    || preg_match('/hiv|hbsag|hcv|vdrl|tpha|screening|serology/i', $label . ' ' . (string)($obj['name'] ?? ''));
+                $initialDefaultVal = '';
+                if ($isOptionsType || $isQualitative) {
+                    $initialDefaultVal = ($rangeVal !== '—' && $rangeVal !== '') ? $rangeVal : 'Non Reactive';
+                }
+
                 // If detailed parameter rows exist from before when this test had parameters, remove them
                 if ($detailed !== []) {
                     $keepVal = '';
@@ -383,16 +418,20 @@ class ResultRepository
                             break;
                         }
                     }
+                    if ($keepVal === '' && $initialDefaultVal !== '') {
+                        $keepVal = $initialDefaultVal;
+                    }
                     foreach ($detailed as $dRow) {
                         $this->db->execute('DELETE FROM results WHERE id = :id', ['id' => $dRow['id']]);
                     }
                     if ($stubs === []) {
                         $resId = 'RES-' . bin2hex(random_bytes(5));
                         $this->db->execute(
-                            "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
-                             VALUES (:id, :lab_no, :patient, :test, NULL, :param, :val, :unit, :range, NULL, :flag, :sort, 1, :print_page)",
+                            "INSERT INTO results (id, organization_id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                             VALUES (:id, :org_id, :lab_no, :patient, :test, NULL, :param, :val, :unit, :range, NULL, :flag, :sort, 1, :print_page)",
                             [
                                 'id' => $resId,
+                                'org_id' => $orgId,
                                 'lab_no' => $labNo,
                                 'patient' => $patientName,
                                 'test' => $label,
@@ -410,15 +449,25 @@ class ResultRepository
 
                 if ($stubs !== []) {
                     $firstStub = $stubs[0];
+                    $currentStubVal = trim((string)($firstStub['value'] ?? ''));
+                    if (($currentStubVal === '' || strcasecmp($currentStubVal, 'pending') === 0) && $initialDefaultVal !== '') {
+                        $currentStubVal = $initialDefaultVal;
+                    }
                     $this->db->execute(
                         "UPDATE results SET 
+                            organization_id = :org_id,
+                            test = :test,
                             parameter = :param,
                             section = NULL,
+                            value = CASE WHEN value IS NULL OR value = '' OR LOWER(value) = 'pending' THEN :val ELSE value END,
                             unit = CASE WHEN unit IS NULL OR unit = '' OR unit = '—' THEN :unit ELSE unit END,
                             reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN :range ELSE reference_range END
                          WHERE id = :id",
                         [
+                            'org_id' => $orgId,
+                            'test' => $label,
                             'param' => $label,
+                            'val' => $currentStubVal,
                             'unit' => $unitVal,
                             'range' => $rangeVal,
                             'id' => $firstStub['id'],
@@ -430,14 +479,16 @@ class ResultRepository
                 } elseif ($detailed === [] && $existingForTest === []) {
                     $resId = 'RES-' . bin2hex(random_bytes(5));
                     $this->db->execute(
-                        "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
-                         VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', :unit, :range, NULL, '', :sort, 1, :print_page)",
+                        "INSERT INTO results (id, organization_id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                         VALUES (:id, :org_id, :lab_no, :patient, :test, NULL, :param, :val, :unit, :range, NULL, '', :sort, 1, :print_page)",
                         [
                             'id' => $resId,
+                            'org_id' => $orgId,
                             'lab_no' => $labNo,
                             'patient' => $patientName,
                             'test' => $label,
                             'param' => $label,
+                            'val' => $initialDefaultVal,
                             'unit' => $unitVal,
                             'range' => $rangeVal,
                             'sort' => $sortOrder++,
@@ -452,10 +503,11 @@ class ResultRepository
             if ($existingForTest === []) {
                 $resId = 'RES-' . bin2hex(random_bytes(5));
                 $this->db->execute(
-                    "INSERT INTO results (id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
-                     VALUES (:id, :lab_no, :patient, :test, NULL, :param, '', '—', '—', NULL, '', :sort, 1, :print_page)",
+                    "INSERT INTO results (id, organization_id, lab_no, patient, test, section, parameter, value, unit, reference_range, sub_table, flag, sort_order, is_visible, print_page)
+                     VALUES (:id, :org_id, :lab_no, :patient, :test, NULL, :param, '', '—', '—', NULL, '', :sort, 1, :print_page)",
                     [
                         'id' => $resId,
+                        'org_id' => $orgId,
                         'lab_no' => $labNo,
                         'patient' => $patientName,
                         'test' => $label,
@@ -470,6 +522,17 @@ class ResultRepository
         // Clean empty stubs
         $this->db->execute(
             "DELETE FROM results WHERE lab_no = :lab_no AND (parameter IS NULL OR parameter = '') AND (value IS NULL OR value = '')",
+            ['lab_no' => $labNo]
+        );
+
+        // Safeguard for qualitative screening investigations (HIV, HBsAg, HCV, VDRL):
+        // Ensure they always have non-empty valid parameters, reference ranges, and default values
+        $this->db->execute(
+            "UPDATE results SET 
+                parameter = CASE WHEN parameter IS NULL OR parameter = '' OR parameter = '—' THEN test ELSE parameter END,
+                reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' THEN 'Non Reactive' ELSE reference_range END,
+                value = CASE WHEN value IS NULL OR value = '' OR LOWER(value) = 'pending' THEN (CASE WHEN reference_range IS NOT NULL AND reference_range != '' AND reference_range != '—' THEN reference_range ELSE 'Non Reactive' END) ELSE value END
+             WHERE lab_no = :lab_no AND (LOWER(test) LIKE '%hiv%' OR LOWER(test) LIKE '%hbsag%' OR LOWER(test) LIKE '%hcv%' OR LOWER(test) LIKE '%vdrl%' OR LOWER(parameter) LIKE '%hiv%' OR LOWER(parameter) LIKE '%hbsag%' OR LOWER(parameter) LIKE '%hcv%')",
             ['lab_no' => $labNo]
         );
 

@@ -20,6 +20,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $walkinPhone = trim((string)($_POST['walkin_phone'] ?? ''));
     $walkinAge = trim((string)($_POST['walkin_age'] ?? ''));
     $walkinGender = trim((string)($_POST['walkin_gender'] ?? ''));
+    $mrMode = trim((string)($_POST['mr_mode'] ?? 'auto'));
+    $manualMr = trim((string)($_POST['manual_mr'] ?? ''));
 
     $patientName = 'Walk-in Patient';
 
@@ -32,7 +34,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } elseif ($walkinName !== '') {
         // Register walk-in as new patient record
         $patientName = $walkinName;
-        $newPid = 'P-' . date('ym') . '-' . sprintf('%03d', rand(100, 999));
+        if ($mrMode === 'manual' && $manualMr !== '') {
+            $newPid = $manualMr;
+        } else {
+            $newPid = patient_repo()->getNextMrNumber($orgId);
+        }
         try {
             $newP = patient_repo()->create([
                 'patient_no' => $newPid,
@@ -108,8 +114,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($res['success']) {
             $createdLabNo = $res['lab_no'];
             // Look up any created imaging scan number
-            $firstScan = db()->fetchOne("SELECT scan_no FROM imaging_scans WHERE lab_no = :ln LIMIT 1", ['ln' => $createdLabNo]);
+            $firstScan = db()->fetchOne("SELECT id, scan_no FROM imaging_scans WHERE lab_no = :ln LIMIT 1", ['ln' => $createdLabNo]);
             $scanParam = !empty($firstScan['scan_no']) ? ('&scan_no=' . urlencode($firstScan['scan_no'])) : '';
+
+            $redirectTo = trim((string)($_POST['redirect_to'] ?? ''));
+            if ($redirectTo === 'results') {
+                $scanId = (string)($firstScan['id'] ?? '');
+                header('Location: /portals/results.php?lab_no=' . urlencode($createdLabNo) . '&scan_id=' . urlencode($scanId) . '&created=1');
+                exit;
+            }
 
             header('Location: /portals/receipt.php?lab_no=' . urlencode($createdLabNo) . $scanParam . '&created=1');
             exit;
@@ -137,6 +150,9 @@ foreach (mock('mock_doctors') as $d) {
     $spec = !empty($d['specialty']) ? ' (' . $d['specialty'] . ')' : '';
     $doctorOpts[$d['name']] = $d['name'] . $spec;
 }
+
+// Next Sequential MR Number for Auto-generation
+$nextMrNo = patient_repo()->getNextMrNumber($orgId);
 
 // Dynamic Test Catalog across All 6 Departments
 $allCatalogTests = test_repo()->getTests($orgId);
@@ -303,37 +319,51 @@ foreach ($deptCatalog as $k => $d) {
         $tPriceFmt = number_format($tPrice, 0);
 
         $catalogCardsHtml .= <<<CARD
-        <label class="test-item-card flex items-start gap-2.5 p-3 rounded-2xl border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer select-none bg-white shadow-2xs" 
+        <label class="test-item-card flex items-start gap-3 p-3.5 rounded-2xl border-2 border-slate-200/90 hover:border-teal-500 hover:bg-teal-50/40 hover:shadow-md transition-all cursor-pointer select-none bg-white shadow-xs" 
+               style="display: none;"
                data-dept="{$k}" 
                data-name="{$tName}" 
+               data-code="{$tCode}"
                data-price="{$tPrice}">
             <input type="checkbox" name="tests[]" value="{$tName}" 
-                   class="test-checkbox mt-1 w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                   class="test-checkbox mt-1 w-4 h-4 rounded text-teal-600 border-slate-300 focus:ring-teal-500 cursor-pointer shrink-0"
                    data-name="{$tName}" 
                    data-price="{$tPrice}"
                    data-dept-name="{$d['name']}"
                    onchange="handleTestToggle(this)">
             <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-1 mb-0.5">
-                    <span class="inline-block px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase tracking-wider {$d['badge']}">
-                        <i class="{$d['icon']} text-[9px] mr-0.5"></i> {$d['name']}
+                <div class="flex items-center justify-between gap-1 mb-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider {$d['badge']}">
+                        <i class="{$d['icon']} text-[10px] mr-1"></i> {$d['name']}
                     </span>
-                    <span class="font-mono font-bold text-xs text-slate-900 shrink-0">Rs. {$tPriceFmt}</span>
+                    <span class="font-mono font-black text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">Rs. {$tPriceFmt}</span>
                 </div>
-                <div class="font-bold text-slate-800 text-xs truncate leading-snug" title="{$tName}">{$tName}</div>
+                <div class="font-black text-slate-900 text-sm tracking-tight truncate leading-snug" title="{$tName}">{$tName}</div>
             </div>
         </label>
 CARD;
     }
 }
 
-// Build Patient Options HTML
-$patientSelectOpts = '';
-foreach ($patientOpts as $k => $v) {
-    $kStr = (string)$k;
-    $vStr = (string)$v;
-    $sel = ($selectedPatientId !== '' && $selectedPatientId === $kStr) ? ' selected' : '';
-    $patientSelectOpts .= '<option value="' . e($kStr) . '"' . $sel . '>' . e($vStr) . '</option>';
+// Build Patient Options HTML with full auto-fill data attributes
+$patientSelectOpts = '<option value="">— Search / Select Registered Patient —</option>';
+foreach ($allPatients as $p) {
+    $pid = (string)($p['patient_no'] ?? $p['id'] ?? '');
+    if ($pid === '') continue;
+    $pname = trim(($p['title'] ?? '') . ' ' . ($p['full_name'] ?? $p['name'] ?? ''));
+    $phone = (string)($p['phone'] ?? '');
+    $age = (string)($p['age'] ?? '');
+    $gender = (string)($p['gender'] ?? 'Male');
+    $label = $pid . ' · ' . $pname . ($phone !== '' ? ' · ' . $phone : '');
+    $sel = ($selectedPatientId !== '' && $selectedPatientId === $pid) ? ' selected' : '';
+
+    $patientSelectOpts .= '<option value="' . e($pid) . '"' . $sel .
+        ' data-name="' . e($pname) . '"' .
+        ' data-phone="' . e($phone) . '"' .
+        ' data-age="' . e($age) . '"' .
+        ' data-gender="' . e($gender) . '"' .
+        ' data-mr="' . e($pid) . '">' .
+        e($label) . '</option>';
 }
 
 // Build Doctor Options HTML
@@ -355,7 +385,7 @@ $headerActions = <<<HTML
 </div>
 HTML;
 
-$content = page_header('New Booking (Unified Slip)', 'Single entry point for all departments: Laboratory, Ultrasound, X-Ray, ECG, CT Scan, and MRI.', $headerActions, 'fa-solid fa-file-circle-plus');
+$content = page_header('Radiology & Diagnostic Booking', 'Book Radiology studies (X-Ray, Ultrasound, ECG, Echo, CT, MRI) and Pathology tests.', $headerActions);
 $content .= $message;
 
 $content .= <<<HTML
@@ -391,8 +421,29 @@ $content .= <<<HTML
             <!-- Walk-in Name -->
             <div>
                 <label class="field-label" for="walkin-name">Or Walk-in Patient Name</label>
-                <input type="text" id="walkin-name" name="walkin_name" class="field text-sm" placeholder="e.g. Muhammad Ali">
+                <input type="text" id="walkin-name" name="walkin_name" class="field text-sm font-semibold" placeholder="e.g. Muhammad Ali">
                 <span class="text-[11px] text-slate-400 mt-1 block">Used if not already registered</span>
+            </div>
+
+            <!-- MR Number Configuration (Auto vs Manual) -->
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="field-label mb-0" for="manual-mr">MR Number</label>
+                    <div class="flex items-center gap-2 text-xs">
+                        <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <input type="radio" name="mr_mode" value="auto" checked onchange="toggleMrMode('auto')" class="text-emerald-600 focus:ring-emerald-500">
+                            <span>Auto (Next)</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-600 px-2 py-0.5 rounded-md hover:bg-slate-100">
+                            <input type="radio" name="mr_mode" value="manual" onchange="toggleMrMode('manual')" class="text-teal-600 focus:ring-teal-500">
+                            <span>Manual</span>
+                        </label>
+                    </div>
+                </div>
+                <input type="text" id="manual-mr" name="manual_mr" value="{$nextMrNo}" class="field text-sm font-mono bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold cursor-not-allowed" placeholder="Auto-generated on save" readonly>
+                <span id="mr-mode-hint" class="text-[11px] text-emerald-700 font-semibold mt-1 block">
+                    <i class="fa-solid fa-circle-check mr-1"></i> Auto-incremented sequential MR number
+                </span>
             </div>
 
             <!-- Walk-in Phone -->
@@ -466,13 +517,13 @@ $content .= <<<HTML
                     </div>
                 </div>
 
-                <!-- Instant Search Bar -->
-                <div class="w-full sm:w-64">
+                <!-- Instant Search Bar (Large & Prominent) -->
+                <div class="w-full sm:w-80 md:w-96">
                     <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
                         <input type="text" id="catalog-search" 
-                               placeholder="Search CBC, X-Ray, Pelvis..." 
-                               class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                               placeholder="Search investigation (e.g. CBC, Ultrasound, X-Ray)..." 
+                               class="w-full pl-10 pr-4 py-2.5 text-sm font-semibold rounded-2xl border-2 border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/10 focus:border-teal-600 shadow-sm transition-all placeholder:text-slate-400"
                                onkeyup="handleCatalogSearch(this.value)">
                     </div>
                 </div>
@@ -483,9 +534,42 @@ $content .= <<<HTML
                 {$tabButtonsHtml}
             </div>
 
-            <!-- Catalog Checkbox Grid -->
-            <div id="catalog-cards-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[520px] overflow-y-auto pr-1">
-                {$catalogCardsHtml}
+            <!-- Catalog Checkbox Grid (Optimized: No overwhelming list on scroll!) -->
+            <div id="catalog-cards-container" class="space-y-3 min-h-[260px] max-h-[540px] overflow-y-auto pr-1">
+                <!-- Clean Default Prompt State -->
+                <div id="search-prompt-state" class="py-10 px-5 text-center bg-slate-50/90 rounded-2xl border-2 border-dashed border-slate-200">
+                    <div class="w-12 h-12 mx-auto rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl mb-3 shadow-xs">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <h4 class="font-extrabold text-slate-800 text-sm">Type in the search bar above to find tests</h4>
+                    <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Only the specific investigations you search for will appear, keeping your screen clean and organized.</p>
+                    
+                    <!-- Frequently Ordered Quick Pick Chips -->
+                    <div class="mt-4 pt-4 border-t border-slate-200/70">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">Quick Add Popular Investigations:</span>
+                        <div class="flex flex-wrap justify-center gap-2">
+                            <button type="button" onclick="quickSearchTest('CBC')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ CBC</button>
+                            <button type="button" onclick="quickSearchTest('LFT')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ LFT</button>
+                            <button type="button" onclick="quickSearchTest('RFT')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ RFT</button>
+                            <button type="button" onclick="quickSearchTest('Lipid')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ Lipid Profile</button>
+                            <button type="button" onclick="quickSearchTest('Chest X-Ray')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ Chest X-Ray</button>
+                            <button type="button" onclick="quickSearchTest('Ultrasound')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-purple-500 hover:bg-purple-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ Ultrasound Abdomen</button>
+                            <button type="button" onclick="quickSearchTest('ECG')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-rose-500 hover:bg-rose-50 text-xs font-bold text-slate-700 transition-all shadow-2xs hover:scale-105">+ 12-Lead ECG</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results Hint -->
+                <div id="search-no-results-hint" style="display: none;" class="py-8 px-4 text-center bg-amber-50/80 rounded-2xl border border-amber-200 text-amber-900 text-xs">
+                    <i class="fa-solid fa-circle-question text-xl text-amber-600 mb-1 block"></i>
+                    No investigations found matching "<span id="search-query-display" class="font-bold"></span>".
+                    <div class="mt-1 text-slate-500">You can type it as a <strong>Custom Test</strong> in the field below.</div>
+                </div>
+
+                <!-- Matching Results Grid (Rendered Only on Search / Category Select) -->
+                <div id="matching-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {$catalogCardsHtml}
+                </div>
             </div>
 
             <!-- Custom Investigation Add Row -->
@@ -558,11 +642,15 @@ $content .= <<<HTML
                 <!-- Hidden inputs for calculated amounts -->
                 <input type="hidden" name="gross_amount" id="hidden-gross" value="0">
 
-                <!-- Submit Button -->
+                <!-- Submit Buttons -->
                 <div class="mt-5 pt-3 border-t border-slate-800 flex flex-col gap-2">
-                    <button type="submit" class="w-full py-3 px-4 rounded-2xl bg-[#c2f13c] hover:bg-[#b2e62a] text-slate-950 font-black text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-print"></i>
-                        <span>Generate Unified Token Slip</span>
+                    <button type="submit" class="w-full py-3 px-4 rounded-2xl bg-[#c2f13c] hover:bg-[#b2e62a] text-slate-950 font-black text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-check-circle text-base"></i>
+                        <span>✓ Book Patient &amp; Save Order</span>
+                    </button>
+                    <button type="submit" name="redirect_to" value="results" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700">
+                        <i class="fa-solid fa-notes-medical text-xs text-[#c2f13c]"></i>
+                        <span>Book &amp; Open Report Findings Directly &rarr;</span>
                     </button>
                     <a href="/portals/dashboard.php" class="text-center text-xs text-slate-400 hover:text-white py-1">
                         Cancel &amp; Return to Dashboard
@@ -590,14 +678,63 @@ $content .= <<<HTML
 <script>
 let currentSelectedTests = [];
 
+function toggleMrMode(mode) {
+    const defaultNextMr = '{$nextMrNo}';
+    const mrInput = document.getElementById('manual-mr');
+    const mrHint = document.getElementById('mr-mode-hint');
+    if (!mrInput) return;
+    if (mode === 'manual') {
+        mrInput.readOnly = false;
+        mrInput.classList.remove('bg-emerald-50/70', 'border-emerald-300', 'text-emerald-950', 'cursor-not-allowed');
+        mrInput.classList.add('bg-white', 'text-slate-900', 'border-teal-500');
+        mrInput.placeholder = 'e.g. MR-10492';
+        mrInput.focus();
+        if (mrHint) mrHint.innerHTML = '<span class="text-blue-600 font-semibold"><i class="fa-solid fa-pen-to-square mr-1"></i> Manual Mode: enter custom MR or hospital ID</span>';
+    } else {
+        mrInput.readOnly = true;
+        mrInput.value = defaultNextMr;
+        mrInput.classList.remove('bg-white', 'text-slate-900', 'border-teal-500');
+        mrInput.classList.add('bg-emerald-50/70', 'border-emerald-300', 'text-emerald-950', 'cursor-not-allowed');
+        if (mrHint) mrHint.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Auto-incremented sequential MR number: <strong>' + defaultNextMr + '</strong>';
+    }
+}
+
 function handlePatientSelect(selectEl) {
-    const val = selectEl.value;
+    const opt = selectEl.options[selectEl.selectedIndex];
     const walkinNameInput = document.getElementById('walkin-name');
     const walkinPhoneInput = document.getElementById('walkin-phone');
-    if (val !== '') {
-        // Clear walk-in inputs
+    const walkinAgeInput = document.getElementById('walkin-age');
+    const walkinGenderSelect = document.getElementById('walkin-gender');
+    const manualMrInput = document.getElementById('manual-mr');
+
+    if (!opt || !opt.value) {
+        // Reset when unselected
         if (walkinNameInput) walkinNameInput.value = '';
         if (walkinPhoneInput) walkinPhoneInput.value = '';
+        if (walkinAgeInput) walkinAgeInput.value = '';
+        if (manualMrInput) manualMrInput.value = defaultNextMr;
+        return;
+    }
+
+    const name = opt.getAttribute('data-name') || '';
+    const phone = opt.getAttribute('data-phone') || '';
+    const age = opt.getAttribute('data-age') || '';
+    const gender = opt.getAttribute('data-gender') || 'Male';
+    const mr = opt.getAttribute('data-mr') || opt.value;
+
+    if (walkinNameInput) walkinNameInput.value = name;
+    if (walkinPhoneInput) walkinPhoneInput.value = phone;
+    if (walkinAgeInput) walkinAgeInput.value = age;
+    if (walkinGenderSelect) walkinGenderSelect.value = gender;
+    if (manualMrInput) manualMrInput.value = mr;
+}
+
+function quickSearchTest(term) {
+    const input = document.getElementById('catalog-search');
+    if (input) {
+        input.value = term;
+        handleCatalogSearch(term);
+        input.focus();
     }
 }
 
@@ -612,34 +749,69 @@ function filterCatalogDept(deptKey, btnEl) {
         btnEl.classList.add('bg-slate-900', 'text-white', 'shadow-sm');
     }
 
-    // Filter card visibility
+    const promptState = document.getElementById('search-prompt-state');
+    const noResultsHint = document.getElementById('search-no-results-hint');
     const cards = document.querySelectorAll('.test-item-card');
-    cards.forEach(card => {
-        const d = card.getAttribute('data-dept');
-        if (deptKey === 'all' || d === deptKey) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-
-    // Clear search bar
     const searchInput = document.getElementById('catalog-search');
     if (searchInput) searchInput.value = '';
+
+    if (deptKey === 'all') {
+        // Return to clean prompt state
+        if (promptState) promptState.style.display = '';
+        if (noResultsHint) noResultsHint.style.display = 'none';
+        cards.forEach(card => card.style.display = 'none');
+    } else {
+        // Show ONLY cards for this specific department
+        if (promptState) promptState.style.display = 'none';
+        if (noResultsHint) noResultsHint.style.display = 'none';
+        cards.forEach(card => {
+            const d = card.getAttribute('data-dept');
+            if (d === deptKey) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
 }
 
 function handleCatalogSearch(q) {
     q = (q || '').toLowerCase().trim();
+    const promptState = document.getElementById('search-prompt-state');
+    const noResultsHint = document.getElementById('search-no-results-hint');
+    const qSpan = document.getElementById('search-query-display');
     const cards = document.querySelectorAll('.test-item-card');
+
+    if (q === '') {
+        if (promptState) promptState.style.display = '';
+        if (noResultsHint) noResultsHint.style.display = 'none';
+        cards.forEach(card => card.style.display = 'none');
+        return;
+    }
+
+    if (promptState) promptState.style.display = 'none';
+
+    let matchCount = 0;
     cards.forEach(card => {
         const name = (card.getAttribute('data-name') || '').toLowerCase();
         const dept = (card.getAttribute('data-dept') || '').toLowerCase();
-        if (name.indexOf(q) !== -1 || dept.indexOf(q) !== -1) {
+        const code = (card.getAttribute('data-code') || '').toLowerCase();
+        if (name.indexOf(q) !== -1 || dept.indexOf(q) !== -1 || code.indexOf(q) !== -1) {
             card.style.display = '';
+            matchCount++;
         } else {
             card.style.display = 'none';
         }
     });
+
+    if (noResultsHint) {
+        if (matchCount === 0) {
+            noResultsHint.style.display = '';
+            if (qSpan) qSpan.textContent = q;
+        } else {
+            noResultsHint.style.display = 'none';
+        }
+    }
 }
 
 function handleTestToggle(checkboxEl) {
@@ -734,8 +906,12 @@ function calculateBillingTotals() {
     if (hiddenGross) hiddenGross.value = gross;
 }
 
-// Track manual editing of paid input
+// Track manual editing of paid input and handle initial patient autofill
 document.addEventListener('DOMContentLoaded', function() {
+    const pSel = document.getElementById('booking-patient-select');
+    if (pSel && pSel.value) {
+        handlePatientSelect(pSel);
+    }
     const paidInput = document.getElementById('billing-paid');
     if (paidInput) {
         paidInput.addEventListener('input', function() {
@@ -747,4 +923,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 HTML;
 
-render_page('New Booking (Unified Slip)', 'imaging', 'new-scan', $content);
+render_page('Radiology Booking', 'imaging', 'new-scan', $content);

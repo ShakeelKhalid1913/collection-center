@@ -18,6 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $doctor = $typedDoc !== '' ? $typedDoc : $selectedDoc;
         if ($doctor === '') {
             $doctor = 'Walk-in / Self';
+        } else {
+            record_doctor_name($doctor, current_user()['organization_id'] ?? 'ORG-001');
         }
 
         $typedRoute = trim((string)($_POST['route'] ?? ''));
@@ -31,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $patientRes = patient_repo()->create([
             'patient_no' => trim($_POST['patient_no'] ?? ''),
-            'title' => $_POST['title'] ?? 'Mr',
+            'title' => trim((string)($_POST['title'] ?? '')),
             'full_name' => $fullName,
             'relation_of' => trim($_POST['relation_of'] ?? ''),
             'phone' => $_POST['phone'] ?? '',
@@ -105,10 +107,10 @@ foreach (mock('mock_routes') as $r) {
 
 $patientBlock = card(
     panel_head('1. Patient details') .
-    '<p class="form-section-note">Required: Title, Full name, Mobile, Gender. CNIC, blood group and email are optional — they appear on the report only when filled. Address prints on the report header area.</p>' .
+    '<p class="form-section-note">Required: Full name, Mobile, Gender. Title is optional (select or leave blank). CNIC, blood group and email are optional — they appear on the report only when filled. Address prints on the report header area.</p>' .
     '<div class="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-6">' .
     form_field('MR Number', 'patient_no', 'text', null, 'e.g. MR-10482 (leave blank to auto-generate)', true) .
-    select_field('Title', 'title', $titles, 'Mr') .
+    title_input_field('Title', 'title', $_POST['title'] ?? '') .
     form_field('Full name', 'full_name', 'text', null, 'As on CNIC / slip') .
     form_field('Father / Husband Name', 'relation_of', 'text', null, 'F/H name', true) .
     form_field('Mobile', 'phone', 'tel', null, '03xx-xxxxxxx') .

@@ -40,6 +40,7 @@ class TemplateRepository
             $this->db->execute($sql);
             $this->seedInitialTemplates('ORG-001');
             $this->seedStandardUltrasoundTemplates('ORG-001');
+            $this->seedAllModalityTemplates('ORG-001');
         } catch (\Throwable $e) {}
     }
 
@@ -196,6 +197,127 @@ class TemplateRepository
             );
             if (!$existing) {
                 $this->create(array_merge($tpl, ['organization_id' => $orgId, 'created_by' => 'admin']));
+            }
+        }
+    }
+
+    public function seedAllModalityTemplates(string $orgId): void
+    {
+        $allTemplates = [
+            // --- DIGITAL X-RAY TEMPLATES ---
+            [
+                'id' => 'TPL-XR-CHEST-01',
+                'title' => 'Chest X-Ray PA View (Normal)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: CHEST X-RAY (PA VIEW)\n\nCLINICAL INDICATION: Routine / Pre-employment / Pre-operative evaluation\n\nFINDINGS:\n- Lung Fields: Both lung fields are clear and normally aerated. No focal pulmonary infiltration, consolidation, nodule, or mass seen.\n- Pleural Spaces: Both costophrenic and cardiophrenic sulci are sharp and clear. No evidence of pleural effusion or pneumothorax.\n- Cardiac Silhouette: Cardiac size and contour are within normal limits. Normal cardiothoracic ratio (< 50%).\n- Mediastinum & Hila: Mediastinal contours and hila appear normal. Trachea is central in position.\n- Bony Cage & Soft Tissues: Ribs, clavicles, and thoracic cage are unremarkable with no acute bony injury. Soft tissues appear normal.\n\nIMPRESSION:\nNORMAL RADIOLOGICAL STUDY OF CHEST (PA VIEW). NO ACTIVE CARDIOPULMONARY LESION DETECTED.",
+            ],
+            [
+                'id' => 'TPL-XR-CHEST-02',
+                'title' => 'Chest X-Ray PA View (Pneumonia / Consolidation)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: CHEST X-RAY (PA VIEW)\n\nCLINICAL INDICATION: Productive cough, fever, shortness of breath\n\nFINDINGS:\n- Lung Fields: Inhomogeneous patchy airspace opacification / consolidation noted in the right lower zone, suspicious of infective etiology. Left lung field is clear.\n- Pleural Spaces: Minimal blunting of the right costophrenic angle. Left costophrenic angle is clear.\n- Cardiac Silhouette: Normal in size and contour.\n- Mediastinum & Hila: Mediastinal contours and hila appear normal.\n- Bony Cage & Soft Tissues: Unremarkable.\n\nIMPRESSION:\nRIGHT LOWER ZONE INHOMOGENEOUS CONSOLIDATION / INFILTRATE, COMPATIBLE WITH PNEUMONIC CONSOLIDATION. CLINICAL AND LAB CORRELATION RECOMMENDED.",
+            ],
+            [
+                'id' => 'TPL-XR-CERV-01',
+                'title' => 'Cervical Spine X-Ray (AP & Lateral Views)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: CERVICAL SPINE X-RAY (AP & LATERAL VIEWS)\n\nCLINICAL INDICATION: Neck pain and stiffness radiating to shoulder\n\nFINDINGS:\n- Normal physiological cervical lordosis is preserved / mildly straightened.\n- Vertebral body heights and alignment are maintained. No acute fracture or dislocation.\n- Intervertebral disc spaces at C5-C6 and C6-C7 show mild narrowing with anterior marginal osteophytosis, consistent with early degenerative spondylotic changes.\n- Posterior elements, pedicles, and facet joints appear unremarkable.\n- Prevertebral soft tissue shadow is within normal limits.\n\nIMPRESSION:\nEARLY CERVICAL SPONDYLOSIS WITH C5-C6 AND C6-C7 DISC SPACE NARROWING. NO EVIDENCE OF ACUTE FRACTURE.",
+            ],
+            [
+                'id' => 'TPL-XR-LS-01',
+                'title' => 'Lumbosacral (L-S) Spine X-Ray (AP & Lateral Views)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: LUMBOSACRAL (L-S) SPINE X-RAY (AP & LATERAL VIEWS)\n\nCLINICAL INDICATION: Chronic lower back pain / Sciatica\n\nFINDINGS:\n- Normal lumbar lordotic curvature is preserved.\n- Vertebral body heights are maintained throughout the lumbar spine. No acute compression fracture or spondylolisthesis.\n- L4-L5 and L5-S1 intervertebral disc spaces show mild-to-moderate narrowing with marginal osteophytic spurring and endplate sclerosis.\n- Pedicles, laminae, and transverse processes appear intact.\n- Sacroiliac joints are symmetrical with unremarkable joint margins.\n- Psoas shadows are symmetrically visualized.\n\nIMPRESSION:\nLUMBOSACRAL SPONDYLOSIS WITH L4-L5 AND L5-S1 DEGENERATIVE DISC DISEASE. NO ACUTE SKELETAL INJURY.",
+            ],
+            [
+                'id' => 'TPL-XR-KNEE-01',
+                'title' => 'Knee Joint X-Ray (AP & Lateral Views)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: KNEE JOINT X-RAY (AP & LATERAL VIEWS)\n\nCLINICAL INDICATION: Knee pain, crepitus on walking\n\nFINDINGS:\n- Bone mineralization is normal.\n- Medial tibiofemoral joint space demonstrates mild-to-moderate narrowing with marginal tibial spine spurring and subchondral sclerosis.\n- Lateral tibiofemoral and patellofemoral compartments are relatively preserved.\n- No evidence of radiopaque loose body, acute fracture, or joint effusion.\n- Soft tissues around the knee joint appear unremarkable.\n\nIMPRESSION:\nPRIMARY OSTEOARTHRITIS OF THE KNEE JOINT (GRADE II KELLGREN-LAWRENCE) WITH MEDIAL COMPARTMENT PREDOMINANCE.",
+            ],
+            [
+                'id' => 'TPL-XR-PELV-01',
+                'title' => 'Pelvis AP View X-Ray',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: PELVIS WITH BOTH HIPS (AP VIEW)\n\nCLINICAL INDICATION: Hip / Pelvic pain\n\nFINDINGS:\n- Pelvic ring is complete and intact. No fracture, diastasis, or destructive bone lesion.\n- Both femoral heads are spherical and well-seated within the acetabula. Shenton's lines are intact bilaterally.\n- Hip joint spaces are preserved bilaterally with no significant degenerative narrowing or osteophytosis.\n- Sacroiliac and pubic symphysis joints appear normal.\n- Visualized pelvic soft tissues and gas shadow are unremarkable.\n\nIMPRESSION:\nNORMAL RADIOLOGICAL STUDY OF PELVIS AND BOTH HIP JOINTS. NO FRACTURE OR GROSS ARTHRITIC CHANGE.",
+            ],
+            [
+                'id' => 'TPL-XR-ABD-01',
+                'title' => 'Abdomen Plain / Erect & Supine X-Ray (KUB)',
+                'department' => 'X-Ray',
+                'is_private' => 0,
+                'content' => "EXAMINATION: ABDOMEN ERECT & SUPINE PLAIN X-RAY (KUB)\n\nCLINICAL INDICATION: Abdominal colic / Rule out obstruction or perforation\n\nFINDINGS:\n- Bowel Gas Pattern: Normal physiological distribution of gas within the stomach and colon. No abnormally dilated small or large bowel loops.\n- Air-Fluid Levels: No multiple or pathological step-ladder air-fluid levels seen.\n- Free Gas: No evidence of pneumoperitoneum (no free crescentic gas under the right or left hemidiaphragms on erect view).\n- Radiopaque Shadows: No obvious radio-opaque calculus visualized along the anatomical course of the urinary tract (KUB).\n- Soft Tissues & Skeleton: Psoas outlines and flank stripes are preserved. Bony pelvis and lower ribs are intact.\n\nIMPRESSION:\nNORMAL ABDOMINAL GAS PATTERN. NO RADIOLOGICAL EVIDENCE OF MECHANICAL BOWEL OBSTRUCTION, CALCULUS, OR PNEUMOPERITONEUM.",
+            ],
+
+            // --- 12-LEAD ECG (ELECTROCARDIOGRAM) TEMPLATES ---
+            [
+                'id' => 'TPL-ECG-01',
+                'title' => '12-Lead Electrocardiogram (Normal Sinus Rhythm)',
+                'department' => 'ECG',
+                'is_private' => 0,
+                'content' => "EXAMINATION: 12-LEAD ELECTROCARDIOGRAM (ECG)\n\nCLINICAL INDICATION: Routine cardiac evaluation / Pre-operative screening\n\nMEASUREMENTS & PARAMETERS:\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 72 beats per minute (bpm)\n- P Wave: Normal morphology and amplitude (0.08 sec)\n- PR Interval: 0.16 sec (Normal range: 0.12 - 0.20 sec)\n- QRS Duration: 0.08 sec (Normal range: 0.06 - 0.10 sec)\n- QTc Interval: 412 ms (Normal range: < 440 ms for males, < 460 ms for females)\n- Cardiac Axis: Normal axis (+45° to +60°)\n\nREPOLARIZATION & MORPHOLOGY:\n- ST Segment: Isoelectric across all limb and precordial leads; no ST elevation or depression.\n- T Waves: Upright and normal morphology in leads I, II, aVF, and V3-V6. Inverted in aVR.\n- Pathological Q Waves: Absent.\n\nIMPRESSION:\nNORMAL 12-LEAD ELECTROCARDIOGRAM (NORMAL SINUS RHYTHM, RATE 72 BPM, NO EVIDENCE OF ISCHEMIA OR CONDUCTION ABNORMALITY).",
+            ],
+            [
+                'id' => 'TPL-ECG-02',
+                'title' => '12-Lead Electrocardiogram (Sinus Tachycardia)',
+                'department' => 'ECG',
+                'is_private' => 0,
+                'content' => "EXAMINATION: 12-LEAD ELECTROCARDIOGRAM (ECG)\n\nCLINICAL INDICATION: Palpitations, anxiety, fever\n\nMEASUREMENTS & PARAMETERS:\n- Rhythm: Sinus Tachycardia\n- Heart Rate: 115 beats per minute (bpm)\n- P Wave: Precedes every QRS complex, normal axis\n- PR Interval: 0.14 sec\n- QRS Duration: 0.08 sec\n- QTc: 420 ms\n- Axis: Normal\n\nREPOLARIZATION:\n- ST Segment: Isoelectric, no significant ST elevation or depression.\n- T Waves: Normal morphology.\n\nIMPRESSION:\nSINUS TACHYCARDIA (RATE 115 BPM). NO ACUTE ST-T WAVE ISCHEMIC CHANGES. CORRELATE CLINICALLY WITH FEVER, ANXIETY, DEHYDRATION, OR THYROID STATUS.",
+            ],
+            [
+                'id' => 'TPL-ECG-03',
+                'title' => '12-Lead Electrocardiogram (Ischemic ST-T Changes)',
+                'department' => 'ECG',
+                'is_private' => 0,
+                'content' => "EXAMINATION: 12-LEAD ELECTROCARDIOGRAM (ECG)\n\nCLINICAL INDICATION: Chest tightness, retrosternal discomfort\n\nMEASUREMENTS & PARAMETERS:\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 78 bpm\n- PR Interval: 0.16 sec\n- QRS Duration: 0.09 sec\n- Axis: Normal\n\nREPOLARIZATION:\n- ST-T Changes: Horizontal / downsloping ST-segment depression (~1.5 mm) with symmetrical T-wave inversions noted in leads V4, V5, V6, I, and aVL (Anterolateral leads).\n- Inferior leads (II, III, aVF) show flat T waves.\n\nIMPRESSION:\nANTEROLATERAL ST-T CHANGES SUGGESTIVE OF MYOCARDIAL ISCHEMIA. CLINICAL CORRELATION AND CARDIAC ENZYMES (TROPONIN-I) WITH CARDIOLOGIST REVIEW RECOMMENDED.",
+            ],
+            [
+                'id' => 'TPL-ECG-04',
+                'title' => '12-Lead Electrocardiogram (Left Ventricular Hypertrophy - LVH)',
+                'department' => 'ECG',
+                'is_private' => 0,
+                'content' => "EXAMINATION: 12-LEAD ELECTROCARDIOGRAM (ECG)\n\nCLINICAL INDICATION: Long-standing systemic hypertension\n\nMEASUREMENTS & PARAMETERS:\n- Rhythm: Normal Sinus Rhythm\n- Heart Rate: 68 bpm\n- Axis: Left Axis Deviation (-15°)\n- Sokolow-Lyon Criteria: S in V1 (18 mm) + R in V5 (22 mm) = 40 mm (Positive for LVH > 35 mm)\n- Cornell Voltage: R in aVL + S in V3 meets criteria for LVH.\n- Repolarization: ST-segment depression and asymmetric T-wave inversion in lateral leads (I, aVL, V5, V6), consistent with LV 'strain' pattern.\n\nIMPRESSION:\nLEFT VENTRICULAR HYPERTROPHY (LVH) WITH SECONDARY REPOLARIZATION (STRAIN) PATTERN. COMPATIBLE WITH HYPERTENSIVE HEART DISEASE. 2D ECHOCARDIOGRAPHY ADVISED.",
+            ],
+
+            // --- 2D ECHOCARDIOGRAPHY & COLOR DOPPLER TEMPLATES ---
+            [
+                'id' => 'TPL-ECHO-01',
+                'title' => '2D Echocardiography & Color Doppler (Normal Study - EF 62%)',
+                'department' => 'Echocardiography',
+                'is_private' => 0,
+                'content' => "TRANSTHORACIC 2D ECHOCARDIOGRAPHY & COLOR DOPPLER REPORT\n\nCLINICAL INDICATION: Cardiac assessment / Pre-op fitness / Evaluation\n\nM-MODE & 2D MEASUREMENTS:\n- Left Ventricle Internal Diameter Diastole (LVIDd): 4.6 cm (Normal: 3.5 - 5.6 cm)\n- Left Ventricle Internal Diameter Systole (LVIDs): 2.9 cm (Normal: 2.0 - 4.0 cm)\n- Interventricular Septum Diastole (IVSd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- Posterior Wall Diastole (PWd): 0.9 cm (Normal: 0.6 - 1.1 cm)\n- Left Atrium Diameter (LA): 3.2 cm (Normal: 1.9 - 4.0 cm)\n- Aortic Root Diameter (Ao): 2.8 cm (Normal: 2.0 - 3.7 cm)\n- Ejection Fraction (EF): 62% (Simpson's biplane, Normal: 55 - 75%)\n- Fractional Shortening (FS): 36% (Normal: 28 - 44%)\n\nCHAMBER SIZES & LV FUNCTION:\n- All four cardiac chambers (LV, RV, LA, RA) are normal in size and dimensions.\n- Left ventricular global and regional systolic function is preserved.\n- No resting regional wall motion abnormality (RWMA) identified.\n- Right ventricular systolic function is normal (TAPSE: 22 mm).\n\nVALVULAR ASSESSMENT & COLOR DOPPLER:\n- Mitral Valve: Leaflets are thin, pliable with normal opening and closure. No mitral stenosis (MS). Trace physiological mitral regurgitation (MR).\n- Aortic Valve: Trileaflet aortic valve with good excursion. No aortic stenosis (AS) or regurgitation (AR).\n- Tricuspid Valve: Normal leaflet morphology. Estimated pulmonary artery systolic pressure (PASP) is normal (~24 mmHg).\n- Pulmonic Valve: Normal.\n\nPERICARDIUM & OTHERS:\n- Pericardium is normal. No pericardial effusion seen.\n- No intracardiac thrombus, vegetative mass, or shunt visualized.\n- Interatrial and interventricular septa appear intact.\n\nIMPRESSION:\n1. NORMAL 2D ECHOCARDIOGRAM WITH COLOR DOPPLER STUDY.\n2. PRESERVED LEFT VENTRICULAR SYSTOLIC FUNCTION (EF = 62%).\n3. NO REGIONAL WALL MOTION ABNORMALITY AT REST.\n4. NORMAL VALVULAR MORPHOLOGY AND FUNCTION.",
+            ],
+            [
+                'id' => 'TPL-ECHO-02',
+                'title' => '2D Echocardiogram (Concentric LVH & Grade I Diastolic Dysfunction)',
+                'department' => 'Echocardiography',
+                'is_private' => 0,
+                'content' => "TRANSTHORACIC 2D ECHOCARDIOGRAPHY & COLOR DOPPLER REPORT\n\nCLINICAL INDICATION: Chronic Hypertension / Dyspnea on exertion\n\nM-MODE & 2D MEASUREMENTS:\n- LVIDd: 4.8 cm\n- LVIDs: 3.1 cm\n- IVSd: 1.3 cm (Increased, Normal: 0.6 - 1.1 cm)\n- PWd: 1.2 cm (Increased, Normal: 0.6 - 1.1 cm)\n- Left Atrium (LA): 4.1 cm (Mildly dilated)\n- Ejection Fraction (EF): 60% (Preserved)\n\nCHAMBER SIZES & LV FUNCTION:\n- Concentric Left Ventricular Hypertrophy (LVH) noted with thickened septum and posterior wall.\n- Global LV systolic performance is preserved (EF: 60%).\n- No resting regional wall motion abnormality.\n- Right ventricle and right atrium are normal in size.\n\nDOPPLER & DIASTOLIC FUNCTION:\n- Mitral inflow Doppler demonstrates impaired LV relaxation pattern (E/A ratio < 0.8, prolonged deceleration time), consistent with Grade I (Mild) LV Diastolic Dysfunction.\n- Mild trivial Mitral Regurgitation (MR).\n- Aortic valve shows sclerotic changes without significant gradient.\n- No pericardial effusion or intracardiac mass.\n\nIMPRESSION:\n1. CONCENTRIC LEFT VENTRICULAR HYPERTROPHY (LVH) WITH MILD LEFT ATRIAL ENLARGEMENT.\n2. PRESERVED LV SYSTOLIC FUNCTION (EF = 60%).\n3. GRADE I (IMPAIRED RELAXATION) LV DIASTOLIC DYSFUNCTION.\n4. COMPATIBLE WITH HYPERTENSIVE HEART DISEASE.",
+            ],
+            [
+                'id' => 'TPL-ECHO-03',
+                'title' => '2D Echocardiogram (Ischemic Heart Disease / RWMA / Reduced EF 40%)',
+                'department' => 'Echocardiography',
+                'is_private' => 0,
+                'content' => "TRANSTHORACIC 2D ECHOCARDIOGRAPHY & COLOR DOPPLER REPORT\n\nCLINICAL INDICATION: Post-Myocardial Infarction / Ischemic Heart Disease\n\nM-MODE & 2D MEASUREMENTS:\n- LVIDd: 5.6 cm (Dilated)\n- LVIDs: 4.3 cm (Dilated)\n- IVSd: 0.9 cm\n- PWd: 0.9 cm\n- Left Atrium: 4.3 cm (Dilated)\n- Ejection Fraction (EF): 40% (Moderately reduced, Simpson's biplane)\n\nREGIONAL WALL MOTION ANALYSIS (RWMA):\n- Anterior wall, anteroseptum, and apex are hypokinetic to akinetic.\n- Inferior, posterior, and lateral walls demonstrate compensatory hyperkinesia.\n\nVALVULAR ASSESSMENT & DOPPLER:\n- Mild-to-moderate functional Mitral Regurgitation (MR) secondary to annular dilatation.\n- Aortic, tricuspid, and pulmonic valves appear unremarkable.\n- Estimated PASP is mildly elevated (~36 mmHg).\n- No intracardiac clot or LV apical thrombus detected on current study.\n- No pericardial effusion.\n\nIMPRESSION:\n1. DILATED LEFT VENTRICLE WITH MODERATELY REDUCED LV SYSTOLIC FUNCTION (EF = 40%).\n2. REGIONAL WALL MOTION ABNORMALITY (ANTEROSEPTAL AND APICAL HYPOKINESIA / AKINESIA), COMPATIBLE WITH CORONARY ARTERY DISEASE (LAD TERRITORY).\n3. MILD-TO-MODERATE FUNCTIONAL MITRAL REGURGITATION.",
+            ],
+        ];
+
+        foreach ($allTemplates as $tpl) {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM report_templates WHERE id = :id AND organization_id = :org_id",
+                ['id' => $tpl['id'], 'org_id' => $orgId]
+            );
+            if (!$existing) {
+                $this->create(array_merge($tpl, ['organization_id' => $orgId, 'created_by' => 'admin']));
+            } else {
+                $this->update($tpl['id'], $tpl, $orgId);
             }
         }
     }

@@ -19,6 +19,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
     $existingEntry = lab_repo()->findByLabNo($postLabNo);
 
     if ($existingEntry) {
+        if (isset($_POST['toggle_bill_lock'])) {
+            $lockAction = (string)$_POST['toggle_bill_lock'];
+            if ($lockAction === 'lock') {
+                lab_repo()->lockBill($postLabNo, current_user()['name'] ?? 'Staff');
+                audit_log('LOCK_BILL', 'lab_entries', $postLabNo, "Bill locked from entry editor by " . (current_user()['name'] ?? 'Staff'));
+                header('Location: /portals/lab-entries/edit.php?lab_no=' . urlencode($postLabNo) . '&bill_locked=1');
+                exit;
+            } elseif ($lockAction === 'unlock') {
+                if (!is_admin_user()) {
+                    $message = flash_error('Security Restriction: Only an Admin account can unlock this locked bill.');
+                } else {
+                    lab_repo()->unlockBill($postLabNo);
+                    audit_log('UNLOCK_BILL', 'lab_entries', $postLabNo, "Bill unlocked from entry editor by Admin " . (current_user()['name'] ?? 'Admin'));
+                    header('Location: /portals/lab-entries/edit.php?lab_no=' . urlencode($postLabNo) . '&bill_unlocked=1');
+                    exit;
+                }
+            }
+        }
+
+        $isBillLocked = !empty($existingEntry['is_bill_locked']);
+        if ($isBillLocked && !is_admin_user() && !isset($_POST['toggle_bill_lock'])) {
+            $message = flash_error('Security Lock: This bill is locked. Modifying patient registration, tests, or bill amounts requires logging in with an Admin ID.');
+            $entry = $existingEntry;
+        } else {
         $patientName = trim((string)($_POST['patient_name'] ?? $existingEntry['patient_name'] ?? ''));
         $patientAge = trim((string)($_POST['age'] ?? ''));
         $patientGender = trim((string)($_POST['gender'] ?? ''));
@@ -29,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
         $doctor = $typedDoc !== '' ? $typedDoc : $selectedDoc;
         if ($doctor === '') {
             $doctor = $existingEntry['doctor'] ?? 'Walk-in / Self';
+        } else {
+            record_doctor_name($doctor, current_user()['organization_id'] ?? 'ORG-001');
         }
 
         $catalog = resolve_catalog_from_post($_POST);
@@ -109,13 +135,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
                 . '<div class="flex flex-wrap items-center gap-2">'
                 . '<a href="' . e($slipUrl) . '" target="_blank" class="btn btn-secondary text-xs font-bold bg-white text-emerald-800 border-emerald-300"><i class="fa-solid fa-receipt mr-1"></i> Print Updated Slip</a>'
                 . '<a href="' . e($reportUrl) . '" class="btn btn-secondary text-xs font-bold bg-white text-amber-800 border-amber-300"><i class="fa-solid fa-file-pen mr-1"></i> Edit Report</a>'
-                . '<a href="' . e($previewUrl) . '" class="btn btn-secondary text-xs font-bold bg-white text-slate-800"><i class="fa-solid fa-eye mr-1"></i> View Preview</a>'
                 . '</div>'
                 . '</div>';
 
             $entry = lab_repo()->findByLabNo($postLabNo);
         } else {
             $message = flash_error('Could not update entry.');
+        }
         }
     }
 }
@@ -180,7 +206,7 @@ if (!$entry) {
     $content = page_header(
         'Edit Entry & Bill',
         'Find any patient visit to correct age, name, doctor, tests, or billing slip details.',
-        '<a href="/portals/lab-entries/new.php" class="btn btn-primary"><i class="fa-solid fa-plus mr-1"></i> New Entry</a>'
+        '<a href="/portals/lab-entries/new.php" class="btn btn-primary"><i class="fa-solid fa-plus mr-1"></i> Register Patient</a>'
     );
 
     $content .= <<<HTML
@@ -259,6 +285,46 @@ $slipUrl = '/portals/receipts.php?lab_no=' . urlencode((string)$entry['lab_no'])
 $reportUrl = '/portals/results/entry.php?lab_no=' . urlencode((string)$entry['lab_no']);
 $previewUrl = '/portals/reports/preview.php?lab_no=' . urlencode((string)$entry['lab_no']);
 
+$isBillLocked = !empty($entry['is_bill_locked']);
+$isAdmin = is_admin_user();
+$billLockedBy = e((string)($entry['bill_locked_by'] ?? 'Staff'));
+$billLockedAt = !empty($entry['bill_locked_at']) ? date('d M Y, h:i A', strtotime($entry['bill_locked_at'])) : '';
+
+if (isset($_GET['bill_locked'])) {
+    $message = flash_success('Bill has been locked. Employees can no longer modify this visit.');
+}
+if (isset($_GET['bill_unlocked'])) {
+    $message = flash_success('Bill has been unlocked by Admin.');
+}
+
+$lockBannerHtml = '';
+if ($isBillLocked) {
+    $adminActionHtml = $isAdmin
+        ? '<button type="submit" name="toggle_bill_lock" value="unlock" class="btn btn-secondary text-xs font-bold text-rose-800 bg-white border border-rose-300 hover:bg-rose-100 shadow-2xs py-2 px-3.5"><i class="fa-solid fa-lock-open mr-1.5 text-rose-600"></i> Unlock Bill (Admin)</button>'
+        : '<span class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-800 bg-white px-3 py-2 rounded-xl border border-rose-200 shadow-2xs"><i class="fa-solid fa-shield-halved text-rose-600"></i> Locked (Admin Only)</span>';
+
+    $lockSubtext = $isAdmin
+        ? 'Locked on ' . $billLockedAt . ' by <strong>' . $billLockedBy . '</strong>. You are logged in as Admin — you can edit values or unlock.'
+        : 'Locked on ' . $billLockedAt . ' by <strong>' . $billLockedBy . '</strong>. To prevent unauthorized tampering, employee edits are disabled. Only an Admin account can unlock.';
+
+    $lockBannerHtml = <<<HTML
+    <div class="mb-4 p-3.5 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-rose-900 shadow-xs">
+        <div class="flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                <i class="fa-solid fa-lock"></i>
+            </span>
+            <div>
+                <div class="text-sm font-extrabold text-rose-950 flex items-center gap-1.5">
+                    BILL LOCKED <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">Protected</span>
+                </div>
+                <div class="text-xs text-rose-800">{$lockSubtext}</div>
+            </div>
+        </div>
+        <div>{$adminActionHtml}</div>
+    </div>
+HTML;
+}
+
 $content = page_header(
     'Edit Entry & Bill Slip',
     "Lab No {$entry['lab_no']} · {$patientName} · MR {$mrNo}",
@@ -266,11 +332,11 @@ $content = page_header(
     . '<a href="/portals/lab-entries/edit.php" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Change Patient</a>'
     . '<a href="' . e($slipUrl) . '" target="_blank" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-receipt mr-1"></i> Patient Slip</a>'
     . '<a href="' . e($reportUrl) . '" class="btn btn-secondary text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300"><i class="fa-solid fa-file-pen mr-1 text-amber-600"></i> Edit Report</a>'
-    . '<a href="' . e($previewUrl) . '" class="btn btn-secondary text-xs font-semibold"><i class="fa-solid fa-eye mr-1"></i> Preview Report</a>'
     . '</div>'
 );
 
 $content .= $message;
+$content .= $lockBannerHtml;
 
 $content .= '<form method="post" data-billing class="space-y-4">' .
     '<input type="hidden" name="lab_no" value="' . $labNoSafe . '">';
@@ -335,6 +401,19 @@ $content .= card(
     'overflow-hidden'
 );
 
+$actionsHtml = '';
+if ($isBillLocked && !$isAdmin) {
+    $actionsHtml = '<button type="button" disabled class="btn btn-secondary w-full justify-center opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200"><i class="fa-solid fa-lock mr-1.5"></i> Bill Locked (Admin Only)</button>'
+        . '<a href="' . e($slipUrl) . '" target="_blank" class="btn btn-secondary w-full justify-center text-teal-800 bg-white border-teal-300 hover:bg-teal-50"><i class="fa-solid fa-receipt mr-1 text-teal-600"></i> Print Current Slip</a>';
+} else {
+    $actionsHtml = '<button type="submit" name="submit_action" value="save" class="btn btn-primary w-full justify-center"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes</button>'
+        . '<button type="submit" name="submit_action" value="print_slip" class="btn btn-secondary w-full justify-center text-teal-800 bg-white border-teal-300 hover:bg-teal-50"><i class="fa-solid fa-receipt mr-1 text-teal-600"></i> Save &amp; Print Slip</button>'
+        . '<button type="submit" name="submit_action" value="edit_report" class="btn btn-secondary w-full justify-center text-amber-800 bg-white border-amber-300 hover:bg-amber-50"><i class="fa-solid fa-file-pen mr-1 text-amber-600"></i> Save &amp; Edit Report</button>';
+    if (!$isBillLocked) {
+        $actionsHtml .= '<button type="submit" name="toggle_bill_lock" value="lock" onclick="return confirm(\'Lock this bill? Once locked, only an Admin ID can unlock or modify it.\');" class="btn btn-secondary w-full justify-center text-amber-800 bg-amber-50 border-amber-300 hover:bg-amber-100 font-bold text-xs"><i class="fa-solid fa-lock mr-1.5 text-amber-600"></i> Lock Bill (Prevent Tampering)</button>';
+    }
+}
+
 $content .= '<div class="book-layout__side space-y-3">' .
     card(
         panel_head('Discount & Billing Slip') .
@@ -343,9 +422,7 @@ $content .= '<div class="book-layout__side space-y-3">' .
         textarea_field('Visit Notes / Remarks', 'clinical', $entry['clinical_notes'] ?? '', 'Notes printed on administrative slip…', 3, true) .
         '</div>' .
         '<div class="sticky-actions border-t border-slate-100 flex flex-col gap-2 p-3 bg-slate-50">' .
-        '<button type="submit" name="submit_action" value="save" class="btn btn-primary w-full justify-center"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes</button>' .
-        '<button type="submit" name="submit_action" value="print_slip" class="btn btn-secondary w-full justify-center text-teal-800 bg-white border-teal-300 hover:bg-teal-50"><i class="fa-solid fa-receipt mr-1 text-teal-600"></i> Save &amp; Print Slip</button>' .
-        '<button type="submit" name="submit_action" value="edit_report" class="btn btn-secondary w-full justify-center text-amber-800 bg-white border-amber-300 hover:bg-amber-50"><i class="fa-solid fa-file-pen mr-1 text-amber-600"></i> Save &amp; Edit Report</button>' .
+        $actionsHtml .
         '</div>'
     ) .
     '</div>';

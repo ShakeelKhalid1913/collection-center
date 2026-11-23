@@ -14,6 +14,7 @@ $msg = '';
 
 // Handle status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_transit') {
+    require_permission('transit_dispatch');
     $labNo = trim((string)($_POST['lab_no'] ?? ''));
     $newStatus = trim((string)($_POST['transit_status'] ?? ''));
     $valid = ['collected', 'in_transit', 'testing', 'result_entered', 'verified'];

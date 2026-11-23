@@ -6,10 +6,18 @@ require_once __DIR__ . '/../../../includes/bootstrap.php';
 require_once __DIR__ . '/../../../includes/layout.php';
 require_once __DIR__ . '/../../../includes/components.php';
 
+require_permission('report_edit');
+
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $by = current_user()['name'] ?? 'Pathologist';
+
+    if (!empty($_POST['verify_and_open']) && !empty($_POST['lab_no'])) {
+        result_repo()->verifyAllByLabNo(trim((string)$_POST['lab_no']), $by);
+        header('Location: /portals/reports/preview.php?lab_no=' . urlencode(trim((string)$_POST['lab_no'])));
+        exit;
+    }
 
     if (!empty($_POST['lab_no'])) {
         result_repo()->verifyAllByLabNo(trim((string)$_POST['lab_no']), $by);
@@ -35,7 +43,7 @@ foreach (result_repo()->getUnverifiedResults() as $r) {
         . '<a href="/portals/reports/preview.php?lab_no=' . urlencode($labNo) . '" class="btn btn-secondary text-xs"><i class="fa-solid fa-eye mr-1"></i> Report</a>'
         . '<form method="post" class="inline">'
         . '<input type="hidden" name="lab_no" value="' . e($labNo) . '">'
-        . '<button type="submit" class="btn btn-primary text-xs"><i class="fa-solid fa-circle-check mr-1"></i> Verify &amp; release</button>'
+        . '<button type="submit" name="verify_and_open" value="1" class="btn btn-primary text-xs"><i class="fa-solid fa-circle-check mr-1"></i> Verify &amp; View Report &rarr;</button> <button type="submit" class="btn btn-secondary text-xs"><i class="fa-solid fa-check mr-1 text-slate-400"></i> Release</button>'
         . '</form>'
         . '</div>';
 
@@ -56,7 +64,7 @@ $content = page_header(
 if (isset($_GET['verified'])) {
     $labHint = trim((string)($_GET['lab_no'] ?? ''));
     $msg = $labHint !== ''
-        ? 'Lab No ' . $labHint . ' verified and released.'
+        ? 'Lab No ' . $labHint . ' verified and released. <a href="/portals/reports/preview.php?lab_no=' . urlencode($labHint) . '" class="btn btn-primary text-xs py-1 px-3 ml-2 font-bold"><i class="fa-solid fa-file-medical mr-1"></i> Open &amp; Print Report &rarr;</a>'
         : 'Result verified and released.';
     $content .= flash_success($msg);
 }

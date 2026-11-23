@@ -36,22 +36,34 @@ foreach (mock('mock_doctors') as $d) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($_POST['scan_no'])) {
-    $radCustom = trim((string)($_POST['rad_custom'] ?? ''));
-    $radSelected = trim((string)($_POST['rad'] ?? ''));
-    $finalRad = $radCustom !== '' ? $radCustom : ($radSelected !== '' ? resolve_doctor_name($radSelected) : 'Dr. Imran Sheikh');
-
-    $ok = result_repo()->saveImagingFindings($_POST['scan_no'], [
-        'radiologist' => $finalRad,
-        'findings' => $_POST['findings'] ?? '',
-        'impression' => $_POST['impression'] ?? '',
-        'status' => 'reported',
-    ]);
-    if ($ok) {
-        header('Location: /portals/reports.php?scan_no=' . urlencode($_POST['scan_no']));
-        exit;
+    $existingScan = result_repo()->findImagingScan($_POST['scan_no']);
+    $scanLabNo = (string)($existingScan['lab_no'] ?? '');
+    if ($scanLabNo !== '') {
+        $labEntry = lab_repo()->findByLabNo($scanLabNo);
+        if (!empty($labEntry['is_report_locked']) && !is_admin_user()) {
+            $message = flash_error('Security Lock: This report has been reviewed and locked. Modifying findings requires logging in with an Admin ID.');
+            $scan = $existingScan;
+        }
     }
-    $message = flash_error('Could not save findings.');
-    $scan = result_repo()->findImagingScan($_POST['scan_no']);
+
+    if (empty($message)) {
+        $radCustom = trim((string)($_POST['rad_custom'] ?? ''));
+        $radSelected = trim((string)($_POST['rad'] ?? ''));
+        $finalRad = $radCustom !== '' ? $radCustom : ($radSelected !== '' ? resolve_doctor_name($radSelected) : 'Dr. Imran Sheikh');
+
+        $ok = result_repo()->saveImagingFindings($_POST['scan_no'], [
+            'radiologist' => $finalRad,
+            'findings' => $_POST['findings'] ?? '',
+            'impression' => $_POST['impression'] ?? '',
+            'status' => 'reported',
+        ]);
+        if ($ok) {
+            header('Location: /portals/reports.php?scan_no=' . urlencode($_POST['scan_no']));
+            exit;
+        }
+        $message = flash_error('Could not save findings.');
+        $scan = result_repo()->findImagingScan($_POST['scan_no']);
+    }
 }
 
 $titleHint = $scan
@@ -86,6 +98,30 @@ if (!$scan) {
     }
 
     $allTemplates = get_all_imaging_templates();
+
+    // Also load custom organization templates from database
+    try {
+        $dbTemplates = template_repo()->getAll($orgId, current_user()['id'] ?? null);
+        foreach ($dbTemplates as $dbt) {
+            $tKey = 'db_' . ($dbt['id'] ?? uniqid());
+            $dep = strtolower((string)($dbt['department'] ?? 'ultrasound'));
+            $depKey = 'ultrasound';
+            if (str_contains($dep, 'x-ray') || str_contains($dep, 'radiology')) $depKey = 'xray';
+            elseif (str_contains($dep, 'cardio') || str_contains($dep, 'ecg')) $depKey = 'ecg';
+            elseif (str_contains($dep, 'echo')) $depKey = 'echo';
+            elseif (str_contains($dep, 'ct')) $depKey = 'ct';
+            elseif (str_contains($dep, 'mri')) $depKey = 'mri';
+
+            $allTemplates[$tKey] = [
+                'id' => $tKey,
+                'dept' => $depKey,
+                'title' => '⭐ ' . ($dbt['title'] ?? 'Custom Template'),
+                'findings' => $dbt['content'] ?? '',
+                'impression' => 'Clinical correlation advised.',
+            ];
+        }
+    } catch (\Throwable $e) {}
+
     $templatesJson = json_encode($allTemplates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
     // Group templates into optgroups
@@ -163,11 +199,15 @@ HTML;
                 <span class="text-[11px] text-slate-300">Shared clinical format across Ultrasound, X-Ray, ECG, CT &amp; MRI. Select template to populate or edit.</span>
             </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
             <label for="img-universal-report-type" class="text-[11px] font-bold text-[#c2f13c] uppercase">Load Template:</label>
             <select id="img-universal-report-type" onchange="if(this.value) applyImagingTemplate(this.value)" class="field text-xs font-semibold py-1.5 px-3 bg-white text-slate-900 border-slate-300 rounded-xl">
                 {$templateSelectHtml}
             </select>
+            <a href="/portals/templates.php" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#c2f13c] border border-white/20 text-xs font-bold transition-all" title="Open Radiology Report Templates Library">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Templates</span>
+            </a>
         </div>
     </div>
     <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-700 text-xs">

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $patient) {
     } else {
         $doctor = trim($_POST['doctor'] ?? '');
         $ok = patient_repo()->update($patient['id'], [
-            'title' => $_POST['title'] ?? 'Mr',
+            'title' => trim((string)($_POST['title'] ?? '')),
             'full_name' => $fullName,
             'relation_of' => trim($_POST['relation_of'] ?? ''),
             'phone' => $_POST['phone'] ?? '',
@@ -70,7 +70,7 @@ $form = '<form method="post">' .
         '<p class="form-section-note">Update patient demographic info or referring doctor. Changes to doctor will automatically sync to this patient’s lab reports.</p>' .
         '<div class="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-6">' .
         form_field('MR Number', 'patient_no_display', 'text', $mrNo, '', true, 'readonly disabled style="background:#f1f5f9;cursor:not-allowed;"') .
-        select_field('Title', 'title', $titles, $patient['title'] ?? 'Mr') .
+        title_input_field('Title', 'title', $patient['title'] ?? '') .
         form_field('Full name', 'full_name', 'text', $patient['full_name'] ?? $patient['name'] ?? '', 'Legal / CNIC name') .
         form_field('Father / Husband Name', 'relation_of', 'text', $patient['relation_of'] ?? '', 'F/H name', true) .
         form_field('Mobile (primary)', 'phone', 'tel', $patient['phone'] ?? '', '03xx-xxxxxxx') .

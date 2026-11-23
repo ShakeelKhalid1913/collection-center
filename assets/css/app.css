@@ -1,5 +1,5 @@
 :root {
-  --font: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --bg: #f8fafc;
   --surface: #ffffff;
   --surface-muted: #f1f5f9;
@@ -21,7 +21,7 @@
 }
 
 * {
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
 html {
@@ -523,6 +523,102 @@ textarea:focus::-webkit-input-placeholder,
 .app-sidebar__logout:hover {
   color: #fca5a5;
   text-decoration: none;
+}
+
+/* ========================================================
+   Sidebar Collapsed (Compact Icon Rail Mode) by Default
+   ======================================================== */
+.main-content-wrapper {
+  padding-left: 0;
+  transition: padding-left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 1024px) {
+  /* Default Expanded state */
+  .main-content-wrapper {
+    padding-left: var(--sidebar-width);
+  }
+
+  /* Collapsed Rail State (Default) */
+  #app-shell.sidebar-collapsed .main-content-wrapper {
+    padding-left: 4.5rem !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar {
+    width: 4.5rem !important;
+    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-brand {
+    padding: 0.75rem 0.5rem !important;
+    justify-content: center !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-brand__text {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .nav-section {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .nav-link {
+    justify-content: center !important;
+    padding: 0.65rem 0 !important;
+    margin: 0.25rem 0.4rem !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .nav-link__icon {
+    width: auto !important;
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .nav-link__text {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .nav-link span {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-sidebar__user {
+    padding: 0.5rem 0.25rem !important;
+    margin: 0.4rem !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-sidebar__user-row {
+    justify-content: center !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-sidebar__user-details {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .sidebar-rail-expand {
+    display: block !important;
+  }
+
+  #app-shell:not(.sidebar-collapsed) #sidebar .sidebar-rail-expand {
+    display: none !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar #sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  #app-shell:not(.sidebar-collapsed) #sidebar #sidebar-collapse-btn {
+    display: flex !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-sidebar__logout {
+    justify-content: center !important;
+    padding: 0.4rem 0 !important;
+  }
+
+  #app-shell.sidebar-collapsed #sidebar .app-sidebar__logout-text {
+    display: none !important;
+  }
 }
 
 .app-topbar {
@@ -1119,35 +1215,62 @@ textarea.field {
 }
 
 .catalog-search-wrap {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  position: relative;
 }
 
 .catalog-search-input {
-  font-size: 0.95rem !important;
-  padding: 0.7rem 0.85rem !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  padding: 0.85rem 1rem !important;
+  border: 2px solid #cbd5e1 !important;
+  border-radius: var(--radius) !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.catalog-search-input:focus {
+  border-color: #0d9488 !important;
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12) !important;
+  background: #ffffff !important;
 }
 
 .catalog-hits {
   display: grid;
-  gap: 0.35rem;
-  max-height: 16rem;
+  gap: 0.45rem;
+  max-height: 20rem;
   overflow-y: auto;
-  padding-right: 0.15rem;
-  margin-bottom: 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding-right: 0.25rem;
+  margin-bottom: 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: var(--radius);
   background: #f8fafc;
-  padding: 0.4rem;
+  padding: 0.6rem;
 }
 
 .catalog-hits.is-empty {
-  padding: 0.75rem;
+  padding: 1rem;
 }
 
 .catalog-hit {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.catalog-hit:hover {
+  background: #f0fdfa;
+  border-color: #0d9488;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
   gap: 0.75rem;
   width: 100%;
   text-align: left;
@@ -1540,7 +1663,7 @@ textarea.field {
   line-height: 1.45;
   font-weight: 700;
   border: 1px solid #cbd5e1;
-  padding: 0.4rem 1.25rem 0.35rem 1.25rem;
+  padding: 0.25rem 1.25rem 0.25rem 1.25rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
@@ -1925,15 +2048,15 @@ textarea.field {
 .lab-report__meta {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.2rem 0.75rem;
-  padding: 0.35rem 0;
+  gap: 0.12rem 0.6rem;
+  padding: 0.2rem 0;
   border-top: 1px solid #0f172a;
   border-bottom: 1px solid #0f172a;
 }
 
 .lab-report__cell {
   min-width: 0;
-  padding: 0.08rem 0;
+  padding: 0.04rem 0;
 }
 
 .lab-report__lbl {
@@ -1983,10 +2106,10 @@ textarea.field {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.35rem 1rem;
-  margin: 0.35rem 0 0.25rem;
-  border-bottom: 2.5px solid #000000;
-  padding-bottom: 0.2rem;
+  gap: 0.2rem 1rem;
+  margin: 0.2rem 0 0.12rem;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 0.12rem;
 }
 
 .lab-report__header--continued {
@@ -2048,13 +2171,13 @@ textarea.field {
   background: #fff !important;
   color: #000000 !important;
   text-align: left;
-  font-size: 0.68rem;
+  font-size: 0.80rem;
   font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
   font-style: italic !important;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.22rem 0.35rem;
+  padding: 0.28rem 0.35rem;
   border-top: 1.5px solid #000000;
   border-bottom: 1.5px solid #000000;
   border-right: 1px solid #000000;
@@ -2073,29 +2196,29 @@ textarea.field {
 }
 
 .lab-report__th-test {
-  width: 50%;
+  width: 30%;
   text-align: left !important;
 }
 
 .lab-report__th-range {
-  width: 20%;
-  text-align: right !important;
-  padding-right: 0.6rem !important;
-  padding-left: 0.2rem !important;
+  width: 26%;
+  text-align: left !important;
+  padding-right: 0.3rem !important;
+  padding-left: 0.5rem !important;
 }
 
 .lab-report__th-unit {
-  width: 15%;
-  text-align: right !important;
-  padding-right: 0.6rem !important;
-  padding-left: 0.2rem !important;
+  width: 18%;
+  text-align: left !important;
+  padding-right: 0.3rem !important;
+  padding-left: 0.5rem !important;
 }
 
 .lab-report__th-result {
-  width: 15%;
-  text-align: right !important;
-  padding-right: 0.6rem !important;
-  padding-left: 0.2rem !important;
+  width: 26%;
+  text-align: left !important;
+  padding-right: 0.35rem !important;
+  padding-left: 0.5rem !important;
   line-height: 1.15;
 }
 
@@ -2107,13 +2230,13 @@ textarea.field {
   text-transform: none;
   letter-spacing: 0;
   margin-top: 0.05rem;
-  text-align: right !important;
+  text-align: left !important;
 }
 
 /* Body matches Infinity sample: compact rows */
 .lab-report__table tbody td {
-  padding: 0.16rem 0.35rem;
-  line-height: 1.25;
+  padding: 0.14rem 0.35rem;
+  line-height: 1.30;
   border: none !important;
   vertical-align: middle;
   color: #000000 !important;
@@ -2123,29 +2246,32 @@ textarea.field {
 }
 
 .lab-report__param-cell {
-  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
+  font-family: var(--report-body-font, Arial, sans-serif) !important;
+  font-size: 15px !important;
   font-weight: var(--report-body-weight, 700) !important;
-  font-style: var(--report-body-style, italic) !important;
+  font-style: var(--report-body-style, normal) !important;
   color: #000000 !important;
   text-align: left !important;
 }
 
 .lab-report__range-cell,
 .lab-report__unit-cell {
-  text-align: right !important;
-  padding-right: 0.6rem !important;
-  padding-left: 0.2rem !important;
+  text-align: left !important;
+  padding-right: 0.3rem !important;
+  padding-left: 0.5rem !important;
   font-variant-numeric: tabular-nums;
-  font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
-  font-weight: var(--report-body-weight, 700) !important;
-  font-style: var(--report-body-style, italic) !important;
+  font-family: var(--report-body-font, Arial, sans-serif) !important;
+  font-size: 14px !important;
+  font-weight: var(--report-body-weight, 500) !important;
+  font-style: var(--report-body-style, normal) !important;
   color: #000000 !important;
+  white-space: pre-line !important;
 }
 
 .lab-report__test-head td {
   background: #ffffff !important;
-  padding: 0.3rem 0.45rem 0.12rem !important;
-  font-size: 0.88rem;
+  padding: 0.14rem 0.35rem 0.06rem !important;
+  font-size: 0.82rem;
   font-weight: 900 !important;
   color: #000000 !important;
   border: none !important;
@@ -2252,10 +2378,10 @@ textarea.field {
   font-family: var(--report-body-font, "Times New Roman", Times, Georgia, serif) !important;
   font-weight: 900 !important;
   font-style: italic !important;
-  font-size: 0.92rem;
-  text-align: right !important;
-  padding-right: 0.6rem !important;
-  padding-left: 0.2rem !important;
+  font-size: 14.5px !important;
+  text-align: left !important;
+  padding-right: 0.35rem !important;
+  padding-left: 0.5rem !important;
   color: #000000 !important;
 }
 
@@ -2309,41 +2435,61 @@ textarea.field {
 }
 
 .lab-report__subtable-wrap {
-  margin: 0.15rem 0 0.35rem 0.5rem;
+  margin: 0.15rem 0 0.3rem 0.25rem;
 }
 
 .lab-report__subtable-title {
   display: block;
-  font-size: 0.68rem;
+  font-size: 10.5px;
   font-weight: 700;
-  color: #64748b;
+  color: #334155;
   margin-bottom: 2px;
+  font-style: normal !important;
 }
 
 .lab-report__subtable {
   border-collapse: collapse;
-  font-size: 0.7rem;
-  width: 210px;
+  font-size: 10.5px;
+  width: 250px;
   background: #fff;
-  border: 1px solid #0f172a;
+  border-top: 3px double #000000;
+  border-bottom: 3px double #000000;
+  border-left: 1px solid #000000;
+  border-right: 1px solid #000000;
 }
 
 .lab-report__subtable th,
 .lab-report__subtable td {
-  padding: 0.12rem 0.5rem !important;
-  border: 1px solid #94a3b8;
+  padding: 1.5px 6px !important;
+  border: 1px solid #64748b;
+  font-style: normal !important;
 }
 
 .lab-report__subtable th {
-  background: #fff;
-  color: #0f172a;
-  font-weight: 700;
+  background: #f8fafc;
+  color: #000000;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
   text-align: left;
+  border-bottom: 1.5px solid #000000;
 }
 
 .lab-report--page-break {
   page-break-after: always;
   break-after: page;
+}
+
+.lab-report__header {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  break-after: avoid;
+}
+
+.lab-report__footer {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  break-before: avoid;
 }
 
 .print-stack {
@@ -2439,10 +2585,11 @@ textarea.field {
 }
 
 .lab-report__disclaimer {
-  margin: 0 0 0.45rem;
-  font-size: 0.68rem;
-  color: #000;
-  line-height: 1.4;
+  margin: 0.15rem 0 0.25rem;
+  font-size: 0.55rem;
+  color: #64748b;
+  font-weight: 400 !important;
+  line-height: 1.25;
 }
 
 .lab-report__lab-note {
@@ -2571,7 +2718,7 @@ textarea.field {
   vertical-align: top;
 }
 
-.lab-bill__c-vial { width: 5.5rem; }
+.lab-bill__c-vial { width: 3.5rem; text-align: center; }
 .lab-bill__c-exp { width: 8rem; }
 .lab-bill__c-price { width: 6rem; text-align: right !important; font-variant-numeric: tabular-nums; }
 .lab-bill__empty { text-align: center; color: #64748b; padding: 1rem !important; }
@@ -2957,10 +3104,9 @@ textarea.field {
   .lab-report {
     width: 210mm !important;
     max-width: 210mm !important;
-    min-height: 297mm !important;
-    height: 297mm !important;
+    min-height: 268mm !important;
     box-sizing: border-box !important;
-    padding: 2mm 6mm 2mm 6mm !important;
+    padding: 1.5mm 6mm 1.5mm 6mm !important;
     margin: 0 auto !important;
     border: none !important;
     box-shadow: none !important;
@@ -2969,13 +3115,61 @@ textarea.field {
     justify-content: space-between !important;
     page-break-after: always !important;
     break-after: page !important;
-    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible !important;
     background: #fff !important;
   }
 
-  .lab-report:last-child {
+  .lab-report:only-child,
+  .lab-report:last-child,
+  .lab-report--single-page {
     page-break-after: auto !important;
     break-after: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    max-height: 278mm !important;
+  }
+
+  /* Dense mode for comprehensive tests like CBC, LFT, RFT to guarantee 1-page fit on Letter & A4 */
+  .lab-report--dense .lab-report__table tbody td {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+  }
+  .lab-report--dense .lab-report__param-cell,
+  .lab-report--dense .lab-report__result,
+  .lab-report--dense .lab-report__range-cell,
+  .lab-report--dense .lab-report__unit-cell {
+    font-size: 11.5px !important;
+    line-height: 1.18 !important;
+  }
+  .lab-report--dense .lab-report__section-head td {
+    padding-top: 2px !important;
+    padding-bottom: 1px !important;
+    font-size: 11px !important;
+  }
+  .lab-report--dense .lab-report__subtable {
+    margin: 1px 0 2px 0 !important;
+  }
+  .lab-report--dense .lab-report__subtable th,
+  .lab-report--dense .lab-report__subtable td {
+    padding: 1px 4px !important;
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+  .lab-report--dense .lab-report__signatory {
+    padding-top: 2px !important;
+  }
+  .lab-report--dense .lab-report__signatory-name {
+    font-size: 10.5px !important;
+  }
+  .lab-report--dense .lab-report__signatory-line {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+  .lab-report--dense .lab-report__disclaimer {
+    margin: 1px 0 2px 0 !important;
+    font-size: 8px !important;
   }
 
   .lab-report--page-break {
@@ -2987,6 +3181,10 @@ textarea.field {
     flex: 0 0 auto !important;
     margin: 0 !important;
     padding: 0 0 0.15rem 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .lab-report__top,
@@ -2994,6 +3192,8 @@ textarea.field {
   .lab-letterhead-image {
     margin: 0 0 0.15rem 0 !important;
     padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .lab-report__body {
@@ -3004,6 +3204,15 @@ textarea.field {
     flex: 0 0 auto !important;
     margin-top: auto !important;
     width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+
+  .lab-report__table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .lab-report__side-note {
@@ -3040,10 +3249,16 @@ textarea.field {
     print-color-adjust: exact !important;
   }
 
-  .lab-report__top,
-  .lab-report__top--banner,
+  .lab-report__top {
+    min-height: 48px !important;
+  }
+
+  .lab-report__top--banner {
+    min-height: 80px !important;
+  }
+
   .lab-report__top--custom {
-    min-height: 150px !important;
+    min-height: 100px !important;
   }
 
   .lab-report {
@@ -3107,6 +3322,18 @@ textarea.field {
     font-weight: 700 !important;
   }
 
+  .lab-report__subtable {
+    border-top: 3px double #000000 !important;
+    border-bottom: 3px double #000000 !important;
+    border-left: 1px solid #000000 !important;
+    border-right: 1px solid #000000 !important;
+  }
+
+  .lab-report__subtable th,
+  .lab-report__subtable td {
+    border: 1px solid #64748b !important;
+  }
+
   .lab-report__test-head td,
   .lab-report__panel-banner,
   .lab-report__section-head td {
@@ -3134,11 +3361,20 @@ textarea.field {
   .lab-report__signatory-line,
   .lab-report__lbl,
   .lab-report__val,
-  .lab-report__disclaimer,
   .lab-report__clinical-note,
   .lab-report__lab-note {
     color: #000000 !important;
     font-weight: 700 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lab-report__disclaimer {
+    color: #64748b !important;
+    font-size: 8.5px !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    margin: 0.15rem 0 0.2rem 0 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

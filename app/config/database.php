@@ -6,6 +6,27 @@ declare(strict_types=1);
  * MariaDB Database Configuration
  * Supports DB_* and Render MySQL Blueprint MYSQL_* env vars.
  */
+// Load .env if present in root
+$envFilePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.env';
+if (is_file($envFilePath) && is_readable($envFilePath)) {
+    $envLines = @file($envFilePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (is_array($envLines)) {
+        foreach ($envLines as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+                continue;
+            }
+            [$ek, $ev] = explode('=', $line, 2);
+            $ek = trim($ek);
+            $ev = trim($ev, " \t\n\r\0\x0B\"'");
+            if (!array_key_exists($ek, $_SERVER) && !array_key_exists($ek, $_ENV)) {
+                putenv("{$ek}={$ev}");
+                $_ENV[$ek] = $ev;
+                $_SERVER[$ek] = $ev;
+            }
+        }
+    }
+}
 if (!function_exists('env_db')) {
     function env_db(string $key, ?string $default = null): ?string
     {

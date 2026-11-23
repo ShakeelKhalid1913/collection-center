@@ -44,17 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="login-brand__mark"><?= brand_logo('brand-logo brand-logo--login') ?></div>
                 <div>
                     <h1>Lab Dash Pro</h1>
-                    <p class="login-brand__tagline">Sign in — your account is locked to one portal (Collection, Laboratory, Diagnostic, or Admin).</p>
+                    <p class="login-brand__tagline">Clinical Diagnostic &amp; Laboratory Information System</p>
                 </div>
             </div>
         </div>
         <ul class="login-brand__features">
-            <li><i class="fa-solid fa-x-ray" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Diagnostic Center</strong> — imaging@citylab.pk</li>
-            <li><i class="fa-solid fa-flask" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Laboratory</strong> — lab@citylab.pk</li>
-            <li><i class="fa-solid fa-building" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Collection Center</strong> — staff@citylab.pk</li>
-            <li><i class="fa-solid fa-shield" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Admin</strong> — admin@citylab.pk</li>
+            <li><i class="fa-solid fa-x-ray" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Diagnostic Center</strong> &bull; Ultrasound, X-Ray, ECG &amp; CT</li>
+            <li><i class="fa-solid fa-flask" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Laboratory</strong> &bull; Pathology &amp; Biochemistry</li>
+            <li><i class="fa-solid fa-building" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Collection Center</strong> &bull; Intake, Tokens &amp; Billing</li>
+            <li><i class="fa-solid fa-shield" style="margin-right:0.4rem;opacity:0.9"></i> <strong>Admin</strong> &bull; Reports &amp; Management</li>
         </ul>
-        <p style="margin:0;font-size:0.75rem;opacity:0.75">Seeded password: 1913</p>
+        <p style="margin:0;font-size:0.75rem;opacity:0.65">Secure Enterprise Access</p>
     </section>
 
     <section class="login-form-side">
@@ -65,25 +65,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="login-card">
             <div class="login-card__head">
-                <h2><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Sign in</h2>
-                <p>Portal access is set by your account — you cannot open other staff types.</p>
-                <p style="margin:0.5rem 0 0;font-size:0.8125rem">Need an account? <a href="/signup.php" style="color:#0f766e;font-weight:700;text-decoration:none">Create Account <i class="fa-solid fa-user-plus"></i></a></p>
+                <h2><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Sign In</h2>
+                <p>Enter your credentials to access your workstation.</p>
             </div>
+
+            <?php 
+            $reqPortal = trim((string)($_GET['portal'] ?? ''));
+            $portalBadges = [
+                'main_lab' => ['title' => 'Laboratory Login', 'icon' => 'fa-flask', 'style' => 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;'],
+                'imaging' => ['title' => 'Diagnostic Portal', 'icon' => 'fa-wand-magic-sparkles', 'style' => 'background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;'],
+                'collection_center' => ['title' => 'Clinic & Collection Center', 'icon' => 'fa-hospital-user', 'style' => 'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;'],
+                'pharmacy' => ['title' => 'Pharmacy Login', 'icon' => 'fa-prescription-bottle-medical', 'style' => 'background:#fffbeb;color:#b45309;border:1px solid #fde68a;'],
+                'admin' => ['title' => 'Administration & Super Admin', 'icon' => 'fa-shield-halved', 'style' => 'background:#f8fafc;color:#0f172a;border:1px solid #cbd5e1;'],
+            ];
+            if (isset($portalBadges[$reqPortal])):
+                $b = $portalBadges[$reqPortal];
+            ?>
+                <div style="margin-top:0.75rem;padding:0.4rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-weight:700;display:flex;align-items:center;gap:0.4rem;<?= $b['style'] ?>">
+                    <i class="fa-solid <?= $b['icon'] ?>"></i>
+                    <span>Accessing <?= e($b['title']) ?></span>
+                </div>
+            <?php endif; ?>
 
             <?php if ($error): ?>
                 <div class="alert-error" style="margin-top:1rem"><i class="fa-solid fa-circle-exclamation"></i> <?= e($error) ?></div>
             <?php endif; ?>
 
-            <form method="post" style="margin-top:1rem">
+            <form method="post" style="margin-top:1.25rem">
                 <div style="margin-bottom:1rem">
                     <label class="field-label" for="email"><i class="fa-solid fa-envelope"></i> Work email</label>
-                    <input type="email" id="email" name="email" class="field" autocomplete="username" value="<?= e($_POST['email'] ?? 'staff@citylab.pk') ?>">
+                    <input type="email" id="email" name="email" class="field" autocomplete="username" placeholder="staff@lab.com" value="<?= e($_POST['email'] ?? '') ?>" required>
                 </div>
                 <div style="margin-bottom:1.25rem">
                     <label class="field-label" for="password"><i class="fa-solid fa-lock"></i> Password</label>
-                    <input type="password" id="password" name="password" class="field" autocomplete="current-password" value="1913">
+                    <input type="password" id="password" name="password" class="field" autocomplete="current-password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-arrow-right"></i> Continue to dashboard</button>
+                <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-arrow-right"></i> Sign In to Workstation</button>
             </form>
             <?= software_credit_footer() ?>
         </div>

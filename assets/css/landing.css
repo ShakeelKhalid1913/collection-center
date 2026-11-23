@@ -223,12 +223,6 @@
   color: #c2f13c;
 }
 
-.lp-badge--teal {
-  background: rgba(15, 118, 110, 0.2);
-  border: 1px solid rgba(20, 184, 166, 0.4);
-  color: #2dd4bf;
-}
-
 .lp-badge--slate {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -313,7 +307,7 @@
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: #0f172a;
 }
 
 .lp-section--dark .lp-eyebrow {

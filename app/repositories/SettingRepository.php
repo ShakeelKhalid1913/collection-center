@@ -37,6 +37,12 @@ class SettingRepository
                         bill_font,
                         report_font_size,
                         bill_font_size,
+                        show_single_test_headers,
+                        hide_pending_tests,
+                        report_heading_title,
+                        hide_report_title_bar,
+                        report_param_size,
+                        report_param_weight,
                         CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image,
                         CASE WHEN footer_image IS NOT NULL AND LENGTH(footer_image) > 0 THEN 1 ELSE 0 END AS has_footer_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
@@ -54,6 +60,21 @@ class SettingRepository
                 }
                 if (empty($row['bill_font_size'])) {
                     $row['bill_font_size'] = 'normal';
+                }
+                if (empty($row['report_param_size'])) {
+                    $row['report_param_size'] = '15px';
+                }
+                if (empty($row['report_param_weight'])) {
+                    $row['report_param_weight'] = '700';
+                }
+                if (!isset($row['hide_pending_tests'])) {
+                    $row['hide_pending_tests'] = 1;
+                }
+                if (!isset($row['report_heading_title']) || $row['report_heading_title'] === '') {
+                    $row['report_heading_title'] = 'DIAGNOSTIC REPORT';
+                }
+                if (!isset($row['hide_report_title_bar'])) {
+                    $row['hide_report_title_bar'] = 0;
                 }
                 if (isset($row['bill_footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['bill_footer_text'])) {
                     $row['bill_footer_text'] = 'Get well soon.';
@@ -122,6 +143,15 @@ class SettingRepository
                 $row['header_layout'] = !empty($row['header_layout_json'])
                     ? json_decode((string)$row['header_layout_json'], true)
                     : null;
+                if (!isset($row['hide_pending_tests'])) {
+                    $row['hide_pending_tests'] = 1;
+                }
+                if (!isset($row['report_heading_title']) || $row['report_heading_title'] === '') {
+                    $row['report_heading_title'] = 'DIAGNOSTIC REPORT';
+                }
+                if (!isset($row['hide_report_title_bar'])) {
+                    $row['hide_report_title_bar'] = 0;
+                }
             }
             return $row;
         }
@@ -174,14 +204,20 @@ class SettingRepository
             'bill_font' => (string)($data['bill_font'] ?? $existing['bill_font'] ?? 'times_bold_italic'),
             'report_font_size' => (string)($data['report_font_size'] ?? $existing['report_font_size'] ?? 'normal'),
             'bill_font_size' => (string)($data['bill_font_size'] ?? $existing['bill_font_size'] ?? 'normal'),
+            'show_single_test_headers' => !empty($data['show_single_test_headers']) ? 1 : 0,
+            'hide_pending_tests' => isset($data['hide_pending_tests']) ? (!empty($data['hide_pending_tests']) ? 1 : 0) : (!empty($existing['hide_pending_tests']) ? 1 : 0),
+            'report_heading_title' => (string)($data['report_heading_title'] ?? $existing['report_heading_title'] ?? 'DIAGNOSTIC REPORT'),
+            'hide_report_title_bar' => !empty($data['hide_report_title_bar']) ? 1 : 0,
+            'report_param_size' => (string)($data['report_param_size'] ?? $existing['report_param_size'] ?? '15px'),
+            'report_param_weight' => (string)($data['report_param_weight'] ?? $existing['report_param_weight'] ?? '700'),
         ];
 
         $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, imaging_footer_text, imaging_disclaimer, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :imaging_footer_text, :imaging_disclaimer, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, imaging_footer_text, imaging_disclaimer, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size, show_single_test_headers, hide_pending_tests, report_heading_title, hide_report_title_bar, report_param_size, report_param_weight)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :imaging_footer_text, :imaging_disclaimer, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size, :show_single_test_headers, :hide_pending_tests, :report_heading_title, :hide_report_title_bar, :report_param_size, :report_param_weight)",
                 $payload
             );
         } else {
@@ -204,7 +240,13 @@ class SettingRepository
                     report_font = :report_font,
                     bill_font = :bill_font,
                     report_font_size = :report_font_size,
-                    bill_font_size = :bill_font_size
+                    bill_font_size = :bill_font_size,
+                    show_single_test_headers = :show_single_test_headers,
+                    hide_pending_tests = :hide_pending_tests,
+                    report_heading_title = :report_heading_title,
+                    hide_report_title_bar = :hide_report_title_bar,
+                    report_param_size = :report_param_size,
+                    report_param_weight = :report_param_weight
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -403,6 +445,12 @@ class SettingRepository
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN bill_font VARCHAR(64) NOT NULL DEFAULT 'times_bold_italic'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_font_size VARCHAR(32) NOT NULL DEFAULT 'normal'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN bill_font_size VARCHAR(32) NOT NULL DEFAULT 'normal'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN show_single_test_headers TINYINT(1) NOT NULL DEFAULT 0"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN hide_pending_tests TINYINT(1) NOT NULL DEFAULT 1"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_heading_title VARCHAR(128) NOT NULL DEFAULT 'DIAGNOSTIC REPORT'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN hide_report_title_bar TINYINT(1) NOT NULL DEFAULT 0"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_param_size VARCHAR(16) NOT NULL DEFAULT '15px'"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_param_weight VARCHAR(32) NOT NULL DEFAULT '700'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_footer_text TEXT NULL"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_disclaimer TEXT NULL"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE report_signatories ADD COLUMN department VARCHAR(32) NOT NULL DEFAULT 'laboratory'"); } catch (\Throwable) {}

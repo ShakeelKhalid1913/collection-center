@@ -134,6 +134,39 @@ HTML;
 $content = page_header('Laboratory Workstation', 'Pathology, Biochemistry, Hematology & Serology orders inside the Diagnostic Center.', $headerActions, 'fa-solid fa-flask');
 
 $content .= <<<HTML
+<!-- Workstation Workflow Direct Actions (Matching Reference Screen Block Layout) -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <a href="/portals/new-scan.php" class="flex items-center gap-3.5 p-4 rounded-2xl bg-[#38bdf8] text-slate-900 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border border-sky-400/30">
+        <i class="fa-solid fa-file-circle-plus text-3xl sm:text-4xl text-slate-900 shrink-0"></i>
+        <div class="min-w-0">
+            <div class="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">Lab Orders</div>
+            <div class="text-[11px] sm:text-xs text-slate-800/80 font-medium truncate mt-0.5">Book Patient Entry</div>
+        </div>
+    </a>
+    <a href="/portals/laboratory.php?status=pending" class="flex items-center gap-3.5 p-4 rounded-2xl bg-[#c084fc] text-slate-900 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border border-purple-400/30">
+        <i class="fa-regular fa-clock text-3xl sm:text-4xl text-slate-900 shrink-0"></i>
+        <div class="min-w-0">
+            <div class="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">Pending Orders</div>
+            <div class="text-[11px] sm:text-xs text-slate-800/80 font-medium truncate mt-0.5">Samples &amp; Worklist</div>
+        </div>
+    </a>
+    <a href="/portals/results.php" class="flex items-center gap-3.5 p-4 rounded-2xl bg-[#2dd4bf] text-slate-900 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border border-teal-400/30">
+        <i class="fa-regular fa-keyboard text-3xl sm:text-4xl text-slate-900 shrink-0"></i>
+        <div class="min-w-0">
+            <div class="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">Reports Edit</div>
+            <div class="text-[11px] sm:text-xs text-slate-800/80 font-medium truncate mt-0.5">Result Entry &amp; Sign</div>
+        </div>
+    </a>
+    <a href="/portals/receipt.php" class="flex items-center gap-3.5 p-4 rounded-2xl bg-[#86efac] text-slate-900 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border border-green-400/30">
+        <i class="fa-solid fa-receipt text-3xl sm:text-4xl text-slate-900 shrink-0"></i>
+        <div class="min-w-0">
+            <div class="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">Patient Bills</div>
+            <div class="text-[11px] sm:text-xs text-slate-800/80 font-medium truncate mt-0.5">Token Receipts</div>
+        </div>
+    </a>
+</div>
+
+$content .= <<<HTML
 <!-- Workstation Stat Strip -->
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
     <div class="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between">

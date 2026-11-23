@@ -29,7 +29,7 @@ if (!$patient) {
 }
 
 $settings = branding_settings($orgId);
-$pName = trim(($patient['title'] ?? 'Mr') . ' ' . ($patient['full_name'] ?? $patient['name'] ?? 'Patient'));
+$pName = trim(($patient['title'] ?? '') . ' ' . ($patient['full_name'] ?? $patient['name'] ?? 'Patient'));
 $mrNo = (string)($patient['patient_no'] ?? $patient['id'] ?? 'MR-10001');
 $phone = (string)($patient['phone'] ?? '—');
 $bloodGroup = !empty($patient['blood_group']) ? (string)$patient['blood_group'] : '—';

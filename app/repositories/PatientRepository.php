@@ -34,10 +34,13 @@ class PatientRepository
         }
 
         if ($orgId !== null && $orgId !== '') {
-            return $this->db->fetchOne(
+            $row = $this->db->fetchOne(
                 "SELECT * FROM patients WHERE (id = :id OR patient_no = :patient_no) AND organization_id = :org_id LIMIT 1",
                 ['id' => $id, 'patient_no' => $id, 'org_id' => $orgId]
             );
+            if ($row) {
+                return $row;
+            }
         }
 
         return $this->db->fetchOne(
@@ -96,11 +99,40 @@ class PatientRepository
         } catch (\Throwable $e) {}
     }
 
+    public function getNextMrNumber(string $orgId): string
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT patient_no FROM patients WHERE organization_id = :org_id AND patient_no LIKE 'MR%' ORDER BY id DESC LIMIT 50",
+                ['org_id' => $orgId]
+            );
+            $maxSeq = 0;
+            foreach ($rows as $r) {
+                $pno = (string)($r['patient_no'] ?? '');
+                if (preg_match('/(?:MR-?|MR)(\d+)/i', $pno, $m)) {
+                    $val = (int)$m[1];
+                    if ($val > $maxSeq) {
+                        $maxSeq = $val;
+                    }
+                }
+            }
+            if ($maxSeq > 0) {
+                return 'MR-' . sprintf('%04d', $maxSeq + 1);
+            }
+            $totalRow = $this->db->fetchOne("SELECT COUNT(*) AS c FROM patients WHERE organization_id = :org_id", ['org_id' => $orgId]);
+            $count = (int)($totalRow['c'] ?? 0);
+            return 'MR-' . sprintf('%04d', $count + 1);
+        } catch (\Throwable $e) {
+            return 'MR-0001';
+        }
+    }
+
     public function create(array $data): array
     {
         $this->ensureReferringDoctorColumn();
+        $orgId = (string)($data['organization_id'] ?? 'ORG-001');
         $manualNo = trim((string)($data['patient_no'] ?? ''));
-        $patientNo = $manualNo !== '' ? $manualNo : ('MR-' . rand(10000, 99999));
+        $patientNo = $manualNo !== '' ? $manualNo : $this->getNextMrNumber($orgId);
         $id = $data['id'] ?? ('P-' . bin2hex(random_bytes(4)));
 
         $doctor = trim((string)($data['referring_doctor'] ?? $data['doctor'] ?? ''));

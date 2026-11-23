@@ -175,7 +175,7 @@ $settings = branding_settings();
                         $ctx['patient'],
                         $ctx['lines'],
                         $ctx['entry'],
-                        $ctx['report_title'] ?? 'DEPARTMENT OF LABORATORY MEDICINE',
+                        $ctx['report_title'] ?? 'DIAGNOSTIC REPORT',
                         $ctx['signatories'] ?? [],
                         $ctx['specimen'] ?? 'Serum'
                     ) ?>

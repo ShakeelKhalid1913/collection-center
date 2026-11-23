@@ -13,6 +13,76 @@ class LabEntryRepository
     public function __construct()
     {
         $this->db = Database::getInstance();
+        static $ensured = false;
+        if (!$ensured) {
+            $ensured = true;
+            $pdo = $this->db->getPdo();
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN reporting_doctor VARCHAR(255) NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN reporting_doctor_quals VARCHAR(255) NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN reporting_doctor_desig VARCHAR(255) NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN is_bill_locked TINYINT(1) NOT NULL DEFAULT 0"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN bill_locked_at DATETIME NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN bill_locked_by VARCHAR(100) NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN is_report_locked TINYINT(1) NOT NULL DEFAULT 0"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN report_locked_at DATETIME NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_entries ADD COLUMN report_locked_by VARCHAR(100) NULL"); } catch (\Throwable) {}
+
+            // Auto-repair past imaging_scans records where full order total was cloned instead of split
+            try {
+                $duplicateScans = $this->db->fetchAll(
+                    "SELECT s.id, s.lab_no, s.study, le.tests, le.amount, le.paid, le.discount, le.organization_id
+                     FROM imaging_scans s
+                     INNER JOIN lab_entries le ON le.lab_no = s.lab_no
+                     WHERE le.tests LIKE '%,%' OR le.tests LIKE '%+%'"
+                );
+                if (!empty($duplicateScans)) {
+                    $byLab = [];
+                    foreach ($duplicateScans as $ds) {
+                        $byLab[$ds['lab_no']][] = $ds;
+                    }
+                    foreach ($byLab as $lNo => $scansList) {
+                        $first = $scansList[0];
+                        $org = (string)($first['organization_id'] ?? 'ORG-001');
+                        $bd = function_exists('allocate_order_breakdown') 
+                            ? allocate_order_breakdown([
+                                'tests' => $first['tests'],
+                                'amount' => $first['amount'],
+                                'discount' => $first['discount'],
+                                'paid' => $first['paid'],
+                            ], $org)
+                            : null;
+                        if (!$bd) continue;
+                        $imMap = [];
+                        foreach ($bd['imaging'] as $im) {
+                            $imMap[strtolower(trim((string)$im['name']))] = $im;
+                        }
+                        foreach ($scansList as $scan) {
+                            $sKey = strtolower(trim((string)$scan['study']));
+                            $alloc = $imMap[$sKey] ?? null;
+                            if (!$alloc) {
+                                foreach ($imMap as $k => $c) {
+                                    if (str_contains($sKey, $k) || str_contains($k, $sKey)) {
+                                        $alloc = $c;
+                                        break;
+                                    }
+                                }
+                            }
+                            if ($alloc) {
+                                $this->db->execute(
+                                    "UPDATE imaging_scans SET amount = :amt, paid = :paid, discount = :disc WHERE id = :id",
+                                    [
+                                        'id' => $scan['id'],
+                                        'amt' => $alloc['allocated_gross'],
+                                        'paid' => $alloc['allocated_paid'],
+                                        'disc' => $alloc['allocated_discount'],
+                                    ]
+                                );
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable) {}
+        }
     }
 
     public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null): array
@@ -68,6 +138,11 @@ class LabEntryRepository
 
     public function findByLabNo(string $labNo, ?string $orgId = null): ?array
     {
+        $clean = trim($labNo);
+        if ($clean === '') {
+            return null;
+        }
+
         if ($orgId === null && function_exists('current_user')) {
             $user = current_user();
             if (!empty($user['organization_id']) && empty($user['is_super_admin'])) {
@@ -75,10 +150,43 @@ class LabEntryRepository
             }
         }
 
+        // 1. Direct exact match
         if ($orgId !== null && $orgId !== '') {
-            return $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no AND organization_id = :org LIMIT 1", ['lab_no' => $labNo, 'org' => $orgId]);
+            $row = $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no AND organization_id = :org LIMIT 1", ['lab_no' => $clean, 'org' => $orgId]);
+            if ($row) return $row;
+        } else {
+            $row = $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no LIMIT 1", ['lab_no' => $clean]);
+            if ($row) return $row;
         }
-        return $this->db->fetchOne("SELECT * FROM lab_entries WHERE lab_no = :lab_no LIMIT 1", ['lab_no' => $labNo]);
+
+        // 2. Slip # / numeric suffix match (e.g. user enters "3235" or "2891" for "L-2026-3235" or "L-2026-2891")
+        $digitsOnly = preg_replace('/\D/', '', $clean);
+        $cleanSuffix = ltrim($clean, 'L-l- ');
+        $needle = $digitsOnly !== '' ? '%' . $digitsOnly : '%' . $cleanSuffix;
+
+        $params = [
+            'suffix1' => $needle,
+            'suffix2' => $needle,
+            'suffix3' => $needle,
+        ];
+        $sqlOrg = '';
+        if ($orgId !== null && $orgId !== '') {
+            $sqlOrg = " AND organization_id = :org";
+            $params['org'] = $orgId;
+        }
+
+        $row = $this->db->fetchOne(
+            "SELECT * FROM lab_entries WHERE (lab_no LIKE :suffix1 OR patient_id LIKE :suffix2 OR id LIKE :suffix3)" . $sqlOrg . " ORDER BY created_at DESC LIMIT 1",
+            $params
+        );
+        if ($row) return $row;
+
+        // 3. Fallback across all organizations (e.g. for super admin or cross-lab lookup)
+        $row = $this->db->fetchOne(
+            "SELECT * FROM lab_entries WHERE (lab_no = :exact OR lab_no LIKE :suffix1 OR patient_id LIKE :suffix2) ORDER BY created_at DESC LIMIT 1",
+            ['exact' => $clean, 'suffix1' => $needle, 'suffix2' => $needle]
+        );
+        return $row ?: null;
     }
 
     public function create(array $data): array
@@ -136,6 +244,23 @@ class LabEntryRepository
 
                 // Auto-route any Imaging / Radiology tests (Ultrasound, X-Ray, ECG, CT, MRI) to imaging_scans
                 $this->syncImagingScans($labNo, $tests, $data);
+
+                // If all initialized results have values (e.g. single serology screening tests defaulted to Non Reactive), mark completed
+                $initResults = (new ResultRepository())->getResultsByLabNo($labNo);
+                if (!empty($initResults)) {
+                    $allHaveValues = true;
+                    foreach ($initResults as $ir) {
+                        if ((int)($ir['is_visible'] ?? 1) === 0) continue;
+                        $v = trim((string)($ir['value'] ?? ''));
+                        if ($v === '' || $v === '-' || $v === '—' || strcasecmp($v, 'pending') === 0) {
+                            $allHaveValues = false;
+                            break;
+                        }
+                    }
+                    if ($allHaveValues) {
+                        $this->updateStatus($labNo, 'completed');
+                    }
+                }
             }
 
             if (($data['sample_status'] ?? '') === 'collected') {
@@ -171,10 +296,37 @@ class LabEntryRepository
         $doctorVal = (string)($data['doctor'] ?? 'Walk-in / Self');
         $notesVal = (string)($data['clinical_notes'] ?? '');
 
+        // Calculate accurate proportional breakdown per study to prevent duplicate/inflated billing
+        $breakdown = function_exists('allocate_order_breakdown') 
+            ? allocate_order_breakdown(array_merge($data, ['tests' => $tests]), $orgIdVal) 
+            : ['imaging' => []];
+        $imagingItems = $breakdown['imaging'] ?? [];
+        $imagingMap = [];
+        foreach ($imagingItems as $im) {
+            $n = strtolower(trim((string)$im['name']));
+            $imagingMap[$n] = $im;
+        }
+
         foreach ($testArr as $singleTest) {
             $deptMeta = get_department_meta($singleTest);
             if (!empty($deptMeta['is_imaging'])) {
                 $modality = $deptMeta['name']; // 'Ultrasound', 'X-Ray', 'ECG', 'CT Scan', 'MRI'
+
+                // Find allocated share for this specific scan
+                $targetKey = strtolower(trim($singleTest));
+                $matchedAlloc = $imagingMap[$targetKey] ?? null;
+                if (!$matchedAlloc) {
+                    foreach ($imagingMap as $k => $alloc) {
+                        if (str_contains($targetKey, $k) || str_contains($k, $targetKey)) {
+                            $matchedAlloc = $alloc;
+                            break;
+                        }
+                    }
+                }
+
+                $scanAmount = (float)($matchedAlloc['allocated_gross'] ?? 0);
+                $scanDiscount = (float)($matchedAlloc['allocated_discount'] ?? 0);
+                $scanPaid = (float)($matchedAlloc['allocated_paid'] ?? 0);
 
                 $existingScan = $this->db->fetchOne(
                     "SELECT id FROM imaging_scans WHERE lab_no = :lab_no AND (study = :st OR study LIKE :st_like) LIMIT 1",
@@ -194,8 +346,8 @@ class LabEntryRepository
 
                     try {
                         $this->db->execute(
-                            "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, findings, impression, amount, paid)
-                             VALUES (:id, :org, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, 'pending', :scan_date, :radiologist, :doctor, :notes, :findings, :impression, :amount, :paid)",
+                            "INSERT INTO imaging_scans (id, organization_id, scan_no, lab_no, patient, patient_id, modality, study, status, scan_date, radiologist, doctor, clinical_notes, findings, impression, amount, paid, discount)
+                             VALUES (:id, :org, :scan_no, :lab_no, :patient, :patient_id, :modality, :study, 'pending', :scan_date, :radiologist, :doctor, :notes, :findings, :impression, :amount, :paid, :discount)",
                             [
                                 'id' => $scanId,
                                 'org' => $orgIdVal,
@@ -211,8 +363,22 @@ class LabEntryRepository
                                 'notes' => $notesVal,
                                 'findings' => $defTemplate['findings'] ?? '',
                                 'impression' => $defTemplate['impression'] ?? '',
-                                'amount' => (float)($data['amount'] ?? 0),
-                                'paid' => (float)($data['paid'] ?? 0),
+                                'amount' => $scanAmount,
+                                'paid' => $scanPaid,
+                                'discount' => $scanDiscount,
+                            ]
+                        );
+                    } catch (\Throwable $e) {}
+                } else {
+                    // Update existing scan with accurate split amounts if already present
+                    try {
+                        $this->db->execute(
+                            "UPDATE imaging_scans SET amount = :amount, paid = :paid, discount = :discount WHERE id = :id",
+                            [
+                                'id' => $existingScan['id'],
+                                'amount' => $scanAmount,
+                                'paid' => $scanPaid,
+                                'discount' => $scanDiscount,
                             ]
                         );
                     } catch (\Throwable $e) {}
@@ -225,7 +391,12 @@ class LabEntryRepository
     {
         $fields = [];
         $params = ['lab_no' => $labNo];
-        $allowed = ['patient_name', 'tests', 'doctor', 'route', 'priority', 'status', 'sample_status', 'amount', 'paid', 'discount', 'clinical_notes', 'created_at'];
+        $allowed = [
+            'patient_name', 'tests', 'doctor', 'reporting_doctor', 'reporting_doctor_quals', 'reporting_doctor_desig', 'route', 'priority', 'status', 'sample_status',
+            'amount', 'paid', 'discount', 'clinical_notes', 'created_at',
+            'is_bill_locked', 'bill_locked_at', 'bill_locked_by',
+            'is_report_locked', 'report_locked_at', 'report_locked_by'
+        ];
         foreach ($allowed as $f) {
             if (array_key_exists($f, $data)) {
                 $fields[] = "{$f} = :{$f}";
@@ -250,6 +421,42 @@ class LabEntryRepository
             }
         }
         return $ok;
+    }
+
+    public function lockBill(string $labNo, string $by): bool
+    {
+        return $this->updateEntry($labNo, [
+            'is_bill_locked' => 1,
+            'bill_locked_at' => date('Y-m-d H:i:s'),
+            'bill_locked_by' => $by,
+        ]);
+    }
+
+    public function unlockBill(string $labNo): bool
+    {
+        return $this->updateEntry($labNo, [
+            'is_bill_locked' => 0,
+            'bill_locked_at' => null,
+            'bill_locked_by' => null,
+        ]);
+    }
+
+    public function lockReport(string $labNo, string $by): bool
+    {
+        return $this->updateEntry($labNo, [
+            'is_report_locked' => 1,
+            'report_locked_at' => date('Y-m-d H:i:s'),
+            'report_locked_by' => $by,
+        ]);
+    }
+
+    public function unlockReport(string $labNo): bool
+    {
+        return $this->updateEntry($labNo, [
+            'is_report_locked' => 0,
+            'report_locked_at' => null,
+            'report_locked_by' => null,
+        ]);
     }
 
     public function updateStatus(string $labNo, string $status, ?string $sampleStatus = null): bool

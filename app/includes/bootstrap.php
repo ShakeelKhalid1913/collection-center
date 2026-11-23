@@ -102,11 +102,11 @@ const PORTALS = [
         'staff' => true,
     ],
     'imaging' => [
-        'label' => 'Diagnostic Center + Hospital',
+        'label' => 'Diagnostic Center (Lab & Radiology)',
         'path' => '/portals/dashboard.php',
         'icon' => 'x-ray',
         'staff' => true,
-        'modules' => ['Laboratory', 'Ultrasound', 'X-Ray', 'ECG', 'Echocardiography', 'CT Scan', 'MRI', 'OPD Slips', 'Hospital Files'],
+        'modules' => ['Laboratory Department', 'Radiology Department (X-Ray, Ultrasound, ECG, Echo, CT, MRI)', 'OPD Slips', 'Hospital Files'],
     ],
     'admin' => [
         'label' => 'Admin',
@@ -554,6 +554,42 @@ function resolve_doctor_name(?string $idOrName): string
     return $trimmed;
 }
 
+/**
+ * Automatically records and bumps referring doctors in doctor_shares
+ * so they instantly appear at the top of the doctor dropdown for future entries.
+ */
+function record_doctor_name(string $doctorName, ?string $orgId = null): void
+{
+    $name = trim($doctorName);
+    if ($name === '' || str_starts_with(strtolower($name), 'walk-in') || strtolower($name) === 'self' || strtolower($name) === 'opd') {
+        return;
+    }
+    if ($orgId === null) {
+        $user = current_user();
+        $orgId = $user['organization_id'] ?? 'ORG-001';
+    }
+
+    try {
+        $existing = db()->fetchOne(
+            "SELECT id FROM doctor_shares WHERE organization_id = :org AND LOWER(doctor_name) = LOWER(:name)",
+            ['org' => $orgId, 'name' => $name]
+        );
+        if ($existing) {
+            db()->execute(
+                "UPDATE doctor_shares SET updated_at = NOW(), is_active = 1 WHERE id = :id",
+                ['id' => $existing['id']]
+            );
+        } else {
+            $id = 'DOC-' . strtoupper(substr(md5($orgId . $name), 0, 10));
+            db()->execute(
+                "INSERT INTO doctor_shares (id, organization_id, doctor_name, commission_percent, is_active, created_at, updated_at)
+                 VALUES (:id, :org, :name, 0.00, 1, NOW(), NOW())",
+                ['id' => $id, 'org' => $orgId, 'name' => $name]
+            );
+        }
+    } catch (\Throwable) {}
+}
+
 function resolve_route_label(?string $idOrLabel): string
 {
     if ($idOrLabel === null || $idOrLabel === '') {
@@ -575,6 +611,21 @@ function normalize_test_label(string $name, string $orgId = 'ORG-001'): string
     $name = trim($name);
     if ($name === '') {
         return '';
+    }
+
+    $clean = preg_replace('/[-\/_]+/', ' ', strtolower($name));
+    $clean = preg_replace('/\s+/', ' ', trim((string)$clean));
+    if (preg_match('/\b(elisa|antibodies\s+elisa)\b/i', $clean) && preg_match('/\bhiv\b/i', $clean)) {
+        return 'Anti HIV Antibodies Elisa';
+    }
+    if (preg_match('/^(anti\s*)?hiv(\s*(screening|rapid|test|1\s*2|antibodies|strip|card))?$/i', $clean) || preg_match('/\bhiv\b/i', $clean)) {
+        return 'ANTI HIV SCREENING';
+    }
+    if (preg_match('/^(anti\s*)?hcv(\s*(screening|rapid|test|antibodies|strip|card))?$/i', $clean) || preg_match('/\bhcv\b/i', $clean)) {
+        return 'ANTI HCV SCREENING';
+    }
+    if (preg_match('/^(hbs\s*ag|hbsag)(\s*(screening|rapid|test|strip|card))?$/i', $clean) || preg_match('/\bhbsag\b/i', $clean)) {
+        return 'HBSAG SCREENING';
     }
 
     $pkg = null;
@@ -733,6 +784,20 @@ function is_super_admin(): bool
     return !empty($u['is_super_admin']) || ($u['email'] ?? '') === 'admin@ldp.com';
 }
 
+function is_admin_user(): bool
+{
+    $u = current_user();
+    if (empty($u)) {
+        return false;
+    }
+    return !empty($u['is_super_admin'])
+        || ($u['email'] ?? '') === 'admin@ldp.com'
+        || ($u['portal'] ?? '') === 'admin'
+        || strtolower((string)($u['role'] ?? '')) === 'admin'
+        || (!empty($u['permissions']['manage_all']))
+        || (!empty($u['permissions']['unlock_records']));
+}
+
 function user_has_permission(string $permission): bool
 {
     $user = current_user();
@@ -743,10 +808,47 @@ function user_has_permission(string $permission): bool
     if (!empty($user['is_super_admin']) || ($user['portal'] ?? '') === 'admin') {
         return true;
     }
-    $perms = $user['permissions'] ?? [];
+
+    // Refresh permissions live from DB so Admin changes take effect immediately without requiring re-login
+    $userId = (string)($user['id'] ?? '');
+    static $livePermsCache = [];
+    if ($userId !== '' && !isset($livePermsCache[$userId])) {
+        try {
+            $row = db()->fetchOne("SELECT permissions FROM users WHERE id = :id", ['id' => $userId]);
+            if ($row && isset($row['permissions'])) {
+                $raw = $row['permissions'];
+                $parsed = is_array($raw) ? $raw : (json_decode((string)$raw, true) ?: []);
+                $livePermsCache[$userId] = $parsed;
+                $_SESSION['user']['permissions'] = $parsed;
+            }
+        } catch (\Throwable $e) {
+            // Keep session fallback
+        }
+    }
+
+    $perms = $livePermsCache[$userId] ?? ($user['permissions'] ?? []);
     if (!is_array($perms) || empty($perms)) {
-        // If not explicitly set, grant defaults by portal
-        return true;
+        // Safe role-based fallback if permissions have never been saved
+        $portal = (string)($user['portal'] ?? '');
+        if ($portal === 'collection_center' || $portal === 'collection-center') {
+            $perms = [
+                'view_results' => 1,
+                'process_billing' => 1,
+                'transit_dispatch' => 1,
+                'header_footer_edit' => 0,
+                'rates_edit' => 0,
+                'report_edit' => 0,
+            ];
+        } else {
+            $perms = [
+                'view_results' => 1,
+                'process_billing' => 1,
+                'transit_dispatch' => 1,
+                'report_edit' => 1,
+                'rates_edit' => 0,
+                'header_footer_edit' => 0,
+            ];
+        }
     }
     if (!empty($perms['manage_all']) || in_array('manage_all', $perms, true)) {
         return true;
@@ -842,6 +944,22 @@ function current_org_id(): string
 function current_organization_id(): string
 {
     return current_org_id();
+}
+
+function current_organization_name(): string
+{
+    static $cache = [];
+    $orgId = current_org_id();
+    if (isset($cache[$orgId])) {
+        return $cache[$orgId];
+    }
+    try {
+        $row = db()->fetchOne("SELECT name FROM organizations WHERE id = :id", ['id' => $orgId]);
+        if (!empty($row['name'])) {
+            return $cache[$orgId] = (string)$row['name'];
+        }
+    } catch (\Throwable) {}
+    return $cache[$orgId] = 'City Clinical Diagnostic';
 }
 
 function current_portal(): string

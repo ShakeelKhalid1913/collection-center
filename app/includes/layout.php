@@ -20,7 +20,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/patients/card.php", 'Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
             ]),
             nav_group('Lab Entries', [
-                nav_item("{$base}/lab-entries/new.php", 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/lab-entries/new.php", 'Book Tests', $activeKey, 'new-entry', null, 'fa-solid fa-flask-vial'),
                 nav_item("{$base}/lab-entries/pending.php", 'Pending', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock'),
                 nav_item("{$base}/sample-tracking.php", 'Sample Tracking & Barcode', $activeKey, 'sample-tracking', null, 'fa-solid fa-barcode'),
                 nav_item("{$base}/lab-entries/history.php", 'History', $activeKey, 'history', null, 'fa-solid fa-clock-rotate-left'),
@@ -33,6 +33,8 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/receipts.php", 'Receipts', $activeKey, 'receipts', null, 'fa-solid fa-file-invoice'),
             ]),
             nav_group('More', [
+                nav_item("{$base}/rate-list.php", 'Rate List (PDF)', $activeKey, 'rate-list', null, 'fa-solid fa-file-pdf'),
+                nav_item("{$base}/tests/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-packing'),
                 nav_item("{$base}/reports.php", 'Reports', $activeKey, 'reports', null, 'fa-solid fa-file-medical'),
                 nav_item("{$base}/branding.php", 'Header / Footer', $activeKey, 'branding', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/settings.php", 'Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
@@ -43,7 +45,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
             nav_group('Lab Entries & Reports', [
-                nav_item("{$base}/lab-entries/new.php", 'New Entry', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/lab-entries/new.php", 'Book Tests', $activeKey, 'new-entry', null, 'fa-solid fa-flask-vial'),
                 nav_item("{$base}/lab-entries/pending.php", 'Pending Orders', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock'),
                 nav_item("{$base}/lab-entries/edit.php", 'Edit Entry & Bill', $activeKey, 'edit-entry', null, 'fa-solid fa-user-pen'),
                 nav_item("{$base}/sample-collection.php", 'Sample Tracking & Collection', $activeKey, 'sample-tracking', null, 'fa-solid fa-vial'),
@@ -53,6 +55,7 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/tests/estimate.php", 'Test Estimate', $activeKey, 'test-estimate', null, 'fa-solid fa-calculator'),
             ]),
             nav_group('Patients', [
+                nav_item("{$base}/patients/register.php", 'Register Patient', $activeKey, 'register', null, 'fa-solid fa-user-plus'),
                 nav_item("{$base}/patients/records.php", 'Patient Records', $activeKey, 'records', null, 'fa-solid fa-address-book'),
                 nav_item("{$base}/patients/card.php", 'Print Patient Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
             ]),
@@ -73,6 +76,8 @@ function portal_nav(string $portal, string $activeKey): string
             nav_group('Catalog & Templates', [
                 nav_item("{$base}/tests/index.php", 'Add Test', $activeKey, 'tests', null, 'fa-solid fa-flask'),
                 nav_item("{$base}/tests/prices.php", 'Add / Update Price', $activeKey, 'prices', null, 'fa-solid fa-tags'),
+                nav_item("{$base}/tests/rate-list.php", 'Rate List (Print/PDF)', $activeKey, 'rate-list', null, 'fa-solid fa-file-pdf'),
+                nav_item("{$base}/tests/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-packing'),
                 nav_item("{$base}/tests/b2b-rates.php", 'B2B Wholesale Rates', $activeKey, 'b2b-rates', null, 'fa-solid fa-handshake'),
                 nav_item("{$base}/templates.php", 'Report Templates', $activeKey, 'templates', null, 'fa-solid fa-bookmark'),
             ]),
@@ -80,50 +85,43 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/settings/report-template.php", 'Header & Footer', $activeKey, 'settings-report', null, 'fa-solid fa-heading'),
                 nav_item("{$base}/archive.php", 'All Dates History', $activeKey, 'archive', null, 'fa-solid fa-clock-rotate-left'),
             ]),
-            nav_group('More', [
+            nav_group('More', array_values(array_filter([
                 nav_item("{$base}/receipts.php", 'Patient Bill', $activeKey, 'receipts', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/settings/profile.php", 'Lab Profile', $activeKey, 'settings-profile', null, 'fa-solid fa-hospital'),
-                nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users'),
-            ]),
+                is_admin_user() ? nav_item("{$base}/settings/users.php", 'Users', $activeKey, 'settings-users', null, 'fa-solid fa-users') : null,
+            ]))),
         ],
         'imaging' => [
             nav_group('Overview', [
                 nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
             ]),
-            nav_group('Laboratory Operations', [
+            nav_group('Laboratory Department', [
                 nav_item("{$base}/laboratory.php", 'Laboratory Station', $activeKey, 'station-lab', null, 'fa-solid fa-flask text-emerald-500'),
-                nav_item("{$base}/lab-entries/new.php", 'New Lab Order', $activeKey, 'new-entry', null, 'fa-solid fa-file-circle-plus text-emerald-500'),
+                nav_item("{$base}/lab-entries/new.php", 'Book Tests', $activeKey, 'new-entry', null, 'fa-solid fa-flask-vial text-emerald-500'),
                 nav_item("{$base}/lab-entries/pending.php", 'Pending Lab Orders', $activeKey, 'pending', $badges['cc_pending'] ?: null, 'fa-solid fa-clock text-amber-500'),
                 nav_item("{$base}/sample-collection.php", 'Sample Collection', $activeKey, 'sample-collection', null, 'fa-solid fa-vial text-teal-500'),
                 nav_item("{$base}/results/entry.php", 'Lab Results Entry', $activeKey, 'results-entry', null, 'fa-solid fa-vials text-indigo-500'),
-                nav_item("{$base}/results/critical.php", 'Critical Lab Values', $activeKey, 'critical-results', null, 'fa-solid fa-triangle-exclamation text-rose-500'),
                 nav_item("{$base}/reports/generate.php", 'Generate Lab Report', $activeKey, 'reports-generate', null, 'fa-solid fa-file-pdf text-blue-500'),
                 nav_item("{$base}/reports/history.php", 'Lab Reports History', $activeKey, 'reports-history', null, 'fa-solid fa-box-archive text-slate-500'),
             ]),
-            nav_group('Imaging & Clinical Stations', [
-                nav_item("{$base}/ultrasound.php", 'Ultrasound Station', $activeKey, 'station-us', null, 'fa-solid fa-wave-square'),
-                nav_item("{$base}/xray.php", 'X-Ray Station', $activeKey, 'station-xray', null, 'fa-solid fa-x-ray'),
-                nav_item("{$base}/ecg.php", 'ECG Station', $activeKey, 'station-ecg', null, 'fa-solid fa-heart-pulse'),
-                nav_item("{$base}/echo.php", 'Echocardiography (Echo)', $activeKey, 'station-echo', null, 'fa-solid fa-heart-pulse text-indigo-500'),
-                nav_item("{$base}/ct.php", 'CT Scan Station', $activeKey, 'station-ct', null, 'fa-solid fa-laptop-medical'),
-                nav_item("{$base}/mri.php", 'MRI Station', $activeKey, 'station-mri', null, 'fa-solid fa-magnet'),
-            ]),
-            nav_group('Hospital & OPD Slips', [
-                nav_item("{$base}/opd-slip.php", 'Doctor OPD Slip', $activeKey, 'opd-slip', null, 'fa-solid fa-user-doctor'),
-                nav_item("{$base}/hospital-files.php", 'Hospital Files & Charts', $activeKey, 'hospital-files', null, 'fa-solid fa-file-medical'),
-            ]),
-            nav_group('Findings & Reports', [
-                nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical'),
-                nav_item("{$base}/reports.php", 'Scan & Echo Reports', $activeKey, 'reports', null, 'fa-solid fa-file-waveform'),
-                nav_item("{$base}/report-history.php", 'Report History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open'),
+            nav_group('Radiology Department', [
+                nav_item("{$base}/pending-scans.php", 'Radiology Workstation', $activeKey, 'pending-scans', null, 'fa-solid fa-x-ray text-indigo-500'),
+                nav_item("{$base}/new-scan.php", 'Book Radiology Study', $activeKey, 'new-scan', null, 'fa-solid fa-calendar-plus text-blue-500'),
+                nav_item("{$base}/results.php", 'Enter / Edit Findings', $activeKey, 'results', null, 'fa-solid fa-notes-medical text-teal-500'),
+                nav_item("{$base}/reports.php", 'Radiology Reports & Print', $activeKey, 'reports', null, 'fa-solid fa-file-waveform text-emerald-500'),
+                nav_item("{$base}/templates.php", 'Radiology Report Templates', $activeKey, 'templates', null, 'fa-solid fa-bookmark text-amber-500'),
+                nav_item("{$base}/report-history.php", 'Radiology Archive & History', $activeKey, 'report-history', null, 'fa-solid fa-folder-open text-slate-500'),
             ]),
             nav_group('Reception & Billing', [
-                nav_item("{$base}/new-scan.php", 'New Booking (Unified Slip)', $activeKey, 'new-scan', null, 'fa-solid fa-file-circle-plus'),
+                nav_item("{$base}/receipt.php", 'Patient Bill / Slip', $activeKey, 'receipt', null, 'fa-solid fa-receipt'),
                 nav_item("{$base}/patients.php", 'Patients Directory', $activeKey, 'patients', null, 'fa-solid fa-users'),
                 nav_item("{$base}/patients/card.php", 'Patient MR Card', $activeKey, 'patient-card', null, 'fa-solid fa-id-card'),
-                nav_item("{$base}/receipt.php", 'Patient Bill / Slip', $activeKey, 'receipt', null, 'fa-solid fa-receipt'),
-                nav_item("{$base}/financial-closing.php", 'Daily / Weekly / Monthly Closing', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/financial-closing.php", 'Daily / Monthly Closing', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
                 nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
+            ]),
+            nav_group('Hospital & OPD', [
+                nav_item("{$base}/opd-slip.php", 'Doctor OPD Slip', $activeKey, 'opd-slip', null, 'fa-solid fa-user-doctor'),
+                nav_item("{$base}/hospital-files.php", 'Hospital Files & Charts', $activeKey, 'hospital-files', null, 'fa-solid fa-file-medical'),
             ]),
             nav_group('Operations & Finance', [
                 nav_item("{$base}/expenses.php", 'Expenses', $activeKey, 'expenses', null, 'fa-solid fa-file-invoice-dollar'),
@@ -139,28 +137,38 @@ function portal_nav(string $portal, string $activeKey): string
                 nav_item("{$base}/settings.php", 'Department Settings', $activeKey, 'settings', null, 'fa-solid fa-gear'),
             ]),
         ],
-        'admin' => array_merge(
-            is_super_admin() ? [
-                nav_group('Platform Administration', [
-                    nav_item("{$base}/organizations.php", 'Client Companies', $activeKey, 'organizations', null, 'fa-solid fa-building-columns'),
-                ]),
-            ] : [],
-            [
-                nav_group('Overview', [
-                    nav_item("{$base}/dashboard.php", 'Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
-                ]),
-                nav_group('Management', [
-                    nav_item("{$base}/summary-reports.php", 'Summary Reports Engine', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie text-indigo-500'),
-                    nav_item("{$base}/labs.php", 'Labs & Branches', $activeKey, 'labs', null, 'fa-solid fa-sitemap'),
-                    nav_item("{$base}/users.php", 'Users & Permissions', $activeKey, 'users', null, 'fa-solid fa-user-shield'),
-                    nav_item("{$base}/audit-trail.php", 'Audit Trail', $activeKey, 'audit-trail', null, 'fa-solid fa-clock-rotate-left'),
-                    nav_item("{$base}/tests.php", 'Tests Catalog', $activeKey, 'tests', null, 'fa-solid fa-flask'),
-                    nav_item("{$base}/packages.php", 'Test Packages', $activeKey, 'packages', null, 'fa-solid fa-boxes-stacked'),
-                    nav_item("{$base}/branding.php", 'Client Branding', $activeKey, 'branding', null, 'fa-solid fa-heading'),
-                ]),
-                nav_group('', [nav_item("{$base}/settings.php", 'System Settings', $activeKey, 'settings', null, 'fa-solid fa-sliders')]),
-            ]
-        ),
+        'admin' => is_super_admin() ? [
+            nav_group('Platform Master', [
+                nav_item("{$base}/dashboard.php", 'Platform Console', $activeKey, 'dashboard', null, 'fa-solid fa-crown text-[#c2f13c]'),
+            ]),
+            nav_group('SaaS Client Labs', [
+                nav_item("{$base}/organizations.php", 'Client Laboratories', $activeKey, 'organizations', null, 'fa-solid fa-building-columns'),
+                nav_item("{$base}/labs.php", 'All Network Branches', $activeKey, 'labs', null, 'fa-solid fa-sitemap'),
+                nav_item("{$base}/users.php", 'Global Staff & Admins', $activeKey, 'users', null, 'fa-solid fa-users'),
+                nav_item("{$base}/locked-records.php", 'Locked Bills & Reports', $activeKey, 'locked-records', null, 'fa-solid fa-lock text-rose-500'),
+            ]),
+            nav_group('Platform Security', [
+                nav_item("{$base}/audit-trail.php", 'Global Audit Trail', $activeKey, 'audit-trail', null, 'fa-solid fa-clock-rotate-left'),
+                nav_item("/database/setup.php", 'Database & System Health', $activeKey, 'db-setup', null, 'fa-solid fa-database'),
+                nav_item("{$base}/settings.php", 'Platform Settings', $activeKey, 'settings', null, 'fa-solid fa-sliders'),
+            ]),
+        ] : [
+            nav_group('Overview', [
+                nav_item("{$base}/dashboard.php", 'Lab Dashboard', $activeKey, 'dashboard', null, 'fa-solid fa-gauge-high'),
+            ]),
+            nav_group('Staff & Operations', [
+                nav_item("{$base}/users.php", 'Staff & Permissions (RBAC)', $activeKey, 'users', null, 'fa-solid fa-user-shield'),
+                nav_item("{$base}/locked-records.php", 'Locked Bills & Reports', $activeKey, 'locked-records', null, 'fa-solid fa-lock text-rose-500'),
+                nav_item("{$base}/labs.php", 'Labs & Collection Centers', $activeKey, 'labs', null, 'fa-solid fa-sitemap'),
+                nav_item("{$base}/audit-trail.php", 'Lab Security Logs', $activeKey, 'audit-trail', null, 'fa-solid fa-clock-rotate-left'),
+            ]),
+            nav_group('Financials & Branding', [
+                nav_item("{$base}/summary-reports.php", 'Revenue & Shift Reports', $activeKey, 'summary-reports', null, 'fa-solid fa-chart-pie'),
+                nav_item("{$base}/financial-closing.php", 'Daily Financial Closing', $activeKey, 'financial-closing', null, 'fa-solid fa-calculator'),
+                nav_item("{$base}/branding.php", 'Lab Branding & Letterhead', $activeKey, 'branding', null, 'fa-solid fa-heading'),
+                nav_item("{$base}/settings.php", 'Lab Settings', $activeKey, 'settings', null, 'fa-solid fa-sliders'),
+            ]),
+        ],
     ];
 
     return implode('', $menus[$portal] ?? []);
@@ -182,6 +190,17 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     $initials = e(user_initials($user['name'] ?? 'User'));
     $branchHint = e($user['branch_id'] ?? 'ORG-001');
 
+    $isDashboard = ($activeKey === 'dashboard');
+    $backBtnHtml = '';
+    if (!$isDashboard) {
+        $backBtnHtml = <<<HTML
+        <a href="/portals/dashboard.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs transition-colors shadow-2xs group shrink-0" title="Back to Dashboard">
+            <i class="fa-solid fa-arrow-left text-xs group-hover:-translate-x-0.5 transition-transform text-slate-500"></i>
+            <span class="hidden sm:inline">Dashboard</span>
+        </a>
+        HTML;
+    }
+
     $logo = brand_logo('brand-logo brand-logo--sidebar');
     $wa = floating_whatsapp_button('+92 306 5193582'); // CLIENT lab WhatsApp only
 
@@ -198,41 +217,54 @@ function render_layout(string $title, string $portal, string $activeKey, string 
     echo '</head><body class="app-body h-full">';
 
     echo <<<HTML
-<div id="app-shell" class="min-h-full">
+<div id="app-shell" class="min-h-full sidebar-collapsed">
     <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-950/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
 
-    <aside id="sidebar" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] -translate-x-full flex-col transition-transform duration-200 lg:translate-x-0">
-        <div class="app-brand">
+    <aside id="sidebar" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] -translate-x-full lg:translate-x-0 flex-col transition-all duration-200 shadow-2xl">
+        <div class="app-brand flex items-center justify-between pr-3">
             <div class="app-brand__row">
                 <div class="app-brand__icon">{$logo}</div>
-                <div>
-                    <p class="app-brand__title">Lab Dash Pro <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full bg-[#c2f13c] text-slate-950">PRO</span></p>
+                <div class="app-brand__text">
+                    <p class="app-brand__title">Lab Dash Pro</p>
                     <p class="app-brand__portal">{$portalLabel}</p>
                 </div>
             </div>
+            <!-- Collapse button when expanded (desktop) -->
+            <button type="button" id="sidebar-collapse-btn" class="sidebar-toggle-btn p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors hidden lg:flex items-center justify-center" title="Collapse sidebar to icon rail">
+                <i class="fa-solid fa-angles-left text-sm"></i>
+            </button>
+            <!-- Close button (mobile) -->
+            <button type="button" id="sidebar-close-btn" class="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors lg:hidden" title="Close sidebar">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
         </div>
+
+        <!-- Prominent Expand Button shown in collapsed rail mode (desktop) -->
+        <div class="sidebar-rail-expand px-2 py-2 border-b border-slate-800/80">
+            <button type="button" class="sidebar-toggle-btn w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#c2f13c] hover:text-white flex items-center justify-center text-xs font-bold transition-all shadow-sm" title="Expand Sidebar (Show full menu)">
+                <i class="fa-solid fa-angles-right text-sm"></i>
+            </button>
+        </div>
+
         <nav class="sidebar-nav flex-1 overflow-y-auto py-2">{$nav}</nav>
         <div class="app-sidebar__user">
             <div class="app-sidebar__user-row">
                 <div class="app-sidebar__avatar">{$initials}</div>
-                <div class="min-w-0 flex-1">
+                <div class="app-sidebar__user-details min-w-0 flex-1">
                     <p class="app-sidebar__name truncate">{$userName}</p>
                     <p class="app-sidebar__role truncate">{$userRole}</p>
                 </div>
             </div>
-            <a href="/logout.php" class="app-sidebar__logout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Sign out</a>
+            <a href="/logout.php" class="app-sidebar__logout" title="Sign out"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span class="app-sidebar__logout-text">Sign out</span></a>
         </div>
     </aside>
 
-    <div class="lg:pl-[var(--sidebar-width)]">
+    <div id="main-content-wrapper" class="main-content-wrapper min-w-0 flex-1">
         <header class="app-topbar no-print flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200/80 bg-white/85 backdrop-blur-md sticky top-0 z-30">
-            <div class="flex items-center gap-3 min-w-0">
-                <button type="button" id="sidebar-toggle" class="topbar-menu-btn lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" aria-label="Open menu">
-                    <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
-                </button>
+            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                {$backBtnHtml}
                 <div class="min-w-0">
-                    <h1 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight truncate">{$pageTitle}</h1>
-                    <p class="text-[11px] text-slate-500 font-medium hidden sm:block">Lab Dash Pro &middot; Diagnostic Intelligence</p>
+                    <h1 class="text-base sm:text-lg font-bold text-slate-800 tracking-tight truncate">{$pageTitle}</h1>
                 </div>
             </div>
             <div class="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -241,19 +273,15 @@ function render_layout(string $title, string $portal, string $activeKey, string 
                     <span class="font-medium text-slate-600 hidden md:inline">Search features...</span>
                     <kbd class="font-mono text-[10px] bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-500 font-semibold shadow-2xs">Ctrl K</kbd>
                 </button>
-                <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-700">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Engine Online</span>
-                </div>
-                <div class="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-medium text-slate-600">
+                <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-medium text-slate-600">
                     <i class="fa-regular fa-calendar text-slate-400"></i>
                     <span>{$today}</span>
                 </div>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
-                    <i class="fa-solid fa-location-dot text-emerald-600"></i> {$branchHint}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700">
+                    <i class="fa-solid fa-location-dot text-slate-500"></i> {$branchHint}
                 </span>
                 <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
-                    <div class="w-8 h-8 rounded-full bg-slate-900 text-[#c2f13c] font-black text-xs flex items-center justify-center shadow-sm border border-slate-700">
+                    <div class="w-8 h-8 rounded-full bg-slate-900 text-[#c2f13c] font-bold text-xs flex items-center justify-center shadow-sm border border-slate-700">
                         {$initials}
                     </div>
                 </div>
@@ -314,7 +342,7 @@ function render_layout(string $title, string $portal, string $activeKey, string 
         { title: "Edit Entry & Bill Slip", category: "Laboratory", icon: "fa-user-pen", url: "/portals/lab-entries/edit.php", keywords: "edit age slip bill patient details name change demographics doctor" },
         { title: "Pending Lab Orders", category: "Laboratory", icon: "fa-clock", url: "/portals/lab-entries/pending.php", keywords: "pending orders queue lab tests" },
         { title: "Report History & Archive", category: "Laboratory", icon: "fa-folder-open", url: "/portals/reports/history.php", keywords: "previous reports print pdf completed" },
-        { title: "New Lab Entry / Booking", category: "Laboratory", icon: "fa-file-circle-plus", url: "/portals/lab-entries/new.php", keywords: "book test billing walkin entry" },
+        { title: "Book Tests / Lab Entry", category: "Laboratory", icon: "fa-flask-vial", url: "/portals/lab-entries/new.php", keywords: "book test billing walkin entry" },
         { title: "Sample Collection & Tracking", category: "Logistics", icon: "fa-vial", url: "/portals/sample-collection.php", keywords: "courier dispatch receive vials tubes transit status" },
         { title: "Test Estimate & Cost Calculator", category: "Laboratory", icon: "fa-calculator", url: "/portals/tests/estimate.php", keywords: "estimate quotation price calculator test rates estimate slip inquiry discount" },
         { title: "Delete / Cancel Lab Entry", category: "Laboratory", icon: "fa-user-xmark", url: "/portals/delete-entry.php", keywords: "void remove mistake refund cancel" },

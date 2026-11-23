@@ -54,7 +54,7 @@ $filters = filter_bar([
 $content = page_header(
     'Pending Lab Orders',
     'Laboratory orders awaiting sample collection, testing, or result approval.',
-    btn_primary('/portals/lab-entries/new.php', 'New Lab Order', 'fa-solid fa-plus')
+    btn_primary('/portals/lab-entries/new.php', 'Register Patient', 'fa-solid fa-plus')
 );
 
 $content .= card(

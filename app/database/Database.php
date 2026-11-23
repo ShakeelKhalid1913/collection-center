@@ -13,6 +13,7 @@ class Database
     private static ?Database $instance = null;
     private ?PDO $pdo = null;
     private bool $connected = false;
+    private ?string $lastError = null;
 
     private function __construct()
     {
@@ -114,12 +115,19 @@ class Database
             return false;
         }
         try {
+            $this->lastError = null;
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute($params);
         } catch (PDOException $e) {
+            $this->lastError = $e->getMessage();
             error_log('Database execute error: ' . $e->getMessage() . ' in SQL: ' . $sql);
             return false;
         }
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 
     /**

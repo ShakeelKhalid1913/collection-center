@@ -44,7 +44,7 @@ foreach ($sourceEntries as $e) {
 $content = page_header(
     'Lab Entry History',
     'All entries — open receipt or report preview without leaving Collection Center.',
-    btn_primary('/portals/lab-entries/new.php', 'New entry')
+    btn_primary('/portals/lab-entries/new.php', 'Register Patient', 'fa-solid fa-plus')
 );
 
 if (isset($_GET['created'])) {

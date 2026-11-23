@@ -1,24 +1,55 @@
 (function () {
+  const shell = document.getElementById('app-shell');
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
   const toggle = document.getElementById('sidebar-toggle');
+  const closeBtn = document.getElementById('sidebar-close-btn');
 
-  function openSidebar() {
-    sidebar?.classList.remove('-translate-x-full');
-    backdrop?.classList.remove('hidden');
+  const isDesktop = () => window.innerWidth >= 1024;
+  const savedState = localStorage.getItem('sidebar_collapsed');
+  if (savedState === 'false' && isDesktop()) {
+    shell?.classList.remove('sidebar-collapsed');
+  } else {
+    shell?.classList.add('sidebar-collapsed');
   }
 
-  function closeSidebar() {
-    sidebar?.classList.add('-translate-x-full');
-    backdrop?.classList.add('hidden');
+  function toggleSidebar() {
+    if (isDesktop()) {
+      const willCollapse = !shell?.classList.contains('sidebar-collapsed');
+      if (willCollapse) {
+        shell?.classList.add('sidebar-collapsed');
+        localStorage.setItem('sidebar_collapsed', 'true');
+      } else {
+        shell?.classList.remove('sidebar-collapsed');
+        localStorage.setItem('sidebar_collapsed', 'false');
+      }
+    } else {
+      if (sidebar?.classList.contains('-translate-x-full')) {
+        sidebar?.classList.remove('-translate-x-full');
+        backdrop?.classList.remove('hidden');
+      } else {
+        sidebar?.classList.add('-translate-x-full');
+        backdrop?.classList.add('hidden');
+      }
+    }
   }
 
-  toggle?.addEventListener('click', openSidebar);
-  backdrop?.addEventListener('click', closeSidebar);
+  function closeMobileSidebar() {
+    if (!isDesktop()) {
+      sidebar?.classList.add('-translate-x-full');
+      backdrop?.classList.add('hidden');
+    }
+  }
 
-  window.addEventListener('resize', () => {
-    if (window.innerWidth >= 1024) {
-      closeSidebar();
+  document.querySelectorAll('.sidebar-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', toggleSidebar);
+  });
+  closeBtn?.addEventListener('click', closeMobileSidebar);
+  backdrop?.addEventListener('click', closeMobileSidebar);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeMobileSidebar();
     }
   });
 
@@ -86,6 +117,25 @@
     discountEl?.addEventListener('input', () => recalc('discount'));
     discountPctEl?.addEventListener('input', () => recalc('pct'));
     paidEl?.addEventListener('input', () => recalc('paid'));
+
+    window.applyDiscountPreset = function(pct) {
+      if (discountPctEl) {
+        discountPctEl.value = String(pct);
+        recalc('pct');
+      }
+    };
+
+    window.applyQuickPay = function(mode) {
+      const sub = subtotal();
+      let disc = Number(discountEl?.value || 0);
+      const total = Math.max(0, sub - disc);
+      if (paidEl) {
+        if (mode === 'full') paidEl.value = String(total);
+        else if (mode === 'half') paidEl.value = String(Math.round(total / 2));
+        else if (mode === 'zero') paidEl.value = '0';
+        recalc('paid');
+      }
+    };
 
     const b2bRadios = document.querySelectorAll('input[name="is_b2b"]');
     const b2bSelect = document.querySelector('[data-b2b-client-select]');
@@ -188,8 +238,24 @@
 
     function applyFilters() {
       const q = (searchInput?.value || '').trim().toLowerCase();
+
+      // If no search query and no category selected, keep results clean (do not overwhelm with scattered list)
+      if (!q && !activeType) {
+        hits.forEach((hit) => {
+          hit.hidden = true;
+          hit.classList.add('hidden');
+        });
+        if (hitsBox) {
+          hitsBox.classList.add('is-empty');
+        }
+        if (hitsHint) {
+          hitsHint.innerHTML = '<span class="text-slate-500 font-medium">Type test name or code above to search and add (e.g. CBC, LFT, Lipid, Sugar)...</span>';
+        }
+        return;
+      }
+
       let shown = 0;
-      const maxShow = q ? 40 : 25;
+      const maxShow = 30;
 
       hits.forEach((hit) => {
         const dept = (hit.getAttribute('data-dept') || '').toLowerCase();
@@ -197,7 +263,7 @@
         const matchType = !activeType || dept === activeType;
         const matchQ = !q || hay.includes(q);
         const ok = matchType && matchQ && shown < maxShow;
-        if (matchType && matchQ && shown < maxShow) {
+        if (ok) {
           shown += 1;
         }
         hit.hidden = !ok;
@@ -213,7 +279,7 @@
             ? 'No tests match “' + searchInput.value.trim() + '”. Try another name or code.'
             : 'No tests in this type.';
         } else if (q) {
-          hitsHint.textContent = shown + ' match' + (shown === 1 ? '' : 'es') + ' — click to add.';
+          hitsHint.textContent = shown + ' match' + (shown === 1 ? '' : 'es') + ' — click to add to patient bill.';
         } else {
           hitsHint.textContent = activeType
             ? 'Showing tests in this type. Search above to find any test by name or code.'
@@ -276,11 +342,19 @@
         return;
       }
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      s.src = '/assets/vendor/html2pdf.bundle.min.js';
       s.async = true;
       s.dataset.html2pdf = '1';
       s.onload = () => resolve(window.html2pdf);
-      s.onerror = () => reject(new Error('Could not load PDF library'));
+      s.onerror = () => {
+        // Fallback to CDN if local bundle fails to load
+        const cdnScript = document.createElement('script');
+        cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        cdnScript.async = true;
+        cdnScript.onload = () => resolve(window.html2pdf);
+        cdnScript.onerror = () => reject(new Error('Could not load PDF library'));
+        document.head.appendChild(cdnScript);
+      };
       document.head.appendChild(s);
     });
   }
@@ -303,12 +377,22 @@
           const html2pdf = await loadHtml2Pdf();
           await html2pdf()
             .set({
-              margin: [2, 6, 2, 6],
+              margin: [0, 0, 0, 0],
               filename,
               image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true, logging: false },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+              },
               jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-              pagebreak: { mode: ['css', 'legacy'] },
+              pagebreak: {
+                mode: ['css', 'legacy'],
+                avoid: ['.lab-report__header', '.lab-report__top', '.lab-report__meta', '.lab-report__title-wrap', '.lab-report__sig-row', '.lab-report__brand-foot', '.lab-report__footer', '.lab-report__table tr', '.lab-bill__totals-wrap'],
+              },
             })
             .from(area)
             .save();
@@ -338,24 +422,21 @@
       const high = Number(m[2]);
       if (num < low) return 'L';
       if (num > high) return 'H';
-      return '';
+      return 'N';
     }
     m = r.match(/^<\s*([0-9]+(?:\.[0-9]+)?)$/);
-    if (m) return num >= Number(m[1]) ? 'H' : '';
+    if (m) return num >= Number(m[1]) ? 'H' : 'N';
     m = r.match(/^>\s*([0-9]+(?:\.[0-9]+)?)$/);
-    if (m) return num <= Number(m[1]) ? 'L' : '';
+    if (m) return num <= Number(m[1]) ? 'L' : 'N';
     return '';
   }
 
   function flagDisplayHtml(flag, value) {
     const f = String(flag || '').toLowerCase();
-    const v = String(value || '').trim();
     if (f === 'l') return '<span class="font-bold" style="color:#2563eb" title="Low">↓ Low</span>';
     if (f === 'h') return '<span class="font-bold" style="color:#dc2626" title="High">↑ High</span>';
     if (f === 'critical') return '<span class="font-bold" style="color:#dc2626" title="Critical">! Critical</span>';
-    if (v !== '' && !Number.isNaN(Number(v))) {
-      return '<span class="font-bold" style="color:#16a34a" title="Normal">✓ Normal</span>';
-    }
+    if (f === 'n') return '<span class="font-bold" style="color:#16a34a" title="Normal">✓ Normal</span>';
     return '—';
   }
 
@@ -363,22 +444,37 @@
     const form = document.querySelector('[data-results-entry]');
     if (!form) return;
 
+    const isCbcForm = form.getAttribute('data-is-cbc') === '1'
+      || /cbc|complete\s*blood|haematology|hematology/i.test(form.querySelector('input[name="active_test"]')?.value || '');
+
     form.querySelectorAll('[data-result-input]').forEach((input) => {
       const refreshFlag = () => {
         const row = input.closest('[data-result-row]');
         if (!row) return;
-        const range = input.getAttribute('data-ref-range') || row.querySelector('input[name*="[range]"]')?.value || '';
-        const flag = input.tagName === 'SELECT' ? '' : computeFlagJs(input.value, range);
+
         const hidden = row.querySelector('[data-auto-flag]');
         const display = row.querySelector('[data-flag-display]');
-        if (hidden) hidden.value = flag;
+
+        if (!isCbcForm) {
+          if (hidden) hidden.value = '';
+          if (display) {
+            display.innerHTML = '';
+            display.style.display = 'none';
+          }
+          input.classList.remove('text-blue-700', 'border-blue-400', 'text-red-600', 'border-red-400', 'text-green-700', 'border-green-400');
+          return;
+        }
+
+        const range = input.getAttribute('data-ref-range') || row.querySelector('input[name*="[range]"]')?.value || '';
+        const flag = input.tagName === 'SELECT' ? '' : computeFlagJs(input.value, range);
+        if (hidden) hidden.value = (flag === 'N' ? '' : flag);
         if (display) display.innerHTML = flagDisplayHtml(flag, input.value);
         input.classList.toggle('text-blue-700', flag === 'L');
         input.classList.toggle('border-blue-400', flag === 'L');
         input.classList.toggle('text-red-600', flag === 'H' || flag === 'critical');
         input.classList.toggle('border-red-400', flag === 'H' || flag === 'critical');
-        input.classList.toggle('text-green-700', flag === '' && input.value.trim() !== '' && !Number.isNaN(Number(input.value)));
-        input.classList.toggle('border-green-400', flag === '' && input.value.trim() !== '' && !Number.isNaN(Number(input.value)));
+        input.classList.toggle('text-green-700', flag === 'N');
+        input.classList.toggle('border-green-400', flag === 'N');
       };
 
       input.addEventListener('input', refreshFlag);
@@ -529,12 +625,12 @@
             <input type="text" name="param_unit[]" class="field text-sm" placeholder="g/dl">
           </div>
           <div>
-            <label class="field-label text-xs">Normal Value</label>
-            <input type="text" name="param_normal[]" class="field text-sm" placeholder="12.0 - 16.5">
+            <label class="field-label text-xs">Normal Value <span class="text-slate-400 font-normal">(Double line)</span></label>
+            <textarea name="param_normal[]" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;"></textarea>
           </div>
           <div>
-            <label class="field-label text-xs">Reference Range</label>
-            <input type="text" name="param_range[]" class="field text-sm" placeholder="12.0 - 16.5">
+            <label class="field-label text-xs">Reference Range <span class="text-slate-400 font-normal">(Double line)</span></label>
+            <textarea name="param_range[]" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;"></textarea>
           </div>
           <div class="flex items-end pb-1">
             <button type="button" class="btn btn-secondary text-sm font-bold text-red-600 hover:bg-red-50 hover:border-red-300" style="padding:0.4rem 0.65rem;" data-remove-param title="Remove Parameter">&times;</button>

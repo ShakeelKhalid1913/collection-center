@@ -12,7 +12,11 @@ $labRepo = lab_repo();
 
 // If submitted directly
 if (!empty($_GET['lab_no'])) {
-    redirect('/portals/reports/preview.php?lab_no=' . urlencode((string)$_GET['lab_no']));
+    $q = trim((string)$_GET['lab_no']);
+    $entry = $labRepo->findByLabNo($q, $orgId);
+    $resolvedLabNo = $entry['lab_no'] ?? $q;
+    $fmt = !empty($_GET['format']) ? '&format=' . urlencode((string)$_GET['format']) : '';
+    redirect('/portals/reports/preview.php?lab_no=' . urlencode($resolvedLabNo) . $fmt);
 }
 
 $verifiedEntries = array_filter(
@@ -20,7 +24,7 @@ $verifiedEntries = array_filter(
     static fn($e) => in_array($e['status'] ?? '', ['verified', 'completed', 'in_progress'], true)
 );
 
-$content = page_header('Generate & Print Official Lab Report', 'Select any lab order or search by Lab No to preview and print.');
+$content = page_header('Generate & Print Official Lab Report', 'Search any patient by Slip #, Lab No, or MR No to preview and print.');
 
 $verifiedRowsHtml = '';
 if (!empty($verifiedEntries)) {
@@ -57,16 +61,20 @@ TR;
 }
 
 $content .= card(
-    '<form method="get" action="/portals/reports/preview.php" class="grid max-w-xl gap-4 p-4 sm:p-6">' .
-    '<label class="field-label font-bold text-slate-900">Enter Lab Number (L-YYYY-XXXX)</label>' .
+    '<form method="get" action="/portals/reports/preview.php" class="grid max-w-2xl gap-4 p-4 sm:p-6">' .
+    '<label class="field-label font-bold text-slate-900 text-sm">Instant Report Search (Slip #, Lab No, or MR Number)</label>' .
     '<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">' .
-    '<input type="text" name="lab_no" class="field text-sm font-mono font-semibold" placeholder="e.g. L-2026-0891" required>' .
+    '<div class="relative flex-1">' .
+    '<i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>' .
+    '<input type="text" name="lab_no" class="field pl-8 text-sm font-mono font-semibold w-full" placeholder="Enter Slip # (e.g. 3235), Lab No (e.g. L-2026-3235), or MR No" autofocus required>' .
+    '</div>' .
     '<select name="format" class="field text-xs font-bold rounded-xl py-2 px-3 border border-slate-300 bg-slate-50 w-auto">' .
     '<option value="graph"><i class="fa-solid fa-chart-simple"></i> Graph Report</option>' .
     '<option value="simple">Simple Report</option>' .
     '</select>' .
-    '<button type="submit" class="btn btn-primary text-xs font-bold px-4 py-2 whitespace-nowrap shadow-md"><i class="fa-solid fa-magnifying-glass mr-1"></i> Generate</button>' .
+    '<button type="submit" class="btn btn-primary text-xs font-bold px-4 py-2 whitespace-nowrap shadow-md"><i class="fa-solid fa-print mr-1"></i> Preview &amp; Print</button>' .
     '</div>' .
+    '<p class="text-[11px] text-slate-500 mt-0.5"><i class="fa-solid fa-circle-info text-teal-600 mr-1"></i> When patients return days or weeks later, simply enter their 4-digit slip number (e.g. <strong>3235</strong>) to view their report immediately.</p>' .
     '</form>'
 );
 

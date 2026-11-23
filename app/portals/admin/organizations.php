@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if (!empty($res['success'])) {
             audit_log('CREATE_ORGANIZATION', 'organizations', $res['id'], "Registered new company {$name}");
             $credentialsNote = ($adminEmail !== '' && $adminPass !== '') 
-                ? "<br><strong class='text-emerald-700'>Company Admin Created:</strong> Email: <code>{$adminEmail}</code> | Password: <code>{$adminPass}</code>"
+                ? " [Admin Account: {$adminEmail} | Password: {$adminPass}]"
                 : '';
-            $msg = flash_success("Company <strong>" . e($name) . "</strong> (ID: <code>" . e($res['id']) . "</code>) created successfully with isolated branding, catalog, and main lab branch.{$credentialsNote}");
+            $msg = flash_success("Company '{$name}' (ID: {$res['id']}) created successfully with isolated catalog and main lab branch.{$credentialsNote}");
         } else {
             $msg = flash_error($res['error'] ?? 'Could not create company.');
         }
@@ -61,9 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if ($targetOrgId === '' || $adminEmail === '' || $adminPass === '') {
         $msg = flash_error('Organization, Admin Email, and Admin Password are all required.');
     } else {
-        // Find main lab branch or default
+        // Find main lab branch for this organization or null
         $branches = db()->fetchAll("SELECT id FROM branches WHERE organization_id = :oid LIMIT 1", ['oid' => $targetOrgId]);
-        $branchId = !empty($branches[0]['id']) ? $branches[0]['id'] : 'BR-MAIN-LAB';
+        $branchId = !empty($branches[0]['id']) ? $branches[0]['id'] : null;
 
         $userRes = user_repo()->createUser([
             'organization_id' => $targetOrgId,
@@ -73,11 +73,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'name' => $adminName !== '' ? $adminName : 'Company Admin',
             'portal' => 'admin',
             'role' => 'Company Admin',
+            'permissions' => [
+                'booking_create' => 1,
+                'booking_cancel' => 1,
+                'report_edit' => 1,
+                'report_verify' => 1,
+                'report_publish' => 1,
+                'rates_edit' => 1,
+                'users_manage' => 1,
+                'header_footer_edit' => 1,
+                'view_results' => 1,
+                'view_financials' => 1,
+                'view_audit' => 1,
+            ],
         ]);
 
         if (!empty($userRes['success'])) {
             audit_log('CREATE_COMPANY_ADMIN', 'users', $adminEmail, "Generated company admin for {$targetOrgId}");
-            $msg = flash_success("New Company Admin <code>{$adminEmail}</code> created successfully for organization <code>{$targetOrgId}</code>.");
+            $msg = flash_success("New Company Admin '{$adminEmail}' created successfully for organization {$targetOrgId}.");
         } else {
             $msg = flash_error($userRes['error'] ?? 'Failed to generate admin account.');
         }
@@ -92,7 +105,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         org_repo()->updateOrganization($targetOrgId, ['is_active' => $newStatus]);
         audit_log('TOGGLE_ORG_STATUS', 'organizations', $targetOrgId, "Set active status to {$newStatus}");
         $statusLabel = $newStatus === 1 ? 'activated' : 'suspended';
-        $msg = flash_success("Company <code>{$targetOrgId}</code> has been {$statusLabel}.");
+        $msg = flash_success("Company '{$targetOrgId}' has been {$statusLabel}.");
+    }
+}
+
+// Handle edit company
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit_org') {
+    $targetOrgId = trim((string)($_POST['org_id'] ?? ''));
+    $name = trim((string)($_POST['name'] ?? ''));
+    $phone = trim((string)($_POST['phone'] ?? ''));
+    $email = trim((string)($_POST['email'] ?? ''));
+    $address = trim((string)($_POST['address'] ?? ''));
+
+    if ($targetOrgId === '' || $name === '') {
+        $msg = flash_error('Company ID and Name are required.');
+    } else {
+        $ok = org_repo()->updateOrganization($targetOrgId, [
+            'name' => $name,
+            'phone' => $phone,
+            'email' => $email,
+            'address' => $address,
+        ]);
+        if ($ok) {
+            audit_log('EDIT_ORGANIZATION', 'organizations', $targetOrgId, "Updated company details for {$name}");
+            $msg = flash_success("Company '{$name}' ({$targetOrgId}) updated successfully.");
+        } else {
+            $msg = flash_error('Failed to update company.');
+        }
+    }
+}
+
+// Handle delete company
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_org') {
+    $targetOrgId = trim((string)($_POST['org_id'] ?? ''));
+    if ($targetOrgId === 'ORG-001') {
+        $msg = flash_error('Cannot delete the primary default organization.');
+    } else {
+        $ok = org_repo()->deleteOrganization($targetOrgId);
+        if ($ok) {
+            audit_log('DELETE_ORGANIZATION', 'organizations', $targetOrgId, "Deleted organization {$targetOrgId}");
+            $msg = flash_success("Company '{$targetOrgId}' has been deleted successfully.");
+        } else {
+            $msg = flash_error('Failed to delete company.');
+        }
     }
 }
 
@@ -137,22 +192,49 @@ foreach ($organizations as $org) {
         ? '<span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Active</span>'
         : '<span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Suspended</span>';
 
-    $actionsHtml = '<div class="flex items-center gap-1.5 justify-end">';
+    $orgDataJson = htmlspecialchars(json_encode([
+        'id' => $oid,
+        'name' => $org['name'] ?? '',
+        'phone' => $org['phone'] ?? '',
+        'email' => $org['email'] ?? '',
+        'address' => $org['address'] ?? ''
+    ]), ENT_QUOTES, 'UTF-8');
+
+    $actionsHtml = '<div class="flex items-center gap-1.5 justify-end flex-wrap">';
     
     // Quick Add Admin Trigger
     $actionsHtml .= '<button type="button" onclick="openAdminModal(\'' . e($oid) . '\', \'' . e(addslashes($org['name'])) . '\')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-medium transition" title="Generate Admin Account"><i class="fa-solid fa-user-plus mr-1"></i> Add Admin</button>';
 
+    // Edit Company
+    $actionsHtml .= '<button type="button" onclick=\'openEditOrgModal(' . $orgDataJson . ')\' class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-medium transition" title="Edit Company Details"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit</button>';
+
+    // View Users
+    $actionsHtml .= '<a href="/portals/admin/users.php?org_id=' . urlencode($oid) . '" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-xs font-medium transition" title="View Users & Passwords"><i class="fa-solid fa-users mr-1"></i> Users</a>';
+
+    // Header & Footer Letterhead
+    $actionsHtml .= '<a href="/portals/branding.php?org=' . urlencode($oid) . '" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded text-xs font-medium transition" title="Configure Header & Footer Letterhead"><i class="fa-solid fa-heading mr-1"></i> Header/Footer</a>';
+
     // Toggle Status Form
-    $actionsHtml .= '<form method="post" class="inline" onsubmit="return confirm(\'Are you sure you want to ' . ($isActive ? 'suspend' : 'activate') . ' ' . e(addslashes($org['name'])) . '?\');">';
+    $actionsHtml .= '<form method="post" class="inline m-0" onsubmit="return confirm(\'Are you sure you want to ' . ($isActive ? 'suspend' : 'activate') . ' ' . e(addslashes($org['name'])) . '?\');">';
     $actionsHtml .= '<input type="hidden" name="action" value="toggle_org_status">';
     $actionsHtml .= '<input type="hidden" name="org_id" value="' . e($oid) . '">';
     $actionsHtml .= '<input type="hidden" name="status" value="' . ($isActive ? 0 : 1) . '">';
     if ($isActive) {
-        $actionsHtml .= '<button type="submit" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-xs font-medium transition" title="Suspend Organization"><i class="fa-solid fa-ban mr-1"></i> Suspend</button>';
+        $actionsHtml .= '<button type="submit" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded text-xs font-medium transition" title="Suspend Organization"><i class="fa-solid fa-ban mr-1"></i> Suspend</button>';
     } else {
         $actionsHtml .= '<button type="submit" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-xs font-medium transition" title="Activate Organization"><i class="fa-solid fa-check mr-1"></i> Activate</button>';
     }
     $actionsHtml .= '</form>';
+
+    // Delete Company (except default ORG-001)
+    if ($oid !== 'ORG-001') {
+        $actionsHtml .= '<form method="post" class="inline m-0" onsubmit="return confirm(\'Are you sure you want to delete ' . e(addslashes($org['name'])) . ' (' . e($oid) . ')? All branches and users will be deleted.\');">';
+        $actionsHtml .= '<input type="hidden" name="action" value="delete_org">';
+        $actionsHtml .= '<input type="hidden" name="org_id" value="' . e($oid) . '">';
+        $actionsHtml .= '<button type="submit" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-xs font-medium transition" title="Delete Organization"><i class="fa-solid fa-trash mr-1"></i> Delete</button>';
+        $actionsHtml .= '</form>';
+    }
+
     $actionsHtml .= '</div>';
 
     $rows[] = [$idBadge, $nameHtml, $contactHtml, $statsHtml, $statusHtml, $actionsHtml];
@@ -269,6 +351,40 @@ $modalHtml = '<div id="adminModal" class="fixed inset-0 bg-slate-900/50 backdrop
     '</div>' .
 '</div>';
 
+// Modal for editing company
+$editOrgModalHtml = '<div id="editOrgModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">' .
+    '<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-2xl max-w-md w-full mx-4">' .
+        '<div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">' .
+            '<h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-indigo-600"></i> Edit Company Details</h3>' .
+            '<button type="button" onclick="closeEditOrgModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>' .
+        '</div>' .
+        '<form method="post" class="space-y-3">' .
+            '<input type="hidden" name="action" value="edit_org">' .
+            '<input type="hidden" name="org_id" id="editOrgModalId" value="">' .
+            '<div>' .
+                '<label class="block text-xs font-semibold text-slate-700 mb-1">Company Name <span class="text-rose-500">*</span></label>' .
+                '<input type="text" name="name" id="editOrgModalName" required class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg">' .
+            '</div>' .
+            '<div>' .
+                '<label class="block text-xs font-semibold text-slate-700 mb-1">Official Phone</label>' .
+                '<input type="text" name="phone" id="editOrgModalPhone" class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg">' .
+            '</div>' .
+            '<div>' .
+                '<label class="block text-xs font-semibold text-slate-700 mb-1">Official Email</label>' .
+                '<input type="email" name="email" id="editOrgModalEmail" class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg">' .
+            '</div>' .
+            '<div>' .
+                '<label class="block text-xs font-semibold text-slate-700 mb-1">Address / Location</label>' .
+                '<input type="text" name="address" id="editOrgModalAddress" class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg">' .
+            '</div>' .
+            '<div class="flex justify-end gap-2 pt-3 border-t border-slate-100">' .
+                '<button type="button" onclick="closeEditOrgModal()" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium">Cancel</button>' .
+                '<button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm">Save Changes</button>' .
+            '</div>' .
+        '</form>' .
+    '</div>' .
+'</div>';
+
 $scriptHtml = '<script>
 function openAdminModal(orgId, orgName) {
     document.getElementById("modalTargetOrgId").value = orgId;
@@ -277,6 +393,17 @@ function openAdminModal(orgId, orgName) {
 }
 function closeAdminModal() {
     document.getElementById("adminModal").classList.add("hidden");
+}
+function openEditOrgModal(org) {
+    document.getElementById("editOrgModalId").value = org.id || "";
+    document.getElementById("editOrgModalName").value = org.name || "";
+    document.getElementById("editOrgModalPhone").value = org.phone || "";
+    document.getElementById("editOrgModalEmail").value = org.email || "";
+    document.getElementById("editOrgModalAddress").value = org.address || "";
+    document.getElementById("editOrgModal").classList.remove("hidden");
+}
+function closeEditOrgModal() {
+    document.getElementById("editOrgModal").classList.add("hidden");
 }
 function generateRandomPass(elementId) {
     var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
@@ -288,8 +415,8 @@ function generateRandomPass(elementId) {
 }
 </script>';
 
-$tableCard = card(data_table(['ID', 'Company Name & Location', 'Contact Details', 'Statistics', 'Status', '<div class="text-right">Actions</div>'], $rows), 'overflow-hidden');
+$tableCard = card(data_table(['ID', 'Company Name & Location', 'Contact Details', 'Statistics', 'Status', 'Actions'], $rows), 'overflow-hidden');
 
-$content = $msg . $pageHeader . $statsCardsHtml . $registerCard . $tableCard . $modalHtml . $scriptHtml;
+$content = $msg . $pageHeader . $statsCardsHtml . $registerCard . $tableCard . $modalHtml . $editOrgModalHtml . $scriptHtml;
 
 render_page('Client Companies', 'admin', 'organizations', $content);

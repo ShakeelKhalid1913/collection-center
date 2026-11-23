@@ -64,20 +64,12 @@ $catalogJson = json_encode($catalogList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX
 $headerActions = <<<HTML
 <div class="flex items-center gap-2">
     <a href="/portals/lab-entries/new.php" class="btn btn-secondary text-xs py-2 px-3">
-        <i class="fa-solid fa-file-circle-plus mr-1"></i> New Lab Entry
-    </a>
-    <a href="/portals/tests/prices.php" class="btn btn-secondary text-xs py-2 px-3">
-        <i class="fa-solid fa-tags mr-1"></i> Update Prices
+        <i class="fa-solid fa-file-circle-plus mr-1"></i> Register Patient
     </a>
 </div>
 HTML;
 
-$content = page_header(
-    'Test Estimate & Rate Checker',
-    'Instant test rate lookup for walk-in reception inquiries. Select any test to view its exact cost and calculate total fees without typing patient details.',
-    $headerActions,
-    'fa-solid fa-calculator'
-);
+$content = page_header('Test Quotation & Rate Checker', '', $headerActions);
 
 $todayHuman = date('d-M-Y');
 $labName = e($settings['name'] ?? 'Diagnostic Center');
@@ -239,7 +231,7 @@ $content .= <<<HTML
                     <i class="fa-solid fa-print text-slate-600"></i> Print Estimate Slip
                 </button>
                 <button type="button" onclick="convertToLabEntry()" class="btn btn-primary w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2 bg-slate-900 text-white">
-                    <i class="fa-solid fa-arrow-right-to-bracket text-[#c2f13c]"></i> Book Patient Now (New Lab Entry)
+                    <i class="fa-solid fa-arrow-right-to-bracket text-[#c2f13c]"></i> Book Patient Now (Register Patient)
                 </button>
             </div>
         </div>

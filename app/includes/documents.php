@@ -220,34 +220,39 @@ function supported_document_font_sizes(): array
 {
     return [
         'compact' => [
-            'name' => 'Compact (11px / High Density)',
-            'size' => '11px',
-            'line_height' => '1.3',
+            'name' => 'Compact (12.5px / High Density)',
+            'size' => '12.5px',
+            'line_height' => '1.30',
         ],
         'normal' => [
-            'name' => 'Normal (12px / Standard Default)',
-            'size' => '12px',
-            'line_height' => '1.38',
+            'name' => 'Normal (14.5px / Crisp Default)',
+            'size' => '14.5px',
+            'line_height' => '1.34',
+        ],
+        'base' => [
+            'name' => 'Base (14.5px / Crisp Default)',
+            'size' => '14.5px',
+            'line_height' => '1.34',
         ],
         'standard' => [
-            'name' => 'Standard (13px / Crisp Readable)',
-            'size' => '13px',
-            'line_height' => '1.42',
+            'name' => 'Standard (15px / Enhanced Readable)',
+            'size' => '15px',
+            'line_height' => '1.36',
         ],
         'medium' => [
-            'name' => 'Medium (14px / Enhanced Visibility)',
-            'size' => '14px',
-            'line_height' => '1.48',
+            'name' => 'Medium (15.5px / Enhanced Visibility)',
+            'size' => '15.5px',
+            'line_height' => '1.38',
         ],
         'large' => [
-            'name' => 'Large (15px / Large Report)',
-            'size' => '15px',
-            'line_height' => '1.52',
+            'name' => 'Large (16.5px / Large Report)',
+            'size' => '16.5px',
+            'line_height' => '1.42',
         ],
         'xlarge' => [
-            'name' => 'Extra Large (16px / High Contrast)',
-            'size' => '16px',
-            'line_height' => '1.58',
+            'name' => 'Extra Large (17.5px / High Contrast)',
+            'size' => '17.5px',
+            'line_height' => '1.46',
         ],
     ];
 }
@@ -300,6 +305,12 @@ function branding_settings(?string $orgId = null): array
         'bill_font' => (string)($set['bill_font'] ?? 'times_bold_italic'),
         'report_font_size' => (string)($set['report_font_size'] ?? 'normal'),
         'bill_font_size' => (string)($set['bill_font_size'] ?? 'normal'),
+        'report_param_size' => (string)($set['report_param_size'] ?? '15px'),
+        'report_param_weight' => (string)($set['report_param_weight'] ?? '700'),
+        'show_single_test_headers' => !empty($set['show_single_test_headers']),
+        'hide_pending_tests' => !isset($set['hide_pending_tests']) || !empty($set['hide_pending_tests']),
+        'report_heading_title' => (string)($set['report_heading_title'] ?? 'DIAGNOSTIC REPORT'),
+        'hide_report_title_bar' => !empty($set['hide_report_title_bar']),
     ];
 }
 
@@ -451,6 +462,12 @@ function save_branding_request(string $orgId): array
         'bill_font' => $_POST['bill_font'] ?? 'times_bold_italic',
         'report_font_size' => $_POST['report_font_size'] ?? 'normal',
         'bill_font_size' => $_POST['bill_font_size'] ?? 'normal',
+        'report_param_size' => $_POST['report_param_size'] ?? '15px',
+        'report_param_weight' => $_POST['report_param_weight'] ?? '700',
+        'show_single_test_headers' => !empty($_POST['show_single_test_headers']),
+        'hide_pending_tests' => !empty($_POST['hide_pending_tests']),
+        'report_heading_title' => trim((string)($_POST['report_heading_title'] ?? 'DIAGNOSTIC REPORT')),
+        'hide_report_title_bar' => !empty($_POST['hide_report_title_bar']),
     ], $orgId);
 
     if (!$ok) {
@@ -581,15 +598,13 @@ function branding_header_image_field(array $settings): string
         . '</div>';
 
     return <<<HTML
-    <div class="rounded-lg border border-slate-300 bg-slate-50 p-4 space-y-3 header-builder-wrap">
+    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 header-builder-wrap">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-                <p class="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-up-down-left-right text-teal-600"></i> Header Logo &amp; QR Code Builder (Drag &amp; Drop)
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrows-up-down-left-right text-teal-600"></i> Header Logo &amp; QR Canvas
                 </p>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    Drag the <strong>Logo</strong> or <strong>QR Code</strong> box anywhere on the canvas. Drag the bottom-right circle handle (<span class="font-bold text-slate-700">⤡</span>) to resize.
-                </p>
+                <p class="text-xs text-slate-500 mt-0.5">Drag to reposition elements or use the bottom-right corner to resize.</p>
             </div>
             <div class="flex items-center gap-2">
                 <label for="builder-h-slider" class="text-xs font-medium text-slate-600 select-none">Height: <span id="builder-h-val" class="font-bold text-teal-700">{$canvasH}px</span></label>
@@ -597,7 +612,7 @@ function branding_header_image_field(array $settings): string
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
             <span class="text-slate-400 font-medium mr-1 uppercase text-[10px] tracking-wider">Presets:</span>
             <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="left">Logo Left · QR Right</button>
             <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-builder-preset="center">Logo Center · QR Right</button>
@@ -608,31 +623,31 @@ function branding_header_image_field(array $settings): string
         <input type="hidden" name="header_layout_json" id="header_layout_json" value='{$layoutJson}'>
         <input type="hidden" name="header_image_position" id="header_image_position" value="{$pos}">
 
-        <!-- Real Drag & Drop Interactive Canvas -->
+        <!-- Interactive Drag & Drop Canvas -->
         <div id="header-builder-canvas" class="header-builder-canvas" style="height: {$canvasH}px;">
             <div id="drag-item-logo" class="builder-item builder-item--logo" style="left: {$logoX}px; top: {$logoY}px; width: {$logoW}px; height: {$logoH}px;" title="Drag to move header logo">
-                <span class="builder-badge">Header Logo / Letterhead</span>
+                <span class="builder-badge">Logo</span>
                 {$logoInnerHtml}
                 <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
             </div>
 
             <div id="drag-item-qr" class="builder-item builder-item--qr" style="left: {$qrX}px; top: {$qrY}px; width: {$qrSize}px; height: {$qrSize}px;" title="Drag to move QR code">
-                <span class="builder-badge builder-badge--qr">QR Code</span>
+                <span class="builder-badge builder-badge--qr">QR</span>
                 {$qrInnerHtml}
                 <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
             </div>
         </div>
 
-        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
-            <span>💡 Position and size will be rendered proportionally on preview, A4 prints, and downloaded PDFs.</span>
-            <span id="builder-coords-status" class="text-slate-400 font-mono text-[10px]"></span>
+        <div class="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
+            <span>Renders proportionally on print and PDF</span>
+            <span id="builder-coords-status" class="font-mono text-[10px]"></span>
         </div>
 
         {$preview}
 
         <div class="mt-3 pt-3 border-t border-slate-200">
-            <label class="field-label" for="header_image">Upload header image <span class="text-slate-400 font-normal">(optional, PNG / JPG / WebP under 2 MB)</span></label>
-            <input type="file" id="header_image" name="header_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-teal-800">
+            <label class="field-label" for="header_image">Header Logo Image <span class="text-slate-400 font-normal">(PNG, JPG, or WebP)</span></label>
+            <input type="file" id="header_image" name="header_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700">
         </div>
     </div>
     HTML;
@@ -699,15 +714,13 @@ function branding_footer_image_field(array $settings): string
     }
 
     return <<<HTML
-    <div class="rounded-xl border border-slate-300 bg-slate-50 p-4 space-y-3 footer-builder-wrap">
+    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 footer-builder-wrap">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-                <p class="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-shoe-prints text-sky-600"></i> Footer Letterhead Builder (Drag &amp; Drop)
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrows-up-down-left-right text-sky-600"></i> Footer Banner Canvas
                 </p>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    Position and resize your <strong>Footer Image</strong> on the canvas. Drag the bottom-right circle handle (<span class="font-bold text-slate-700">⤡</span>) to resize.
-                </p>
+                <p class="text-xs text-slate-500 mt-0.5">Position and resize your footer banner on the canvas.</p>
             </div>
             <div class="flex items-center gap-2">
                 <label for="footer-builder-h-slider" class="text-xs font-medium text-slate-600 select-none">Height: <span id="footer-builder-h-val" class="font-bold text-sky-700">{$canvasH}px</span></label>
@@ -715,7 +728,7 @@ function branding_footer_image_field(array $settings): string
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
             <span class="text-slate-400 font-medium mr-1 uppercase text-[10px] tracking-wider">Presets:</span>
             <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="full">Full Width</button>
             <button type="button" class="btn btn-secondary text-xs py-1 px-2.5" data-footer-preset="center">Center Banner</button>
@@ -725,25 +738,25 @@ function branding_footer_image_field(array $settings): string
 
         <input type="hidden" name="footer_layout_json" id="footer_layout_json" value='{$layoutJson}'>
 
-        <!-- Footer Drag & Drop Canvas -->
+        <!-- Footer Interactive Canvas -->
         <div id="footer-builder-canvas" class="footer-builder-canvas" style="height: {$canvasH}px;">
             <div id="drag-item-footer-img" class="builder-item builder-item--footer-img" style="left: {$imgX}px; top: {$imgY}px; width: {$imgW}px; height: {$imgH}px;" title="Drag to move footer image">
-                <span class="builder-badge builder-badge--footer">Footer Banner / Image</span>
+                <span class="builder-badge builder-badge--footer">Footer Banner</span>
                 {$imgInnerHtml}
                 <div class="builder-resize-handle" data-handle="se" title="Drag to resize">⤡</div>
             </div>
         </div>
 
-        <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
-            <span>💡 Position and size will be rendered proportionally on preview, A4 prints, and downloaded PDFs.</span>
-            <span id="footer-builder-coords-status" class="text-slate-400 font-mono text-[10px]"></span>
+        <div class="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
+            <span>Renders proportionally on print and PDF</span>
+            <span id="footer-builder-coords-status" class="font-mono text-[10px]"></span>
         </div>
 
         {$preview}
 
         <div class="mt-3 pt-3 border-t border-slate-200">
-            <label class="field-label" for="footer_image">Upload footer image <span class="text-slate-400 font-normal">(optional, PNG / JPG / WebP under 2 MB)</span></label>
-            <input type="file" id="footer_image" name="footer_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sky-800">
+            <label class="field-label" for="footer_image">Footer Banner Image <span class="text-slate-400 font-normal">(PNG, JPG, or WebP)</span></label>
+            <input type="file" id="footer_image" name="footer_image" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700">
         </div>
     </div>
     HTML;
@@ -752,15 +765,44 @@ function branding_footer_image_field(array $settings): string
 /**
  * @return array{settings: array, patient: array, entry: ?array, lines: array, report_title: string}
  */
-function load_document_context(?string $labNo): array
+function load_document_context(?string $labNo, ?string $orgId = null): array
 {
-    $settings = branding_settings();
     $entry = ($labNo !== null && $labNo !== '') ? lab_repo()->findByLabNo($labNo) : null;
 
     if (!$entry) {
-        $all = lab_repo()->getAll();
+        if ($labNo !== null && $labNo !== '') {
+            return [
+                'settings' => branding_settings($orgId ?: current_org_id()),
+                'patient' => [
+                    'id' => '',
+                    'name' => 'Not Found',
+                    'title' => '',
+                    'age' => '',
+                    'gender' => '',
+                    'phone' => '',
+                    'cnic' => '',
+                    'blood_group' => '',
+                    'email' => '',
+                    'address' => '',
+                    'relation_of' => '',
+                    'referring_doctor' => '',
+                ],
+                'entry' => null,
+                'lines' => [],
+                'report_title' => 'DIAGNOSTIC REPORT',
+                'signatories' => [],
+                'specimen' => 'Serum',
+                'not_found' => true,
+                'searched_lab_no' => $labNo,
+            ];
+        }
+        $checkOrg = $orgId ?: current_org_id();
+        $all = lab_repo()->getAll($checkOrg);
         $entry = $all[0] ?? null;
     }
+
+    $entryOrgId = (string)($entry['organization_id'] ?? ($orgId ?: current_org_id()));
+    $settings = branding_settings($entryOrgId);
 
     $patient = [
         'id' => '',
@@ -808,6 +850,9 @@ function load_document_context(?string $labNo): array
 
     $lines = [];
     $deptHint = '';
+    $allBookedTests = [];
+    $testsWithEnteredResults = [];
+
     if ($entry) {
         $labNo = (string)$entry['lab_no'];
         $results = result_repo()->ensureResultsInitialized(
@@ -816,6 +861,27 @@ function load_document_context(?string $labNo): array
             (string)($patient['name'] ?? ''),
             $settings['organization_id'] ?? 'ORG-001'
         );
+
+        $hidePending = !isset($settings['hide_pending_tests']) || !empty($settings['hide_pending_tests']);
+        $allBookedTests = array_values(array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? '')))));
+
+        // Identify tests that have at least one explicitly entered result value (not empty, not dash, not 'pending')
+        foreach ($results as $r) {
+            $raw = trim((string)($r['value'] ?? ''));
+            $tName = trim((string)($r['test'] ?? ''));
+            $isScreeningTest = preg_match('/hiv|hbsag|hcv|vdrl|tpha|screening|serology/i', $tName . ' ' . ($r['parameter'] ?? ''));
+            if ($raw !== '' && $raw !== '-' && $raw !== '—' && strcasecmp($raw, 'pending') !== 0) {
+                if ($tName !== '') {
+                    $testsWithEnteredResults[$tName] = true;
+                    $testsWithEnteredResults[strtolower($tName)] = true;
+                }
+            } elseif ($isScreeningTest) {
+                if ($tName !== '') {
+                    $testsWithEnteredResults[$tName] = true;
+                    $testsWithEnteredResults[strtolower($tName)] = true;
+                }
+            }
+        }
 
         $testTitles = array_unique(array_filter(array_column($results, 'test')));
         $testMethodologies = [];
@@ -837,6 +903,8 @@ function load_document_context(?string $labNo): array
                 continue;
             }
             $tTitle = $r['test'] ?? '';
+            $rawVal = trim((string)($r['value'] ?? ''));
+
             $tObj = $testCatalogMeta[$tTitle] ?? null;
             $pCount = $tObj ? count(test_repo()->getParameters((string)$tObj['id'])) : -1;
             $paramName = $r['parameter'] ?: ($tTitle !== '' ? $tTitle : 'Result');
@@ -849,6 +917,57 @@ function load_document_context(?string $labNo): array
             $isMicro = $deptInfo['is_microbiology'];
             $hasRef = $deptInfo['has_reference_ranges'];
 
+            $refRange = $hasRef ? (($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—')) : '';
+            $isScreening = preg_match('/hiv|hbsag|hcv|vdrl|tpha|screening|serology/i', $tTitle . ' ' . $paramName);
+
+            // For screening tests like HIV, HBsAg, HCV, VDRL:
+            // If result was marked DONE, empty, or pending, reliably resolve to normal reference value
+            if ($isScreening) {
+                if ($rawVal === '' || strcasecmp($rawVal, 'pending') === 0 || strcasecmp($rawVal, 'done') === 0) {
+                    if (preg_match('/negative/i', $refRange)) {
+                        $rawVal = 'Negative';
+                    } elseif (preg_match('/non\s*reactive/i', $refRange)) {
+                        $rawVal = 'Non Reactive';
+                    } else {
+                        $rawVal = ($refRange !== '' && $refRange !== '—') ? $refRange : 'Non Reactive';
+                    }
+                }
+            }
+
+            $hasExplicitValue = ($rawVal !== '' && $rawVal !== '-' && $rawVal !== '—' && strcasecmp($rawVal, 'pending') !== 0);
+
+            // If hide_pending_tests rule is enabled:
+            // 1. If test has NO entered results across all parameters, hide entire test from report
+            // 2. If a specific parameter has no entered value, do not print it as 'Pending'
+            if ($hidePending) {
+                $hasEntered = !empty($testsWithEnteredResults[$tTitle]) || !empty($testsWithEnteredResults[strtolower($tTitle)]);
+                if (!$hasEntered && !$isScreening) {
+                    continue;
+                }
+                if (!$hasExplicitValue) {
+                    continue;
+                }
+            }
+
+            if ($deptHint === '' && !empty($deptInfo['department_name'])) {
+                $deptHint = $deptInfo['department_name'];
+            }
+
+            $resVal = $hasExplicitValue ? $rawVal : '';
+            if (!$hidePending && ($resVal === '' || strcasecmp($resVal, 'pending') === 0)) {
+                if (preg_match('/negative/i', $refRange)) {
+                    $resVal = 'Negative';
+                } elseif (preg_match('/non\s*reactive/i', $refRange)) {
+                    $resVal = 'Non Reactive';
+                } elseif (preg_match('/done/i', $refRange)) {
+                    $resVal = $refRange;
+                } elseif ($isScreening) {
+                    $resVal = ($refRange !== '' && $refRange !== '—') ? $refRange : 'Negative';
+                } else {
+                    $resVal = 'Pending';
+                }
+            }
+
             $lines[] = [
                 'test_title' => $tTitle,
                 'department_code' => $deptInfo['department_code'],
@@ -857,9 +976,9 @@ function load_document_context(?string $labNo): array
                 'has_ref_range' => $hasRef,
                 'section' => ($pCount === 0) ? '' : ($r['section'] ?? ''),
                 'test' => $paramName,
-                'result' => ($r['value'] !== null && $r['value'] !== '') ? $r['value'] : 'Pending',
+                'result' => $resVal,
                 'unit' => ($hasRef && ($r['unit'] !== '' && $r['unit'] !== '—')) ? $r['unit'] : ($hasRef ? ($tObj['unit'] ?? '—') : ''),
-                'range' => $hasRef ? (($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—')) : '',
+                'range' => $refRange,
                 'sub_table' => ($pCount === 0) ? '' : ($r['sub_table'] ?? ''),
                 'result_note' => ($pCount === 0) ? '' : ($r['result_note'] ?? ''),
                 'methodology' => $testMethodologies[$tTitle] ?? '',
@@ -870,7 +989,7 @@ function load_document_context(?string $labNo): array
             ];
         }
 
-        if ($lines === []) {
+        if ($lines === [] && !$hidePending) {
             $tests = array_filter(array_map('trim', explode(',', (string)($entry['tests'] ?? ''))));
             foreach ($tests as $tName) {
                 $meta = null;
@@ -888,6 +1007,18 @@ function load_document_context(?string $labNo): array
                 $isMicro = $deptInfo['is_microbiology'];
                 $hasRef = $deptInfo['has_reference_ranges'];
 
+                $fallbackRange = $hasRef ? ($meta['range'] ?? '—') : '';
+                $fallbackRes = 'Pending';
+                if (preg_match('/negative/i', $fallbackRange)) {
+                    $fallbackRes = 'Negative';
+                } elseif (preg_match('/non\s*reactive/i', $fallbackRange)) {
+                    $fallbackRes = 'Non Reactive';
+                } elseif (preg_match('/done/i', $fallbackRange)) {
+                    $fallbackRes = $fallbackRange;
+                } elseif (preg_match('/hiv|hbsag|hcv|vdrl|screening|serology/i', $tName)) {
+                    $fallbackRes = ($fallbackRange !== '' && $fallbackRange !== '—') ? $fallbackRange : 'Negative';
+                }
+
                 $lines[] = [
                     'test_title' => $tName,
                     'department_code' => $deptInfo['department_code'],
@@ -896,9 +1027,9 @@ function load_document_context(?string $labNo): array
                     'has_ref_range' => $hasRef,
                     'section' => '',
                     'test' => $tName,
-                    'result' => 'Pending',
+                    'result' => $fallbackRes,
                     'unit' => $hasRef ? ($meta['unit'] ?? '—') : '',
-                    'range' => $hasRef ? ($meta['range'] ?? '—') : '',
+                    'range' => $fallbackRange,
                     'sub_table' => '',
                     'flag' => '',
                     'print_page' => 1,
@@ -945,6 +1076,10 @@ function load_document_context(?string $labNo): array
         'report_title' => $reportTitle,
         'specimen' => $specimen !== '' && $specimen !== '—' ? $specimen : 'Serum',
         'signatories' => setting_repo()->getSignatories($settings['organization_id'] ?? 'ORG-001'),
+        'total_booked_tests' => count($allBookedTests),
+        'entered_tests_count' => count($testsWithEnteredResults),
+        'pending_tests_count' => max(0, count($allBookedTests) - count($testsWithEnteredResults)),
+        'is_partial' => count($testsWithEnteredResults) > 0 && count($testsWithEnteredResults) < count($allBookedTests),
     ];
 }
 
@@ -967,7 +1102,7 @@ function department_report_heading(string $category): string
         'Molecular' => 'DEPARTMENT OF MOLECULAR PATHOLOGY',
         'Endocrinology' => 'DEPARTMENT OF ENDOCRINOLOGY',
         'Clinical Pathology' => 'DEPARTMENT OF CLINICAL PATHOLOGY',
-        'Report Profile' => 'DEPARTMENT OF LABORATORY MEDICINE',
+        'Report Profile' => 'DIAGNOSTIC REPORT',
         'Radiology' => 'DEPARTMENT OF RADIOLOGY',
     ];
     if ($category !== '' && isset($map[$category])) {
@@ -976,7 +1111,7 @@ function department_report_heading(string $category): string
     if ($category !== '') {
         return 'DEPARTMENT OF ' . strtoupper($category);
     }
-    return 'DEPARTMENT OF LABORATORY MEDICINE';
+    return 'DIAGNOSTIC REPORT';
 }
 
 function format_datetime_report(?string $iso): string
@@ -1011,7 +1146,7 @@ function render_branded_header(array $settings, bool $forBill = false): string
 {
     $imageHtml = render_letterhead_image($settings);
     $name = e($settings['name'] ?? '');
-    $header = e($forBill ? ($settings['bill_header'] ?: ($settings['header'] ?? '')) : ($settings['header'] ?? ''));
+    $header = e($forBill ? (($settings['bill_header'] ?? '') ?: ($settings['header'] ?? '')) : ($settings['header'] ?? ''));
     $address = e($settings['address'] ?? '');
     $phone = e($settings['phone'] ?? '');
 
@@ -1072,7 +1207,7 @@ function render_branded_footer(array $settings, bool $forBill = false, string $d
     $labLine = $footer !== ''
         ? '<p class="lab-report__lab-note">' . $footer . '</p>'
         : '';
-    return $imgHtml . $labLine . software_credit_footer(true);
+    return $imgHtml . $labLine;
 }
 
 function render_report_signatories(array $signatories): string
@@ -1135,7 +1270,7 @@ function render_report_document(
     array $patient,
     array $resultLines,
     ?array $entry = null,
-    string $reportTitle = 'DEPARTMENT OF LABORATORY MEDICINE',
+    string $reportTitle = 'DIAGNOSTIC REPORT',
     array $signatories = [],
     string $specimen = 'Serum',
     array $options = []
@@ -1213,16 +1348,18 @@ function get_test_department_info(string $testTitle, ?string $category = null): 
         || preg_match('/(ultrasound|x-ray|xray|ecg|ekg|ct scan|computed tomography|doppler|mri|radiology|sonograph|echocardiogra|mammograph)/i', $title)
     ) {
         $deptTitle = 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
-        if (preg_match('/(ultrasound|sonograph|doppler)/i', $title)) {
+        if (preg_match('/(echo|echocardiogra)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF CARDIOLOGY & ECHOCARDIOGRAPHY (2D ECHO)';
+        } elseif (preg_match('/(ultrasound|sonograph|doppler)/i', $title)) {
             $deptTitle = 'DEPARTMENT OF RADIOLOGY & ULTRASONOGRAPHY';
-        } elseif (preg_match('/(ecg|ekg|echocardiogra)/i', $title)) {
-            $deptTitle = 'DEPARTMENT OF CARDIOLOGY & ECG';
+        } elseif (preg_match('/(ecg|ekg|electrocardiogra)/i', $title)) {
+            $deptTitle = 'DEPARTMENT OF CARDIOLOGY & ELECTROCARDIOGRAPHY (ECG)';
         } elseif (preg_match('/(mri|magnetic resonance)/i', $title)) {
             $deptTitle = 'DEPARTMENT OF MRI & ADVANCED IMAGING';
         } elseif (preg_match('/(ct scan|computed tomography)/i', $title)) {
             $deptTitle = 'DEPARTMENT OF COMPUTED TOMOGRAPHY (CT SCAN)';
         } elseif (preg_match('/(x-ray|xray|radiography)/i', $title)) {
-            $deptTitle = 'DEPARTMENT OF RADIOLOGY (X-RAY)';
+            $deptTitle = 'DEPARTMENT OF RADIOLOGY (DIGITAL X-RAY)';
         }
         return [
             'department_code' => 'radiology',
@@ -1812,19 +1949,19 @@ function render_parameter_gauge(
         $topPct = $gridCount > 1 ? round(($idx / ($gridCount - 1)) * 100, 2) : 0;
         $tFormatted = number_format((float)$t, 2);
         $gridLinesHtml .= '<div style="position: absolute; left: 0; right: 0; top: ' . $topPct . '%; display: flex; align-items: center; pointer-events: none;">'
-            . '<span style="width: 52px; text-align: right; font-size: 10px; color: #64748b; font-family: monospace; font-weight: 600; margin-right: 12px; flex-shrink: 0; transform: translateY(-50%);">' . $tFormatted . '</span>'
+            . '<span style="width: 42px; text-align: right; font-size: 9px; color: #64748b; font-family: monospace; font-weight: 600; margin-right: 8px; flex-shrink: 0; transform: translateY(-50%);">' . $tFormatted . '</span>'
             . '<div style="flex: 1; height: 1px; background: #e2e8f0;"></div>'
             . '</div>';
     }
 
     // Legend html matching visual image
     if ($lowText !== '') {
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#d97706;display:inline-block;"></span> Low Level <i>' . e($lowText) . '</i></span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:#1e293b;"><span style="width:8px;height:8px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:#1e293b;"><span style="width:8px;height:8px;background:#d97706;display:inline-block;"></span> Low Level <i>' . e($lowText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:#1e293b;"><span style="width:8px;height:8px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
     } else {
-        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
-                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1e293b;"><span style="width:11px;height:11px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
+        $legendHtml = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:#1e293b;"><span style="width:8px;height:8px;background:#16a34a;display:inline-block;"></span> Normal <i>' . e($normalText) . '</i></span>'
+                    . '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;color:#1e293b;"><span style="width:8px;height:8px;background:#dc2626;display:inline-block;"></span> High Level <i>' . e($highText) . '</i></span>';
     }
 
     $paramNameEsc = e($paramName);
@@ -1837,11 +1974,11 @@ function render_parameter_gauge(
 
     return <<<HTML
 <tr class="lab-report__gauge-row" style="border-bottom: 2px solid #cbd5e1; page-break-inside: avoid;">
-    <td colspan="4" style="padding: 14px 4px 18px 4px !important;">
+    <td colspan="4" style="padding: 6px 4px 6px 4px !important;">
         <div style="display: grid; grid-template-columns: 28% 44% 28%; align-items: center; gap: 14px;">
             <!-- Column 1: Test Title & Clinical Interpretation -->
             <div>
-                <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+                <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 3px;">
                     {$paramNameEsc}
                 </div>
                 <div style="font-size: 11px; color: #334155; line-height: 1.45;">
@@ -1851,36 +1988,36 @@ function render_parameter_gauge(
 
             <!-- Column 2: Vertical Ladder Chart & Reference Legend -->
             <div>
-                <div style="position: relative; height: 130px; width: 100%; margin: 0 auto;">
+                <div style="position: relative; height: 70px; width: 100%; margin: 0 auto;">
                     <!-- Identifier on left (■ 2302) -->
                     <div style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 5px;">
                         <span style="display: inline-block; width: 6px; height: 6px; background: #000;"></span> 2302
                     </div>
 
                     <!-- Chart Grid (Ticks + Horizontal Gridlines) -->
-                    <div style="margin-left: 65px; position: relative; height: 130px;">
+                    <div style="margin-left: 52px; position: relative; height: 70px;">
                         {$gridLinesHtml}
 
                         <!-- Value Badge & Green Square Marker -->
                         <div style="position: absolute; left: 45%; bottom: {$pct}%; transform: translate(-50%, 50%); display: flex; flex-direction: column; align-items: center; z-index: 5;">
-                            <span style="background: {$themeColor}; color: #ffffff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.25); white-space: nowrap; font-family: sans-serif;">
+                            <span style="background: {$themeColor}; color: #ffffff; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.25); white-space: nowrap; font-family: sans-serif;">
                                 {$displayValBadge}
                             </span>
-                            <span style="width: 7px; height: 7px; background: #16a34a; margin-top: 2px; display: block;"></span>
+                            <span style="width: 5px; height: 5px; background: #16a34a; margin-top: 1px; display: block;"></span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Bottom Legend matching image -->
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: #1e293b; margin-top: 10px; padding-top: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-weight: 600; color: #1e293b; margin-top: 4px; padding-top: 2px;">
                     {$legendHtml}
                 </div>
             </div>
 
             <!-- Column 3: Large Prominent Value Display -->
             <div style="text-align: right; padding-right: 12px;">
-                <div style="font-size: 40px; font-weight: 800; color: {$themeColor}; line-height: 1; letter-spacing: -0.5px;">
-                    {$displayValRight} <span style="font-size: 14px; font-weight: 600; color: {$themeColor}; margin-left: 2px;">{$unitEsc}</span>
+                <div style="font-size: 26px; font-weight: 700; color: {$themeColor}; line-height: 1; letter-spacing: -0.3px;">
+                    {$displayValRight} <span style="font-size: 11px; font-weight: 600; color: {$themeColor}; margin-left: 2px;">{$unitEsc}</span>
                 </div>
             </div>
         </div>
@@ -1892,7 +2029,7 @@ HTML;
 /**
  * Build result table rows for one report page.
  */
-function build_report_result_rows(array $resultLines, bool $isTwoColumn = false, bool $useGraph = true): string
+function build_report_result_rows(array $resultLines, bool $isTwoColumn = false, bool $useGraph = true, array $settings = []): string
 {
     $rows = '';
     $currentTestTitle = null;
@@ -1979,8 +2116,8 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
             }
             $currentTestTitle = $testTitle;
             $currentSection = null;
-            $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1
-                || strcasecmp($testTitle, $paramRaw) !== 0;
+            $showSingleHeaders = !empty($settings['show_single_test_headers']);
+            $needsHeading = ($testRowCounts[$testTitle] ?? 0) > 1 || $showSingleHeaders;
             if ($needsHeading) {
                 $rows .= '<tr class="lab-report__test-head"><td colspan="' . $colspan . '">'
                     . '<div class="lab-report__panel-banner"><strong>' . e($testTitle) . '</strong></div>'
@@ -2008,22 +2145,29 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
             $isPending = strcasecmp($resultRaw, 'Pending') === 0;
         }
 
-        if ($flagRaw === 'l') {
-            $resClass .= ' lab-report__result--low';
-            $arrow = ' <span class="lab-report__arrow lab-report__arrow--low">&darr;</span>';
-        } elseif ($flagRaw === 'h') {
-            $resClass .= ' lab-report__result--high';
-            $arrow = ' <span class="lab-report__arrow lab-report__arrow--high">&uarr;</span>';
-        } elseif ($flagRaw === 'critical') {
-            $resClass .= ' lab-report__result--critical';
-            $arrow = ' <span class="lab-report__arrow lab-report__arrow--critical">!</span>';
-        } elseif (!$isPending && is_numeric($resultRaw)) {
-            // In-range numeric result → green marker
-            $arrow = ' <span class="lab-report__arrow lab-report__arrow--normal">&#10003;</span>';
+        $isCbc = preg_match('/\b(cbc|complete blood|haematology|hematology)\b/i', $testTitle . ' ' . $paramRaw);
+
+        if ($isCbc) {
+            if ($flagRaw === 'l') {
+                $resClass .= ' lab-report__result--low';
+                $arrow = ' <span class="lab-report__arrow lab-report__arrow--low">&darr;</span>';
+            } elseif ($flagRaw === 'h') {
+                $resClass .= ' lab-report__result--high';
+                $arrow = ' <span class="lab-report__arrow lab-report__arrow--high">&uarr;</span>';
+            } elseif ($flagRaw === 'critical') {
+                $resClass .= ' lab-report__result--critical';
+                $arrow = ' <span class="lab-report__arrow lab-report__arrow--critical">!</span>';
+            } elseif (!$isPending && is_numeric($resultRaw)) {
+                // In-range numeric result for CBC → green marker
+                $arrow = ' <span class="lab-report__arrow lab-report__arrow--normal">&#10003;</span>';
+            }
+        } else {
+            // Disabled & removed from every report except CBC (e.g. Urine, Chemistry, Serology)
+            $arrow = '';
         }
 
         $unitVal = e($line['unit'] ?? '—');
-        $rangeVal = e($line['range'] ?? '—');
+        $rangeVal = nl2br(e($line['range'] ?? '—'));
         $paramName = e($paramRaw);
 
         $resNoteHtml = '';
@@ -2036,13 +2180,17 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
             $studyTitle = $testTitle !== '' ? $testTitle : $paramRaw;
             $deptBanner = !empty($line['department_title']) ? $line['department_title'] : 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
             $imagingText = ($resultRaw !== '' && $resultRaw !== '-' && $resultRaw !== '—') ? $resultRaw : 'Clinical imaging study recorded. Interpretation / report pending.';
+            $narrativeFontSize = (!empty($line['unit']) && preg_match('/^[0-9]+(?:\.[0-9]+)?px$/', (string)$line['unit']))
+                ? (string)$line['unit']
+                : '13.5px';
+            $renderedNarrative = render_narrative_markdown($imagingText);
             $rows .= '<tr class="lab-report__imaging-row">
-                <td colspan="' . $colspan . '" style="padding: 16px 8px; border-bottom: none;">
+                <td colspan="' . $colspan . '" style="padding: 16px 8px; border-bottom: none; vertical-align: top; text-align: left;">
                     <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 16px;">
                         <strong style="font-size: 18px; text-transform: uppercase; letter-spacing: 1.2px; color: #0f172a;">' . e($studyTitle) . '</strong>
                         <div style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px;">' . e($deptBanner) . '</div>
                     </div>
-                    <div style="font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px;">' . e($imagingText) . '</div>
+                    <div class="lab-report__imaging-narrative" style="font-size: ' . $narrativeFontSize . '; line-height: 1.75; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px; text-align: left; word-break: break-word;">' . $renderedNarrative . '</div>
                 </td>
             </tr>';
             continue;
@@ -2068,8 +2216,8 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
         if ($isTwoColumn) {
             // Microbiology / Narrative Pathology without Reference Ranges or Units
             $rows .= '<tr>
-                <td class="lab-report__param-cell" style="width: 48%; font-weight: 700;">' . $paramName . '</td>
-                <td class="' . $resClass . '" style="width: 52%; text-align: left;">' . $resVal . $arrow . $resNoteHtml . '</td>
+                <td class="lab-report__param-cell" style="width: 30%; font-weight: 700;">' . $paramName . '</td>
+                <td class="' . $resClass . '" style="width: 70%; text-align: left;">' . $resVal . $arrow . $resNoteHtml . '</td>
             </tr>';
         } else {
             // Multi-column pathology table
@@ -2149,7 +2297,7 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
     }
 
     if ($rows === '') {
-        $rows = '<tr><td colspan="' . $colspan . '" class="lab-report__empty">No tests on this entry yet.</td></tr>';
+        $rows = '<tr><td colspan="' . $colspan . '" class="lab-report__empty">No entered test results to display. Pending tests will appear once results are entered.</td></tr>';
     }
 
     return $rows;
@@ -2193,23 +2341,28 @@ function render_report_sheet(
     $isTwoColumn = !$isAllImaging && ($isAllMicrobiology || $allNoRefRange);
 
     // Dynamic Sheet Department Title
-    $deptTitles = array_unique(array_filter(array_column($resultLines, 'department_title')));
-    if (count($deptTitles) === 1) {
-        $sheetTitle = reset($deptTitles);
-    } elseif ($isAllImaging) {
-        $sheetTitle = 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
-    } elseif ($isAllMicrobiology) {
-        $sheetTitle = 'DEPARTMENT OF MICROBIOLOGY';
-    } elseif (!empty($deptTitles)) {
-        $sheetTitle = 'DEPARTMENT OF LABORATORY MEDICINE';
+    $customHeading = trim((string)($settings['report_heading_title'] ?? ''));
+    if ($customHeading !== '' && strcasecmp($customHeading, 'auto') !== 0) {
+        $sheetTitle = $customHeading;
     } else {
-        $sheetTitle = $reportTitle;
+        $deptTitles = array_unique(array_filter(array_column($resultLines, 'department_title')));
+        if (count($deptTitles) === 1) {
+            $sheetTitle = reset($deptTitles);
+        } elseif ($isAllImaging) {
+            $sheetTitle = 'DEPARTMENT OF RADIOLOGY & DIAGNOSTIC IMAGING';
+        } elseif ($isAllMicrobiology) {
+            $sheetTitle = 'DEPARTMENT OF MICROBIOLOGY';
+        } elseif (!empty($deptTitles)) {
+            $sheetTitle = 'DIAGNOSTIC REPORT';
+        } else {
+            $sheetTitle = ($reportTitle !== '' && $reportTitle !== 'DEPARTMENT OF LABORATORY MEDICINE') ? $reportTitle : 'DIAGNOSTIC REPORT';
+        }
     }
     $title = e(strtoupper($sheetTitle));
 
     $resultDate = e(format_date_report(null));
     $useGraph = $options['graph_mode'] ?? true;
-    $rows = build_report_result_rows($resultLines, $isTwoColumn, $useGraph);
+    $rows = build_report_result_rows($resultLines, $isTwoColumn, $useGraph, $settings);
     $pageLabel = 'Page ' . $pageIndex . ' of ' . max(1, $totalPages);
     $breakClass = $forceBreakAfter ? ' lab-report--page-break' : '';
     $isFirstPage = $pageIndex <= 1;
@@ -2265,12 +2418,12 @@ function render_report_sheet(
     } else {
         if ($letterhead !== '') {
             // Full-width letterhead banner; QR sits on the right over/beside it
-            $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '" style="min-height:150px;">'
+            $brandBlock = '<div class="lab-report__top lab-report__top--banner lab-report__top--img-' . e($imgPos) . '" style="min-height:90px;">'
                 . '<div class="lab-report__banner">' . $letterhead . '</div>'
                 . $qrHtml
                 . '</div>';
         } else {
-            $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '" style="min-height:150px;">'
+            $brandBlock = '<div class="lab-report__top lab-report__top--img-' . e($imgPos) . '" style="min-height:55px;">'
                 . '<div class="lab-report__letterhead">'
                 . '<div class="lab-report__brand lab-report__brand--img-' . e($imgPos) . ' lab-report__brand--logo-only">'
                 . '<div class="lab-report__mark lab-report__mark--logo">' . $logoImg . '</div>'
@@ -2281,13 +2434,19 @@ function render_report_sheet(
         }
     }
     $metaBlock = build_patient_document_meta($patient, $entry, 'report');
+    $titleWrapHtml = '';
+    if ($title !== '' && empty($settings['hide_report_title_bar'])) {
+        $titleWrapHtml = <<<HTML
+        <div class="lab-report__title-wrap">
+            <h2 class="lab-report__title">{$title}</h2>
+        </div>
+        HTML;
+    }
     $headerHtml = <<<HTML
     <header class="lab-report__header">
         {$brandBlock}
         {$metaBlock}
-        <div class="lab-report__title-wrap">
-            <h2 class="lab-report__title">{$title}</h2>
-        </div>
+        {$titleWrapHtml}
     </header>
     HTML;
 
@@ -2295,7 +2454,7 @@ function render_report_sheet(
     $noteHtml = '';
 
     $footerBlock = '';
-    $credit = software_credit_footer(true);
+    $credit = '';
     $addrLine = trim($labAddress . ($labPhone !== '' ? '  ·  ' . $labPhone : '') . ($labEmail !== '' ? '  ·  ' . $labEmail : ''));
     $contactBar = $addrLine !== '' ? '<div class="lab-report__contact-bar">' . $addrLine . '</div>' : '';
 
@@ -2303,12 +2462,36 @@ function render_report_sheet(
         // --- DIAGNOSTIC CENTER & IMAGING FOOTER ---
         // 1. Signatories: Consultant Radiologist / Sonologist / Cardiologist
         $imagingSigs = setting_repo()->getSignatories($settings['organization_id'] ?? 'ORG-001', 'imaging');
-        if (empty($imagingSigs)) {
-            $repDoc = trim((string)($entry['doctor'] ?? ''));
-            if ($repDoc !== '') {
+        $repDoc = trim((string)($entry['reporting_doctor'] ?? ''));
+        $repQuals = trim((string)($entry['reporting_doctor_quals'] ?? ''));
+        $repDesig = trim((string)($entry['reporting_doctor_desig'] ?? ''));
+        if ($repDoc !== '') {
+            $matchedSig = null;
+            foreach ($imagingSigs as $isig) {
+                if (strcasecmp((string)($isig['name'] ?? ''), $repDoc) === 0) {
+                    $matchedSig = $isig;
+                    break;
+                }
+            }
+            if ($matchedSig) {
+                if ($repQuals !== '') $matchedSig['qualifications'] = $repQuals;
+                if ($repDesig !== '') $matchedSig['designation'] = $repDesig;
+                $imagingSigs = [$matchedSig];
+            } else {
                 $imagingSigs = [
                     [
                         'name' => $repDoc,
+                        'qualifications' => $repQuals !== '' ? $repQuals : 'M.B.B.S, F.C.P.S (Radiology)',
+                        'designation' => $repDesig !== '' ? $repDesig : 'Consultant Radiologist & Sonologist',
+                    ]
+                ];
+            }
+        } elseif (empty($imagingSigs)) {
+            $fallbackDoc = trim((string)($entry['doctor'] ?? ''));
+            if ($fallbackDoc !== '' && !preg_match('/walk-in|self/i', $fallbackDoc)) {
+                $imagingSigs = [
+                    [
+                        'name' => $fallbackDoc,
                         'qualifications' => 'M.B.B.S, F.C.P.S (Radiology)',
                         'designation' => 'Consultant Radiologist / Sonologist',
                     ]
@@ -2348,6 +2531,31 @@ function render_report_sheet(
     } else {
         // --- LABORATORY MEDICINE FOOTER ---
         // 1. Signatories: Pathology & Laboratory Signatories
+        $repDoc = trim((string)($entry['reporting_doctor'] ?? ''));
+        $repQuals = trim((string)($entry['reporting_doctor_quals'] ?? ''));
+        $repDesig = trim((string)($entry['reporting_doctor_desig'] ?? ''));
+        if ($repDoc !== '') {
+            $matchedSig = null;
+            foreach ($signatories as $lsig) {
+                if (strcasecmp((string)($lsig['name'] ?? ''), $repDoc) === 0) {
+                    $matchedSig = $lsig;
+                    break;
+                }
+            }
+            if ($matchedSig) {
+                if ($repQuals !== '') $matchedSig['qualifications'] = $repQuals;
+                if ($repDesig !== '') $matchedSig['designation'] = $repDesig;
+                $signatories = [$matchedSig];
+            } else {
+                $signatories = [
+                    [
+                        'name' => $repDoc,
+                        'qualifications' => $repQuals !== '' ? $repQuals : 'Consultant Pathologist',
+                        'designation' => $repDesig !== '' ? $repDesig : 'Reporting Consultant',
+                    ]
+                ];
+            }
+        }
         $signatoriesHtml = render_report_signatories($signatories);
 
         // 2. Laboratory disclaimer
@@ -2378,9 +2586,9 @@ function render_report_sheet(
             . '</div></div>';
     }
 
-    $reportFontKey = $settings['report_font'] ?? 'times_bold_italic';
+    $reportFontKey = $settings['report_font'] ?? 'arial';
     $allFonts = supported_document_fonts();
-    $fontConf = $allFonts[$reportFontKey] ?? $allFonts['times_bold_italic'];
+    $fontConf = $allFonts[$reportFontKey] ?? $allFonts['arial'] ?? reset($allFonts);
     $rFamily = $fontConf['family'];
     $rWeight = $fontConf['weight'];
     $rStyle = $fontConf['style'];
@@ -2391,7 +2599,21 @@ function render_report_sheet(
     $rSize = $fontSizeConf['size'];
     $rLineHeight = $fontSizeConf['line_height'];
 
-    $styleAttr = htmlspecialchars("--report-body-font: {$rFamily}; --report-body-weight: {$rWeight}; --report-body-style: {$rStyle}; --report-body-size: {$rSize};", ENT_COMPAT, 'UTF-8');
+    // Custom Param Size & Weight (strictly for main body test parameters & results)
+    $paramSizeRaw = (string)($settings['report_param_size'] ?? '15px');
+    $paramSize = preg_match('/^[0-9]+(?:\.[0-9]+)?$/', $paramSizeRaw) ? ($paramSizeRaw . 'px') : $paramSizeRaw;
+    if ($paramSize === '') $paramSize = '15px';
+
+    $paramWeightRaw = (string)($settings['report_param_weight'] ?? '700');
+    $paramStyle = 'normal';
+    if (str_ends_with($paramWeightRaw, '_italic') || $paramWeightRaw === 'italic') {
+        $paramStyle = 'italic';
+        $paramWeight = ($paramWeightRaw === 'italic') ? '400' : str_replace('_italic', '', $paramWeightRaw);
+    } else {
+        $paramWeight = $paramWeightRaw;
+    }
+
+    $styleAttr = htmlspecialchars("--report-body-font: {$rFamily}; --report-body-weight: {$rWeight}; --report-body-style: {$rStyle}; --report-body-size: {$rSize}; --report-param-size: {$paramSize}; --report-param-weight: {$paramWeight}; --report-param-style: {$paramStyle};", ENT_COMPAT, 'UTF-8');
 
     $reportFontStyle = <<<CSS
 <style>
@@ -2416,15 +2638,136 @@ function render_report_sheet(
 .lab-report .lab-report__comments * {
     font-family: {$rFamily} !important;
 }
-.lab-report .lab-report__table tbody td,
-.lab-report .lab-report__param-cell,
-.lab-report .lab-report__range-cell,
-.lab-report .lab-report__unit-cell,
+.lab-report .lab-report__table thead th {
+    font-size: calc(var(--report-body-size, 14.5px) - 1.5px) !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+}
+.lab-report .lab-report__table tbody td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    vertical-align: middle !important;
+}
+.lab-report .lab-report__param-cell {
+    font-size: var(--report-param-size, {$paramSize}) !important;
+    font-weight: var(--report-param-weight, {$paramWeight}) !important;
+    font-style: var(--report-param-style, {$paramStyle}) !important;
+    color: #000000 !important;
+    line-height: 1.25 !important;
+}
 .lab-report .lab-report__result {
-    font-weight: {$rWeight} !important;
-    font-style: {$rStyle} !important;
-    font-size: {$rSize} !important;
-    line-height: {$rLineHeight} !important;
+    font-size: var(--report-param-size, {$paramSize}) !important;
+    font-weight: var(--report-param-weight, {$paramWeight}) !important;
+    font-style: var(--report-param-style, {$paramStyle}) !important;
+    color: #000000 !important;
+    line-height: 1.25 !important;
+}
+.lab-report .lab-report__range-cell {
+    font-size: calc(var(--report-param-size, {$paramSize}) - 1px) !important;
+    font-weight: var(--report-param-weight, {$paramWeight}) !important;
+    font-style: var(--report-param-style, {$paramStyle}) !important;
+    color: #000000 !important;
+    white-space: pre-line !important;
+    line-height: 1.25 !important;
+}
+.lab-report .lab-report__unit-cell {
+    font-size: calc(var(--report-param-size, {$paramSize}) - 1px) !important;
+    font-weight: var(--report-param-weight, {$paramWeight}) !important;
+    font-style: var(--report-param-style, {$paramStyle}) !important;
+    color: #000000 !important;
+    line-height: 1.25 !important;
+}
+.lab-report .lab-report__section-head td {
+    font-size: calc(var(--report-body-size, 14.5px) - 1px) !important;
+    font-weight: 800 !important;
+    font-style: normal !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    padding-top: 4px !important;
+    padding-bottom: 2px !important;
+    color: #000000 !important;
+}
+.lab-report .lab-report__panel-banner {
+    font-size: calc(var(--report-body-size, 14.5px) + 0.5px) !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    border-bottom: 1.5px solid #000000 !important;
+    padding: 2px 2px !important;
+    margin: 3px 0 2px 0 !important;
+    background: transparent !important;
+}
+.lab-report .lab-report__subtable-wrap {
+    margin: 0.2rem 0 0.3rem 0.15rem !important;
+}
+.lab-report .lab-report__subtable-title {
+    font-size: calc(var(--report-body-size, 14.5px) - 1.5px) !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    font-style: normal !important;
+    margin-bottom: 2px !important;
+    display: block !important;
+}
+.lab-report .lab-report__subtable {
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+    width: 320px !important;
+    max-width: 100% !important;
+    background: #fff !important;
+    border: 1px solid #475569 !important;
+}
+.lab-report .lab-report__subtable th,
+.lab-report .lab-report__subtable td {
+    padding: 1.5px 6px !important;
+    border: 1px solid #64748b !important;
+    font-style: normal !important;
+    font-size: 10.5px !important;
+    color: #000000 !important;
+    line-height: 1.2 !important;
+}
+.lab-report .lab-report__subtable th {
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    border-bottom: 1.5px solid #000000 !important;
+}
+.lab-report .lab-report__imaging-row td {
+    vertical-align: top !important;
+    text-align: left !important;
+    padding: 14px 8px !important;
+}
+.lab-report .lab-report__imaging-narrative {
+    text-align: left !important;
+    color: #0f172a !important;
+}
+.lab-report .lab-report__imaging-narrative ul {
+    margin: 4px 0 6px 0 !important;
+    padding-left: 22px !important;
+    list-style-type: disc !important;
+}
+.lab-report .lab-report__imaging-narrative ol {
+    margin: 4px 0 6px 0 !important;
+    padding-left: 22px !important;
+    list-style-type: decimal !important;
+}
+.lab-report .lab-report__imaging-narrative li {
+    margin-bottom: 3px !important;
+    line-height: 1.65 !important;
+}
+.lab-report .lab-report__imaging-narrative .narrative-spacer {
+    height: 10px !important;
+    min-height: 10px !important;
+}
+.lab-report .lab-report__disclaimer {
+    font-size: 7.5px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;
+    line-height: 1.15 !important;
+    margin: 0.08rem 0 0.12rem 0 !important;
 }
 </style>
 CSS;
@@ -2435,8 +2778,8 @@ CSS;
             $tableHeadHtml = <<<THEAD
                 <thead>
                     <tr>
-                        <th class="lab-report__th-test" style="width: 48%;">TEST / INVESTIGATION</th>
-                        <th class="lab-report__th-result" style="width: 52%; text-align: left;">OBSERVATION / RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
+                        <th class="lab-report__th-test" style="width: 30%;">TEST / INVESTIGATION</th>
+                        <th class="lab-report__th-result" style="width: 70%; text-align: left;">OBSERVATION / RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
                     </tr>
                 </thead>
 THEAD;
@@ -2454,8 +2797,16 @@ THEAD;
         }
     }
 
+    $denseClass = '';
+    if (count($resultLines) >= 8) {
+        $denseClass .= ' lab-report--dense';
+    }
+    if ($totalPages === 1) {
+        $denseClass .= ' lab-report--single-page';
+    }
+
     return <<<HTML
-    <div class="print-area lab-report{$breakClass}" style="{$styleAttr}">
+    <div class="print-area lab-report{$breakClass}{$denseClass}" style="{$styleAttr}">
         {$reportFontStyle}
         {$headerHtml}
 
@@ -2554,7 +2905,7 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $rowsHtml = '';
     foreach ($lines['items'] as $i => $item) {
         $rowsHtml .= '<tr>'
-            . '<td class="lab-bill__c-vial">' . e((string)$item['vial']) . '</td>'
+            . '<td class="lab-bill__c-vial" style="text-align: center; font-weight: 700;">' . ($i + 1) . '</td>'
             . '<td class="lab-bill__c-test">' . e((string)$item['name']) . '</td>'
             . '<td class="lab-bill__c-exp">' . e((string)$item['expected']) . '</td>'
             . '<td class="lab-bill__c-price">' . number_format((float)$item['price'], 0) . '</td>'
@@ -2569,6 +2920,14 @@ function render_receipt_document(array $settings, array $entry, array $patient):
     $afterFmt = 'Rs ' . number_format($afterDiscount, 0);
     $paidFmt = 'Rs ' . number_format($paid, 0);
     $dueFmt = 'Rs ' . number_format($due, 0);
+    $discPct = ($subtotal > 0 && $discount > 0) ? (int)round(($discount / $subtotal) * 100) : 0;
+    if ($discount > 0) {
+        $discLabel = 'Discount' . ($discPct > 0 ? ' (' . $discPct . '%)' : '');
+        $discRow = '<tr><td style="color:#b91c1c;font-weight:600;">' . e($discLabel) . '</td><td style="color:#b91c1c;font-weight:700;">- ' . $discFmt . '</td></tr>';
+    } else {
+        $discRow = '<tr><td>Total Discount</td><td>Rs 0</td></tr>';
+    }
+
     $stamp = $isPaid ? '<div class="lab-bill__paid-stamp">PAID</div>' : '';
     $billFontKey = $settings['bill_font'] ?? 'times_bold_italic';
     $allFonts = supported_document_fonts();
@@ -2617,7 +2976,7 @@ CSS;
         <table class="lab-bill__table">
             <thead>
                 <tr>
-                    <th class="lab-bill__c-vial">Dept / Vial</th>
+                    <th class="lab-bill__c-vial" style="width: 50px; text-align: center;">Sr #</th>
                     <th class="lab-bill__c-test">Test / Investigation</th>
                     <th class="lab-bill__c-exp">Expected Report</th>
                     <th class="lab-bill__c-price">Price (Rs)</th>
@@ -2630,11 +2989,11 @@ CSS;
             <div class="lab-bill__totals-wrap">
                 {$stamp}
                 <table class="lab-bill__totals">
-                    <tr><td>Subtotal</td><td>{$subFmt}</td></tr>
-                    <tr><td>Total Discount</td><td>{$discFmt}</td></tr>
-                    <tr><td>After Discount</td><td>{$afterFmt}</td></tr>
-                    <tr><td>Paid</td><td>{$paidFmt}</td></tr>
-                    <tr class="lab-bill__due"><td>Due</td><td>{$dueFmt}</td></tr>
+                    <tr><td>Gross Subtotal</td><td>{$subFmt}</td></tr>
+                    {$discRow}
+                    <tr><td style="font-weight:700;">Net Payable</td><td style="font-weight:700;">{$afterFmt}</td></tr>
+                    <tr><td>Amount Paid</td><td>{$paidFmt}</td></tr>
+                    <tr class="lab-bill__due"><td>Balance Due</td><td>{$dueFmt}</td></tr>
                 </table>
             </div>
         </div>

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     branch_id       VARCHAR(64) NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NOT NULL,
+    password_plain  VARCHAR(255) NULL,
     name            VARCHAR(255) NOT NULL,
     role            VARCHAR(64) NOT NULL,
     portal          ENUM('main_lab','collection_center','imaging','admin') NOT NULL,

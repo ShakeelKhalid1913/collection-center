@@ -236,31 +236,54 @@ HTML;
 
 
 
-function billing_panel(): string
+function billing_panel(float $initialDiscount = 0, float $initialPaid = 0): string
 {
+    $discVal = (int)round($initialDiscount);
+    $paidVal = (int)round($initialPaid);
     return <<<HTML
     <div class="billing-panel" data-billing>
         <input type="hidden" name="amount" value="0" data-amount-input>
-        <div class="billing-row"><span>Subtotal</span><strong data-subtotal>Rs. 0</strong></div>
-        <div class="billing-fields">
-            <div>
-                <label class="field-label" for="discount">Discount (Rs.)</label>
-                <input type="number" id="discount" name="discount" class="field" value="0" min="0" data-discount>
-            </div>
-            <div>
-                <label class="field-label" for="discount_pct">Discount %</label>
-                <input type="number" id="discount_pct" name="discount_pct" class="field" value="0" min="0" max="100" data-discount-pct>
+        <div class="billing-row"><span>Gross Subtotal</span><strong data-subtotal>Rs. 0</strong></div>
+        
+        <!-- Quick Preset Discount Buttons (30%, 50%, etc.) -->
+        <div class="mt-2.5 mb-1.5 p-2 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">Quick Discount %</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-900 hover:text-white border border-slate-300 shadow-2xs transition-all text-slate-700" onclick="applyDiscountPreset(10)">10%</button>
+                <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-slate-900 hover:text-white border border-slate-300 shadow-2xs transition-all text-slate-700" onclick="applyDiscountPreset(20)">20%</button>
+                <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-900 hover:text-white border border-slate-300 shadow-2xs transition-all text-slate-900" onclick="applyDiscountPreset(30)">30%</button>
+                <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-900 hover:text-white border border-slate-300 shadow-2xs transition-all text-slate-900" onclick="applyDiscountPreset(50)">50%</button>
+                <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all ml-auto" onclick="applyDiscountPreset(0)">0% Reset</button>
             </div>
         </div>
-        <div class="billing-row billing-row--total"><span>Net total</span><strong data-total>Rs. 0</strong></div>
+
+        <div class="billing-fields">
+            <div>
+                <label class="field-label" for="discount_pct">Discount %</label>
+                <input type="number" id="discount_pct" name="discount_pct" class="field font-bold text-blue-700 text-sm" value="0" min="0" max="100" step="1" data-discount-pct placeholder="0">
+            </div>
+            <div>
+                <label class="field-label" for="discount">Discount (Rs.)</label>
+                <input type="number" id="discount" name="discount" class="field font-bold text-rose-600 text-sm" value="{$discVal}" min="0" step="1" data-discount placeholder="0">
+            </div>
+        </div>
+        <div class="billing-row billing-row--total"><span>Net Payable Total</span><strong data-total class="text-blue-700">Rs. 0</strong></div>
+        
+        <!-- Quick Pay Helper Chips -->
+        <div class="mt-2 mb-1 flex flex-wrap items-center gap-1.5">
+            <button type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-200 transition-all shadow-2xs" onclick="applyQuickPay('full')">Full Paid</button>
+            <button type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 hover:bg-amber-600 hover:text-white border border-amber-200 transition-all shadow-2xs" onclick="applyQuickPay('half')">50% Advance</button>
+            <button type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition-all shadow-2xs" onclick="applyQuickPay('zero')">Zero Advance</button>
+        </div>
+
         <div class="billing-fields">
             <div>
                 <label class="field-label" for="paid">Paid amount (Rs.)</label>
-                <input type="number" id="paid" name="paid" class="field" value="0" min="0" data-paid>
+                <input type="number" id="paid" name="paid" class="field font-bold text-emerald-600 text-sm" value="{$paidVal}" min="0" step="1" data-paid>
             </div>
             <div>
                 <label class="field-label" for="pay_mode">Payment mode</label>
-                <select id="pay_mode" name="pay_mode" class="field">
+                <select id="pay_mode" name="pay_mode" class="field text-sm">
                     <option>Cash</option>
                     <option>Card</option>
                     <option>Bank transfer</option>
@@ -269,8 +292,8 @@ function billing_panel(): string
                 </select>
             </div>
         </div>
-        <div class="billing-row"><span>Remaining</span><strong data-remaining class="text-amber-700">Rs. 0</strong></div>
-        <p class="billing-hint">Remaining updates as you change discount and paid amount.</p>
+        <div class="billing-row"><span>Remaining Balance Due</span><strong data-remaining class="text-amber-700">Rs. 0</strong></div>
+        <p class="billing-hint text-[11px] text-slate-400">Click 30% or 50% for instant calculation. Balance updates live.</p>
     </div>
     HTML;
 }
@@ -291,13 +314,13 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
     $waLink = 'https://wa.me/' . $waPhone . '?text=' . $waText;
     $barcodeBtn = '';
     $editReportBtn = '';
-    $editEntryBtn = '';
+    $pageGroupingBtn = '';
     if (preg_match('/lab_no=([^&]+)/', $reportUrl, $m)) {
         $bLabNo = urldecode($m[1]);
         $encLab = urlencode($bLabNo);
         $barcodeBtn = '<a href="/portals/barcode-label.php?lab_no=' . $encLab . '" target="_blank" class="btn btn-secondary text-sm font-semibold" title="Print Barcode Specimen Sticker"><i class="fa-solid fa-barcode"></i> Barcode Label</a>';
-        $editReportBtn = '<a href="/portals/results/entry.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300" title="Edit Test Results & Findings"><i class="fa-solid fa-file-pen text-amber-600 mr-1"></i> Edit Report</a>';
-        $editEntryBtn = '<a href="/portals/lab-entries/edit.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300" title="Edit Patient Info, Age & Billing Slip"><i class="fa-solid fa-user-pen text-indigo-600 mr-1"></i> Edit Entry &amp; Bill</a>';
+        $editReportBtn = '<a href="/portals/results/entry.php?lab_no=' . $encLab . '" class="btn btn-secondary text-sm font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300" title="Edit Test Results & Findings"><i class="fa-solid fa-file-pen text-amber-600 mr-1"></i> Edit Results</a>';
+        $pageGroupingBtn = '<button type="button" onclick="if(typeof openPageGroupingModal===\'function\'){openPageGroupingModal();}else{window.location.href=\'/portals/results/entry.php?lab_no=' . $encLab . '&open_grouping=1\';}" class="btn btn-secondary text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200 cursor-pointer" title="Configure or fix page layout and grouping"><i class="fa-solid fa-table-cells-large text-indigo-600 mr-1"></i> Page Grouping</button>';
     }
     $file = e($pdfFilename !== '' ? $pdfFilename : 'lab-report');
 
@@ -330,10 +353,10 @@ function report_actions(string $patientPhone, string $reportUrl = '', string $pd
         {$formatSwitcher}
         <button type="button" onclick="window.print()" class="btn btn-secondary"><i class="fa-solid fa-print" aria-hidden="true"></i> Print</button>
         <button type="button" class="btn btn-secondary" data-download-pdf data-pdf-name="{$file}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF</button>
+        {$pageGroupingBtn}
         {$barcodeBtn}
         <a href="{$waLink}" target="_blank" rel="noopener" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>
         {$editReportBtn}
-        {$editEntryBtn}
         <span class="text-xs text-slate-500" data-pdf-status></span>
         <div class="flex flex-wrap items-center gap-3 ml-auto text-sm text-slate-700 border border-slate-200 bg-white rounded-lg px-3 py-2">
             <span class="text-[10px] uppercase font-bold tracking-wide text-slate-400">Print options</span>
@@ -431,43 +454,199 @@ function doctor_input_field(
     string $name = 'doctor',
     ?string $value = null,
     bool $optional = true,
-    string $placeholder = 'Type doctor name or select from list...'
+    string $placeholder = 'Select or type doctor name...'
 ): string {
     $val = e($value ?? '');
     $labelHtml = field_label_html($label, $optional);
     $fc = FIELD_CLASS;
 
     $orgId = current_user()['organization_id'] ?? 'ORG-001';
-    $options = ['' => '— Quick select doctor —'];
-    foreach (mock('mock_doctors') as $d) {
-        $options[$d['name']] = $d['name'] . ($d['specialty'] !== '—' ? ' (' . $d['specialty'] . ')' : '');
-    }
+
+    // 1. Fetch saved / recent clinic doctors from doctor_shares (ordered by updated_at DESC so most recent is at the very top)
+    $savedDoctors = [];
+    $seen = [];
     try {
-        foreach (doctor_share_repo()->getAll($orgId) as $ds) {
-            $docName = trim((string)($ds['doctor_name'] ?? ''));
-            if ($docName !== '' && !isset($options[$docName])) {
-                $options[$docName] = $docName;
+        $shares = db()->fetchAll(
+            "SELECT doctor_name FROM doctor_shares WHERE organization_id = :org AND is_active = 1 ORDER BY updated_at DESC, created_at DESC",
+            ['org' => $orgId]
+        );
+        foreach ($shares as $s) {
+            $d = trim((string)$s['doctor_name']);
+            $k = strtolower($d);
+            if ($d !== '' && !isset($seen[$k])) {
+                $seen[$k] = true;
+                $savedDoctors[] = $d;
             }
         }
     } catch (\Throwable) {}
 
-    $selectOpts = '';
-    foreach ($options as $k => $text) {
-        $selectOpts .= '<option value="' . e((string)$k) . '">' . e($text) . '</option>';
-    }
+    // 2. Also fetch any distinct doctors recently used in lab_entries
+    try {
+        $labDocs = db()->fetchAll(
+            "SELECT doctor FROM lab_entries WHERE organization_id = :org AND doctor IS NOT NULL AND TRIM(doctor) != '' AND doctor NOT LIKE '%Walk-in%' AND doctor NOT LIKE '%Self%' GROUP BY doctor ORDER BY MAX(created_at) DESC LIMIT 20",
+            ['org' => $orgId]
+        );
+        foreach ($labDocs as $ld) {
+            $d = trim((string)$ld['doctor']);
+            $k = strtolower($d);
+            if ($d !== '' && !isset($seen[$k])) {
+                $seen[$k] = true;
+                $savedDoctors[] = $d;
+            }
+        }
+    } catch (\Throwable) {}
+
+    // 3. Organization staff doctors / signatories (strictly this organization)
+    $staffDoctors = [];
+    try {
+        $sigs = db()->fetchAll(
+            "SELECT name, designation FROM report_signatories WHERE organization_id = :org AND is_active = 1 ORDER BY sort_order ASC, name ASC",
+            ['org' => $orgId]
+        );
+        foreach ($sigs as $s) {
+            $d = trim((string)($s['name'] ?? ''));
+            $k = strtolower($d);
+            if ($d !== '' && $k !== 'walk-in / self' && !isset($seen[$k])) {
+                $seen[$k] = true;
+                $desig = trim((string)($s['designation'] ?? ''));
+                $staffDoctors[] = [
+                    'name' => $d,
+                    'label' => $d . ($desig !== '' ? ' (' . $desig . ')' : '')
+                ];
+            }
+        }
+        $emps = db()->fetchAll(
+            "SELECT full_name, designation FROM employees WHERE organization_id = :org AND is_active = 1 AND (full_name LIKE 'Dr%' OR designation LIKE '%Doctor%' OR designation LIKE '%Consultant%' OR designation LIKE '%Pathologist%' OR designation LIKE '%Radiologist%') ORDER BY full_name ASC",
+            ['org' => $orgId]
+        );
+        foreach ($emps as $em) {
+            $d = trim((string)($em['full_name'] ?? ''));
+            $k = strtolower($d);
+            if ($d !== '' && $k !== 'walk-in / self' && !isset($seen[$k])) {
+                $seen[$k] = true;
+                $desig = trim((string)($em['designation'] ?? ''));
+                $staffDoctors[] = [
+                    'name' => $d,
+                    'label' => $d . ($desig !== '' ? ' (' . $desig . ')' : '')
+                ];
+            }
+        }
+    } catch (\Throwable) {}
 
     $uniqueId = 'doc_' . substr(md5($name . rand()), 0, 6);
+    $dropdownId = 'drop_' . $uniqueId;
+
+    // Build the dropdown list items
+    $itemsHtml = '';
+    
+    // Default Walk-in
+    $itemsHtml .= '<div class="px-3.5 py-2 hover:bg-slate-100 cursor-pointer text-slate-800 font-semibold border-b border-slate-100 flex items-center justify-between" onclick="selectDocItem(\'' . $uniqueId . '\', \'Walk-in / Self\')">';
+    $itemsHtml .= '<span>Walk-in / Self</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-normal">Default</span>';
+    $itemsHtml .= '</div>';
+
+    if (!empty($savedDoctors)) {
+        $itemsHtml .= '<div class="px-3.5 py-1.5 text-[10px] uppercase font-bold text-teal-800 bg-teal-50/80 tracking-wider">⭐ Saved Clinic Doctors (Recently Used)</div>';
+        foreach ($savedDoctors as $d) {
+            $itemsHtml .= '<div class="px-3.5 py-2 hover:bg-teal-50/60 cursor-pointer text-slate-800 font-medium doc-option-item flex items-center justify-between" onclick="selectDocItem(\'' . $uniqueId . '\', \'' . e(addslashes($d)) . '\')">';
+            $itemsHtml .= '<span>' . e($d) . '</span>';
+            $itemsHtml .= '</div>';
+        }
+    }
+
+    if (!empty($staffDoctors)) {
+        $itemsHtml .= '<div class="px-3.5 py-1.5 text-[10px] uppercase font-bold text-slate-400 bg-slate-50 tracking-wider">Other Specialists</div>';
+        foreach ($staffDoctors as $sd) {
+            $itemsHtml .= '<div class="px-3.5 py-2 hover:bg-slate-100 cursor-pointer text-slate-700 doc-option-item flex items-center justify-between" onclick="selectDocItem(\'' . $uniqueId . '\', \'' . e(addslashes($sd['name'])) . '\')">';
+            $itemsHtml .= '<span>' . e($sd['label']) . '</span>';
+            $itemsHtml .= '</div>';
+        }
+    }
 
     return <<<HTML
-    <div>
+    <div class="relative" id="container-{$uniqueId}">
         <label class="field-label" for="{$uniqueId}">{$labelHtml}</label>
-        <div class="flex gap-2">
-            <select class="{$fc} text-xs w-2/5 shrink-0" onchange="if(this.value){ document.getElementById('{$uniqueId}').value = this.value; }">
-                {$selectOpts}
-            </select>
-            <input type="text" id="{$uniqueId}" name="{$name}" class="{$fc} flex-1" value="{$val}" placeholder="{$placeholder}">
+        <div class="relative">
+            <input type="text" id="{$uniqueId}" name="{$name}" class="{$fc} w-full pr-9 font-medium cursor-pointer" value="{$val}" placeholder="{$placeholder}" autocomplete="off"
+                   onfocus="openDocDropdown('{$uniqueId}')"
+                   onclick="openDocDropdown('{$uniqueId}')"
+                   oninput="filterDocDropdown('{$uniqueId}', this.value)"
+                   onblur="handleDocInputBlur('{$uniqueId}', this.value)">
+            <button type="button" tabindex="-1" onclick="toggleDocDropdown('{$uniqueId}')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-700 cursor-pointer">
+                <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" id="chevron-{$uniqueId}"></i>
+            </button>
         </div>
-        <p class="text-[11px] text-slate-500 mt-1">Pick from list or freely type any referring doctor name.</p>
+        <!-- Single Unified Dropdown Menu -->
+        <div id="{$dropdownId}" class="absolute z-50 left-0 right-0 mt-1 hidden max-h-56 overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 py-1 text-xs">
+            {$itemsHtml}
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">Select from saved clinic list or freely type any doctor name.</p>
+        <script>
+        if (typeof window.saveDoctorQuick === 'undefined') {
+            window.saveDoctorQuick = function(val) {
+                val = (val || '').trim();
+                if (!val || val.toLowerCase().indexOf('walk-in') !== -1 || val.toLowerCase() === 'self') return;
+                try {
+                    fetch('/api/doctors.php?name=' + encodeURIComponent(val), { method: 'POST' }).catch(function(){});
+                } catch(e) {}
+            };
+            window.openDocDropdown = function(id) {
+                const el = document.getElementById('drop_' + id);
+                const ch = document.getElementById('chevron-' + id);
+                if (el) el.classList.remove('hidden');
+                if (ch) ch.classList.add('rotate-180');
+            };
+            window.closeDocDropdown = function(id) {
+                const el = document.getElementById('drop_' + id);
+                const ch = document.getElementById('chevron-' + id);
+                if (el) el.classList.add('hidden');
+                if (ch) ch.classList.remove('rotate-180');
+            };
+            window.toggleDocDropdown = function(id) {
+                const el = document.getElementById('drop_' + id);
+                if (el && el.classList.contains('hidden')) {
+                    window.openDocDropdown(id);
+                } else {
+                    window.closeDocDropdown(id);
+                }
+            };
+            window.selectDocItem = function(id, val) {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.value = val;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                window.closeDocDropdown(id);
+                window.saveDoctorQuick(val);
+            };
+            window.filterDocDropdown = function(id, query) {
+                window.openDocDropdown(id);
+                const drop = document.getElementById('drop_' + id);
+                if (!drop) return;
+                const q = (query || '').toLowerCase().trim();
+                const items = drop.querySelectorAll('.doc-option-item');
+                items.forEach(function(item) {
+                    const txt = (item.textContent || '').toLowerCase();
+                    item.style.display = (q === '' || txt.indexOf(q) !== -1) ? 'flex' : 'none';
+                });
+            };
+            window.handleDocInputBlur = function(id, val) {
+                setTimeout(function() {
+                    window.closeDocDropdown(id);
+                    window.saveDoctorQuick(val);
+                }, 250);
+            };
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('[id^="container-doc_"]')) {
+                    document.querySelectorAll('[id^="drop_doc_"]').forEach(function(d) {
+                        d.classList.add('hidden');
+                    });
+                    document.querySelectorAll('[id^="chevron-doc_"]').forEach(function(c) {
+                        c.classList.remove('rotate-180');
+                    });
+                }
+            });
+        }
+        </script>
     </div>
     HTML;
 }
@@ -508,5 +687,122 @@ function route_input_field(
     </div>
     HTML;
 }
+
+function title_input_field(
+    string $label = 'Title',
+    string $name = 'title',
+    ?string $value = null,
+    bool $optional = true,
+    string $placeholder = 'Optional (Mr, Mrs, Dr...)'
+): string {
+    $val = e($value ?? '');
+    $labelHtml = field_label_html($label, $optional);
+    $fc = FIELD_CLASS;
+
+    $presetTitles = [
+        'Mr' => 'Mr',
+        'Mrs' => 'Mrs',
+        'Ms' => 'Ms',
+        'Miss' => 'Miss',
+        'Dr' => 'Dr',
+        'Baby' => 'Baby',
+        'Master' => 'Master',
+    ];
+
+    $uniqueId = 'title_' . substr(md5($name . rand()), 0, 6);
+    $dropdownId = 'drop_' . $uniqueId;
+
+    $itemsHtml = '';
+    // Optional / Blank option to easily clear or remove title
+    $itemsHtml .= '<div class="px-3 py-2 hover:bg-slate-100 cursor-pointer text-slate-500 font-medium border-b border-slate-100 flex items-center justify-between" onclick="selectTitleItem(\'' . $uniqueId . '\', \'\')">';
+    $itemsHtml .= '<span>&mdash; None / Blank (Optional) &mdash;</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Clear</span>';
+    $itemsHtml .= '</div>';
+
+    foreach ($presetTitles as $tKey => $tLabel) {
+        $itemsHtml .= '<div class="px-3.5 py-2 hover:bg-teal-50/70 cursor-pointer text-slate-800 font-semibold title-option-item flex items-center justify-between" onclick="selectTitleItem(\'' . $uniqueId . '\', \'' . e(addslashes($tKey)) . '\')">';
+        $itemsHtml .= '<span>' . e($tLabel) . '</span>';
+        $itemsHtml .= '</div>';
+    }
+
+    return <<<HTML
+    <div class="relative" id="container-{$uniqueId}">
+        <label class="field-label" for="{$uniqueId}">{$labelHtml}</label>
+        <div class="relative">
+            <input type="text" id="{$uniqueId}" name="{$name}" class="{$fc} w-full pr-9 font-medium" value="{$val}" placeholder="{$placeholder}" autocomplete="off"
+                   onfocus="openTitleDropdown('{$uniqueId}')"
+                   onclick="openTitleDropdown('{$uniqueId}')"
+                   oninput="filterTitleDropdown('{$uniqueId}', this.value)"
+                   onblur="handleTitleInputBlur('{$uniqueId}')">
+            <button type="button" tabindex="-1" onclick="toggleTitleDropdown('{$uniqueId}')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-700 cursor-pointer" title="Choose title or leave blank">
+                <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" id="chevron-{$uniqueId}"></i>
+            </button>
+        </div>
+        <div id="{$dropdownId}" class="absolute z-50 left-0 right-0 mt-1 hidden max-h-56 overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 py-1 text-xs">
+            {$itemsHtml}
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">Optional. Select from list, type custom, or leave blank.</p>
+        <script>
+        if (typeof window.openTitleDropdown === 'undefined') {
+            window.openTitleDropdown = function(id) {
+                const el = document.getElementById('drop_' + id);
+                const ch = document.getElementById('chevron-' + id);
+                if (el) el.classList.remove('hidden');
+                if (ch) ch.classList.add('rotate-180');
+            };
+            window.closeTitleDropdown = function(id) {
+                const el = document.getElementById('drop_' + id);
+                const ch = document.getElementById('chevron-' + id);
+                if (el) el.classList.add('hidden');
+                if (ch) ch.classList.remove('rotate-180');
+            };
+            window.toggleTitleDropdown = function(id) {
+                const drop = document.getElementById('drop_' + id);
+                if (drop && drop.classList.contains('hidden')) {
+                    window.openTitleDropdown(id);
+                } else {
+                    window.closeTitleDropdown(id);
+                }
+            };
+            window.selectTitleItem = function(id, val) {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.value = val;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                window.closeTitleDropdown(id);
+            };
+            window.filterTitleDropdown = function(id, query) {
+                window.openTitleDropdown(id);
+                const drop = document.getElementById('drop_' + id);
+                if (!drop) return;
+                const q = (query || '').toLowerCase().trim();
+                const items = drop.querySelectorAll('.title-option-item');
+                items.forEach(function(item) {
+                    const txt = (item.textContent || '').toLowerCase();
+                    item.style.display = (q === '' || txt.indexOf(q) !== -1) ? 'flex' : 'none';
+                });
+            };
+            window.handleTitleInputBlur = function(id) {
+                setTimeout(function() {
+                    window.closeTitleDropdown(id);
+                }, 250);
+            };
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('[id^="container-title_"]')) {
+                    document.querySelectorAll('[id^="drop_title_"]').forEach(function(d) {
+                        d.classList.add('hidden');
+                    });
+                    document.querySelectorAll('[id^="chevron-title_"]').forEach(function(c) {
+                        c.classList.remove('rotate-180');
+                    });
+                }
+            });
+        }
+        </script>
+    </div>
+    HTML;
+}
+
 
 

@@ -53,10 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($action === 'update') {
                     $testId = $_POST['test_id'] ?? '';
                     $success = test_repo()->updateTest($testId, $testData);
+                    if ($success && isset($testData['price'])) {
+                        test_repo()->updateOrganizationPrice($orgId, $testId, (float)$testData['price']);
+                    }
                 } else {
                     $res = test_repo()->createTest($testData);
                     $success = (bool)($res['success'] ?? false);
                     $testId = $res['id'] ?? '';
+                    if ($success && $testId !== '' && isset($testData['price'])) {
+                        test_repo()->updateOrganizationPrice($orgId, $testId, (float)$testData['price']);
+                    }
                 }
 
                 if ($success && $testId !== '') {
@@ -137,12 +143,12 @@ if (!empty($editingParams)) {
                     <input type="text" name="param_unit[]" class="field text-sm" value="{$pUn}" placeholder="g/dl">
                 </div>
                 <div>
-                    <label class="field-label text-xs">Normal Value</label>
-                    <input type="text" name="param_normal[]" class="field text-sm" value="{$pNorm}" placeholder="12.0 - 16.5">
+                    <label class="field-label text-xs">Normal Value <span class="text-slate-400 font-normal">(Double line)</span></label>
+                    <textarea name="param_normal[]" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;">{$pNorm}</textarea>
                 </div>
                 <div>
-                    <label class="field-label text-xs">Reference Range</label>
-                    <input type="text" name="param_range[]" class="field text-sm" value="{$pRef}" placeholder="12.0 - 16.5">
+                    <label class="field-label text-xs">Reference Range <span class="text-slate-400 font-normal">(Double line)</span></label>
+                    <textarea name="param_range[]" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;">{$pRef}</textarea>
                 </div>
                 <div class="flex items-end pb-1">
                     <button type="button" class="btn btn-secondary text-sm font-bold text-red-600 hover:bg-red-50 hover:border-red-300" style="padding:0.4rem 0.65rem;" data-remove-param title="Remove Parameter">&times;</button>
@@ -199,8 +205,8 @@ $formHtml .= select_field('Department', 'category', $deptOpts, $valDept, true);
 $formHtml .= form_field('Price (Rs.)', 'price', 'number', $valPrice);
 $formHtml .= form_field('Sample Type', 'sample', 'text', $valSample);
 $formHtml .= form_field('Unit (general)', 'unit', 'text', $valUnit, 'e.g. g/dl, mg/dl', true);
-$formHtml .= form_field('Normal Value', 'normal_value', 'text', $valNorm, 'e.g. 12.0 - 16.5', true);
-$formHtml .= form_field('Reference Range', 'reference_value', 'text', $valRef, 'e.g. 12.0 - 16.5', true);
+$formHtml .= '<div><label class="field-label">Normal Value <span class="text-xs text-slate-400 font-normal">(Double line)</span></label><textarea name="normal_value" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;">' . e($valNorm) . '</textarea></div>';
+$formHtml .= '<div><label class="field-label">Reference Range <span class="text-xs text-slate-400 font-normal">(Double line)</span></label><textarea name="reference_value" rows="2" class="field text-sm" placeholder="e.g. Male: 13.0 - 18.0&#10;Female: 12.0 - 16.5" style="min-height: 48px; resize: vertical;">' . e($valRef) . '</textarea></div>';
 $formHtml .= select_field('Result Type', 'result_type', $resultTypeOpts, $valResultType, true);
 $formHtml .= form_field('Dropdown Options', 'result_options', 'text', $valResultOptions, 'e.g. Positive|Negative or Reactive|Non-Reactive', true);
 
@@ -366,8 +372,8 @@ if ($totalPages > 1) {
 
 $content = page_header(
     'Add Test',
-    'Add new laboratory tests not already in the system, or edit existing catalog items.',
-    btn_primary('/portals/tests/prices.php', 'Add / Update Price', 'fa-solid fa-tags')
+    '',
+    btn_primary('/portals/tests/prices.php', 'Update Prices', 'fa-solid fa-tags')
 );
 $content .= $message;
 $content .= card(

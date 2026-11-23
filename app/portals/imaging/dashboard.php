@@ -7,360 +7,271 @@ require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/components.php';
 
 $orgId = current_user()['organization_id'] ?? 'ORG-001';
-$liveScans = result_repo()->getImagingScans($orgId);
-$imagingScans = !empty($liveScans) ? $liveScans : mock('mock_imaging');
-$totalScans = count($imagingScans);
 
-$studiesToday = count(array_filter($imagingScans, fn($s) => (!empty($s['scan_date']) && $s['scan_date'] === date('Y-m-d')) || (!empty($s['created_at']) && str_starts_with((string)$s['created_at'], date('Y-m-d')))));
-if ($studiesToday === 0) {
-    $studiesToday = result_repo()->countImagingToday();
+// Fetch live statistics
+$allScans = result_repo()->getImagingScans($orgId);
+$pendingScansCount = 0;
+$reportedScansCount = 0;
+foreach ($allScans as $sc) {
+    $st = strtolower((string)($sc['status'] ?? 'pending'));
+    if (in_array($st, ['reported', 'completed', 'verified'], true)) {
+        $reportedScansCount++;
+    } else {
+        $pendingScansCount++;
+    }
 }
 
-$pendingStudies = count(array_filter($imagingScans, fn($s) => in_array(strtolower((string)($s['status'] ?? '')), ['pending', 'in_progress', 'scanned'], true)));
-if ($pendingStudies === 0) {
-    $pendingStudies = result_repo()->countImagingPending();
+// Modality breakdown counts
+$usCount = 0;
+$xrCount = 0;
+$ecgCount = 0;
+$echoCount = 0;
+$ctCount = 0;
+$mriCount = 0;
+
+foreach ($allScans as $sc) {
+    $mod = strtolower((string)($sc['modality'] ?? ''));
+    $std = strtolower((string)($sc['study'] ?? ''));
+    if (str_contains($mod, 'ultra') || str_contains($mod, 'us') || str_contains($std, 'ultra') || str_contains($std, 'pelvis') || str_contains($std, 'abdomen')) $usCount++;
+    elseif (str_contains($mod, 'xray') || str_contains($mod, 'x-ray') || str_contains($std, 'x-ray') || str_contains($std, 'chest')) $xrCount++;
+    elseif (str_contains($mod, 'ecg') || str_contains($std, 'ecg')) $ecgCount++;
+    elseif (str_contains($mod, 'echo') || str_contains($std, 'echo')) $echoCount++;
+    elseif (str_contains($mod, 'ct') || str_contains($std, 'ct')) $ctCount++;
+    elseif (str_contains($mod, 'mri') || str_contains($std, 'mri')) $mriCount++;
 }
-
-$reportedStudies = count(array_filter($imagingScans, fn($s) => in_array(strtolower((string)($s['status'] ?? '')), ['reported', 'completed', 'verified'], true)));
-if ($reportedStudies === 0) {
-    $reportedStudies = result_repo()->countImagingReported();
-}
-
-// Spectrum Donut
-$total = max(10, $totalScans);
-$pendingPct = max(10, min(50, (int)round(($pendingStudies / $total) * 100)));
-$inProgressPct = 25;
-$completedPct = max(20, 100 - $pendingPct - $inProgressPct);
-
-$c = 251.327;
-$lenPending = ($pendingPct / 100) * $c;
-$lenProg = ($inProgressPct / 100) * $c;
-$lenComp = ($completedPct / 100) * $c;
-
-$offsetPending = 0;
-$offsetProg = -$lenPending;
-$offsetComp = -($lenPending + $lenProg);
 
 ob_start();
 ?>
-<div class="space-y-6">
+<div class="space-y-8">
 
-    <!-- Top Diagnostic Operations Header -->
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-card">
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 text-[#c2f13c] flex items-center justify-center text-2xl shadow-md shrink-0">
-                <i class="fa-solid fa-x-ray"></i>
-            </div>
-            <div>
-                <div class="flex flex-wrap items-center gap-2 mb-1">
-                    <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Diagnostic Center Command</h2>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-[#c2f13c]/30 text-slate-900 border border-[#c2f13c]">
-                        <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-                        PACS Online
-                    </span>
-                </div>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium">Digital X-Ray, Multi-Slice CT, 4D Ultrasound, and 12-Lead ECG modalities.</p>
-            </div>
+    <!-- Top Clean Overview Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-hospital text-teal-600"></i>
+                <span>Diagnostic Center Workstation</span>
+            </h1>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Two primary clinical wings: <strong>Laboratory Department (Pathology)</strong> &amp; <strong>Radiology Department (Imaging)</strong></p>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-            <a href="/portals/new-scan.php" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#c2f13c] text-slate-950 font-bold text-xs hover:bg-[#b2e62a] transition-all shadow-sm">
-                <i class="fa-solid fa-plus"></i>
-                <span>Book Diagnostic Order</span>
+        <div class="flex items-center gap-2">
+            <a href="/portals/new-scan.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all hover:scale-[1.02]">
+                <i class="fa-solid fa-plus text-[#c2f13c]"></i>
+                <span>+ Book New Patient</span>
             </a>
-            <a href="/portals/laboratory.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs hover:bg-emerald-100 transition-all">
-                <i class="fa-solid fa-flask-vial"></i>
-                <span>Laboratory</span>
+            <a href="/portals/templates.php" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-300 shadow-xs transition-colors">
+                <i class="fa-solid fa-bookmark text-teal-600"></i>
+                <span>Report Templates</span>
             </a>
-            <a href="/portals/ultrasound.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-teal-50 text-teal-800 border border-teal-200 font-bold text-xs hover:bg-teal-100 transition-all">
-                <i class="fa-solid fa-wave-square"></i>
-                <span>Ultrasound</span>
-            </a>
-            <a href="/portals/xray.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs hover:bg-blue-100 transition-all">
-                <i class="fa-solid fa-x-ray"></i>
-                <span>X-Ray</span>
-            </a>
-            <a href="/portals/ecg.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-rose-50 text-rose-800 border border-rose-200 font-bold text-xs hover:bg-rose-100 transition-all">
-                <i class="fa-solid fa-heart-pulse"></i>
-                <span>ECG</span>
-            </a>
-            <a href="/portals/ct.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 text-purple-800 border border-purple-200 font-bold text-xs hover:bg-purple-100 transition-all">
-                <i class="fa-solid fa-laptop-medical"></i>
-                <span>CT Scan</span>
-            </a>
-            <a href="/portals/mri.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold text-xs hover:bg-indigo-100 transition-all">
-                <i class="fa-solid fa-magnet"></i>
-                <span>MRI</span>
-            </a>
-            <a href="/portals/report-history.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-all border border-slate-200">
-                <i class="fa-solid fa-folder-open"></i>
-                <span>Report History</span>
+            <a href="/portals/report-history.php" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-300 shadow-xs transition-colors">
+                <i class="fa-solid fa-folder-open text-blue-600"></i>
+                <span>All Archive</span>
             </a>
         </div>
     </div>
 
-    <!-- Modalities Overview & Ring Spectrum Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
-
-        <!-- Modality Throughput Hero -->
-        <div class="lg:col-span-4 bg-gradient-to-br from-[#0c1322] via-[#0f172a] to-[#1e293b] text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-[#c2f13c]/10 blur-3xl pointer-events-none"></div>
-            <div class="absolute -left-12 -bottom-12 w-44 h-44 rounded-full bg-blue-600/15 blur-3xl pointer-events-none"></div>
-
-            <div>
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-slate-800/80 text-[#c2f13c] border border-slate-700">
-                        Imaging Velocity
-                    </span>
-                    <span class="text-xs text-slate-400 font-medium">DICOM Station</span>
+    <!-- ==========================================
+         1. LABORATORY DEPARTMENT (PATHOLOGY)
+         ========================================== -->
+    <div class="bg-gradient-to-b from-sky-50/40 via-white to-white p-5 sm:p-6 rounded-3xl border border-sky-100 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-sky-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-flask-vial"></i>
                 </div>
-
-                <h3 class="text-xl font-extrabold tracking-tight text-white mb-1">Radiology Operations</h3>
-                <p class="text-xs text-slate-400">Study acquisition to consultant impression release.</p>
-
-                <div class="my-6 flex items-center gap-5">
-                    <div class="relative w-24 h-24 shrink-0 flex items-center justify-center">
-                        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1e293b" stroke-width="9" />
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#c2f13c" stroke-width="9"
-                                    stroke-dasharray="251.327"
-                                    stroke-dashoffset="40"
-                                    stroke-linecap="round" />
-                        </svg>
-                        <div class="absolute flex flex-col items-center justify-center text-center">
-                            <span class="text-lg font-black text-white leading-none"><?= $studiesToday ?></span>
-                            <span class="text-[9px] text-[#c2f13c] font-bold mt-0.5">Today</span>
-                        </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-black text-slate-900 tracking-tight">1. Laboratory Department</h2>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-sky-100 text-sky-800">Pathology</span>
                     </div>
-                    <div>
-                        <div class="text-2xl font-black tracking-tight text-white"><?= $reportedStudies ?> <span class="text-xs font-semibold text-slate-400">Reported</span></div>
-                        <p class="text-xs text-slate-300 mt-1"><strong><?= $pendingStudies ?> studies</strong> currently waiting in radiologist review queue.</p>
-                    </div>
-                </div>
-
-                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 flex items-center justify-between">
-                    <span class="flex items-center gap-2">
-                        <i class="fa-solid fa-circle-check text-[#c2f13c]"></i>
-                        <span>All Modalities Connected</span>
-                    </span>
-                    <span class="font-bold text-[#c2f13c]">Zero Errors</span>
+                    <p class="text-xs text-slate-500 font-medium">Hematology, CBC, Clinical Chemistry, Serology, Urinalysis &amp; Microbiology</p>
                 </div>
             </div>
-
-            <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                <span class="text-xs text-slate-400">Radiology PACS 4.0</span>
-                <a href="/portals/pending-scans.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
-                    <span>Pending Worklist</span>
-                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- 4 Modality Stations Deck -->
-        <div class="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-card flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Modality Suites</span>
-                    <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        Ready
-                    </span>
-                </div>
-
-                <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Diagnostic Modalities</h3>
-                <p class="text-xs text-slate-500 mb-5">Quick initiation for scheduled imaging studies.</p>
-
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    <a href="/portals/laboratory.php" class="p-3 rounded-2xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 transition-all text-center group">
-                        <i class="fa-solid fa-flask-vial text-xl text-emerald-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">Laboratory</span>
-                        <span class="text-[10px] text-emerald-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-
-                    <a href="/portals/ultrasound.php" class="p-3 rounded-2xl bg-teal-50/60 hover:bg-teal-100/80 border border-teal-200 transition-all text-center group">
-                        <i class="fa-solid fa-wave-square text-xl text-teal-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">Ultrasound</span>
-                        <span class="text-[10px] text-teal-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-
-                    <a href="/portals/xray.php" class="p-3 rounded-2xl bg-blue-50/60 hover:bg-blue-100/80 border border-blue-200 transition-all text-center group">
-                        <i class="fa-solid fa-x-ray text-xl text-blue-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">Digital X-Ray</span>
-                        <span class="text-[10px] text-blue-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-
-                    <a href="/portals/ecg.php" class="p-3 rounded-2xl bg-rose-50/60 hover:bg-rose-100/80 border border-rose-200 transition-all text-center group">
-                        <i class="fa-solid fa-heart-pulse text-xl text-rose-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">12-Lead ECG</span>
-                        <span class="text-[10px] text-rose-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-
-                    <a href="/portals/ct.php" class="p-3 rounded-2xl bg-purple-50/60 hover:bg-purple-100/80 border border-purple-200 transition-all text-center group">
-                        <i class="fa-solid fa-laptop-medical text-xl text-purple-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">CT Scan</span>
-                        <span class="text-[10px] text-purple-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-
-                    <a href="/portals/mri.php" class="p-3 rounded-2xl bg-indigo-50/60 hover:bg-indigo-100/80 border border-indigo-200 transition-all text-center group">
-                        <i class="fa-solid fa-magnet text-xl text-indigo-600 mb-1 block group-hover:scale-110 transition-transform"></i>
-                        <span class="text-xs font-bold text-slate-900 block">MRI Scan</span>
-                        <span class="text-[10px] text-indigo-700 font-semibold">Open Station &rarr;</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Shared with Lab &amp; Collection</span>
-                <a href="/portals/patients.php" class="font-bold text-blue-600 hover:underline">Patient Database &rarr;</a>
-            </div>
-        </div>
-
-        <!-- Radiologist Reporting Ring Spectrum -->
-        <div class="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-card flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Radiology Workflow</span>
-                    <a href="/portals/reports.php" class="text-xs font-bold text-blue-600 hover:text-blue-700">All reports &gt;</a>
-                </div>
-
-                <h3 class="text-xl font-extrabold text-slate-900 tracking-tight mb-1">Study Reporting Spectrum</h3>
-                <p class="text-xs text-slate-500 mb-4">Real-time status of scans across doctor verification benches.</p>
-
-                <div class="flex items-center gap-6 my-2">
-                    <div class="relative w-28 h-28 shrink-0 flex items-center justify-center">
-                        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" stroke-width="12" />
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f87171" stroke-width="12"
-                                    stroke-dasharray="<?= $lenPending ?> <?= $c - $lenPending ?>"
-                                    stroke-dashoffset="<?= $offsetPending ?>"
-                                    stroke-linecap="round" />
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#fbbf24" stroke-width="12"
-                                    stroke-dasharray="<?= $lenProg ?> <?= $c - $lenProg ?>"
-                                    stroke-dashoffset="<?= $offsetProg ?>"
-                                    stroke-linecap="round" />
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#a3e635" stroke-width="12"
-                                    stroke-dasharray="<?= $lenComp ?> <?= $c - $lenComp ?>"
-                                    stroke-dashoffset="<?= $offsetComp ?>"
-                                    stroke-linecap="round" />
-                        </svg>
-                        <div class="absolute flex flex-col items-center justify-center text-center">
-                            <span class="text-2xl font-black text-slate-900 leading-none"><?= $totalScans ?></span>
-                            <span class="text-[9px] uppercase font-bold text-slate-400 mt-0.5">Studies</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 flex-1">
-                        <div class="flex items-center justify-between px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
-                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Pending Scan</span>
-                            <span><?= $pendingStudies ?></span>
-                        </div>
-                        <div class="flex items-center justify-between px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700">
-                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Findings Queue</span>
-                            <span><?= max(1, (int)round($totalScans * 0.25)) ?></span>
-                        </div>
-                        <div class="flex items-center justify-between px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
-                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Signed / Verified</span>
-                            <span><?= $reportedStudies ?></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <a href="/portals/results.php" class="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all shadow-md">
-                <i class="fa-solid fa-notes-medical"></i>
-                <span>Enter Radiologist Findings</span>
+            <a href="/portals/laboratory.php" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold text-xs transition-colors self-start sm:self-auto">
+                <span>Open Lab Workstation</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </a>
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Lab Booking -->
+            <a href="/portals/new-scan.php?dept=lab" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#38bdf8] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-sky-400/50 min-h-[96px]">
+                <i class="fa-solid fa-file-circle-plus text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Register Patient</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Patient Registration &amp; Tests</div>
+                </div>
+            </a>
+
+            <!-- Pending Samples / Worklist -->
+            <a href="/portals/laboratory.php?status=pending" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#c084fc] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-purple-400/50 min-h-[96px]">
+                <i class="fa-regular fa-clock text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Pending Orders</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Sample Collection &amp; Worklist</div>
+                </div>
+            </a>
+
+            <!-- Lab Results Entry -->
+            <a href="/portals/results/entry.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#2dd4bf] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-teal-400/50 min-h-[96px]">
+                <i class="fa-solid fa-vials text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Results Entry</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Parameters &amp; Clinical Sign-off</div>
+                </div>
+            </a>
+
+            <!-- Print Lab Reports -->
+            <a href="/portals/reports/generate.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#60a5fa] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-blue-400/50 min-h-[96px]">
+                <i class="fa-solid fa-file-pdf text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Generate Lab Report</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Print PDF with QR Code</div>
+                </div>
+            </a>
+        </div>
     </div>
 
-    <!-- Studies & Scans Table -->
-    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-card">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-            <div>
-                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Imaging Manifest</span>
-                <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Recent Scans &amp; Imaging Manifest</h3>
+    <!-- ==========================================
+         2. RADIOLOGY DEPARTMENT (UNIFIED IMAGING)
+         ========================================== -->
+    <div class="bg-gradient-to-b from-indigo-50/40 via-white to-white p-5 sm:p-6 rounded-3xl border border-indigo-100 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-x-ray"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-black text-slate-900 tracking-tight">2. Radiology Department</h2>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900">Unified Imaging</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900">
+                            <?= $pendingScansCount ?> Pending Queue
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium">Covers <strong>X-ray, ECG, Ultrasound, Echocardiography, CT scan, and MRI</strong> — unified into one clinical workflow.</p>
+                </div>
             </div>
-
-            <div class="flex items-center gap-2">
-                <a href="/portals/new-scan.php" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#c2f13c] text-slate-950 font-bold text-xs hover:bg-[#b2e62a] transition-colors">
-                    <i class="fa-solid fa-plus"></i> Order Study
-                </a>
-                <a href="/portals/report-history.php" class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors">
-                    <i class="fa-solid fa-clock-rotate-left"></i> History
-                </a>
-            </div>
+            <a href="/portals/pending-scans.php" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-xs transition-colors self-start sm:self-auto">
+                <span>Open Radiology Workstation</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
         </div>
 
-        <div class="overflow-x-auto mt-4">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-slate-100 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50/50">
-                        <th class="py-3 px-4 rounded-l-xl">Scan / Study ID</th>
-                        <th class="py-3 px-4">Patient</th>
-                        <th class="py-3 px-4">Modality</th>
-                        <th class="py-3 px-4">Study Description</th>
-                        <th class="py-3 px-4">Status</th>
-                        <th class="py-3 px-4 text-right rounded-r-xl">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-xs text-slate-700 font-medium">
-                    <?php if (empty($imagingScans)): ?>
-                        <tr>
-                            <td colspan="6" class="py-12 text-center text-slate-400">
-                                <i class="fa-solid fa-x-ray text-3xl mb-2 text-slate-300 block"></i>
-                                No active studies. Click <a href="/portals/new-scan.php" class="text-blue-600 underline font-bold">New Study</a> to book an imaging scan.
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach (array_slice($imagingScans, 0, 10) as $s): 
-                            $status = strtolower($s['status'] ?? 'pending');
-                            $modality = strtoupper($s['modality'] ?? 'XR');
-                            $statusBadgeClass = match($status) {
-                                'reported', 'completed' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                                'in_progress', 'scanned' => 'bg-blue-100 text-blue-800 border-blue-200',
-                                default => 'bg-amber-100 text-amber-800 border-amber-200',
-                            };
-                        ?>
-                            <tr class="hover:bg-slate-50/80 transition-colors">
-                                <td class="py-3.5 px-4 font-bold text-slate-900">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2 h-2 rounded-full <?= $status === 'reported' ? 'bg-emerald-500' : 'bg-amber-400' ?>"></span>
-                                        <span class="font-mono tracking-tight font-black"><?= e($s['scan_no']) ?></span>
-                                    </div>
-                                    <span class="text-[10px] text-slate-400 block mt-0.5"><?= date('d M Y', strtotime($s['date'] ?? 'now')) ?></span>
-                                </td>
-                                <td class="py-3.5 px-4 font-bold text-slate-900">
-                                    <?= e($s['patient']) ?>
-                                    <span class="text-[10px] text-slate-500 block font-normal">ID: <?= e($s['patient_id'] ?? '—') ?></span>
-                                </td>
-                                <td class="py-3.5 px-4">
-                                    <span class="inline-block px-2.5 py-1 rounded-lg bg-slate-900 text-white font-black text-[10px] tracking-wider">
-                                        <?= e($modality) ?>
-                                    </span>
-                                </td>
-                                <td class="py-3.5 px-4 text-slate-800 font-semibold">
-                                    <?= e($s['study'] ?? 'Standard Scan') ?>
-                                </td>
-                                <td class="py-3.5 px-4">
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border <?= $statusBadgeClass ?>">
-                                        <?= ucfirst($status) ?>
-                                    </span>
-                                </td>
-                                <td class="py-3.5 px-4 text-right">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        <a href="/portals/results.php?scan_no=<?= urlencode($s['scan_no']) ?>" class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 transition-all text-xs font-bold" title="Enter Findings">
-                                            <i class="fa-solid fa-notes-medical mr-1"></i> Findings
-                                        </a>
-                                        <a href="/portals/reports.php?scan_no=<?= urlencode($s['scan_no']) ?>" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 transition-all text-xs font-bold" title="Report">
-                                            <i class="fa-solid fa-file-medical mr-1"></i> Report
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+        <!-- Modality Quick Filter Bar -->
+        <div class="flex flex-wrap items-center gap-2 mb-5">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wide mr-1">Modality Quick Worklists:</span>
+            <a href="/portals/pending-scans.php?modality=us" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition-colors">
+                <i class="fa-solid fa-wave-square text-purple-600"></i>
+                <span>Ultrasound (<?= $usCount ?>)</span>
+            </a>
+            <a href="/portals/pending-scans.php?modality=xray" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 transition-colors">
+                <i class="fa-solid fa-x-ray text-blue-600"></i>
+                <span>Digital X-Ray (<?= $xrCount ?>)</span>
+            </a>
+            <a href="/portals/pending-scans.php?modality=ecg" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200 transition-colors">
+                <i class="fa-solid fa-heart-pulse text-rose-600"></i>
+                <span>ECG (<?= $ecgCount ?>)</span>
+            </a>
+            <a href="/portals/pending-scans.php?modality=echo" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 transition-colors">
+                <i class="fa-solid fa-heart-pulse text-indigo-600"></i>
+                <span>Echo (<?= $echoCount ?>)</span>
+            </a>
+            <a href="/portals/pending-scans.php?modality=ct" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                <i class="fa-solid fa-laptop-medical text-emerald-600"></i>
+                <span>CT Scan (<?= $ctCount ?>)</span>
+            </a>
+            <a href="/portals/pending-scans.php?modality=mri" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors">
+                <i class="fa-solid fa-magnet text-amber-600"></i>
+                <span>MRI (<?= $mriCount ?>)</span>
+            </a>
+        </div>
+
+        <!-- 6 Main Radiology Action Tiles -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <!-- 1. Radiology Booking -->
+            <a href="/portals/new-scan.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#60a5fa] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-blue-400/50 min-h-[96px]">
+                <i class="fa-solid fa-calendar-plus text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Book Radiology Study</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">X-Ray, Ultrasound, ECG, Echo, CT &amp; MRI</div>
+                </div>
+            </a>
+
+            <!-- 2. Unified Radiology Queue -->
+            <a href="/portals/pending-scans.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#c084fc] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-purple-400/50 min-h-[96px]">
+                <i class="fa-regular fa-clock text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Radiology Workstation</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Live Queue across all modalities</div>
+                </div>
+            </a>
+
+            <!-- 3. Edit Findings -->
+            <a href="/portals/results.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#2dd4bf] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-teal-400/50 min-h-[96px]">
+                <i class="fa-solid fa-notes-medical text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Enter / Edit Findings</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Reporting pad with organ macros</div>
+                </div>
+            </a>
+
+            <!-- 4. Print / View Report -->
+            <a href="/portals/reports.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#86efac] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-green-400/50 min-h-[96px]">
+                <i class="fa-solid fa-file-waveform text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Print Radiology Report</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Letterhead report with impressions</div>
+                </div>
+            </a>
+
+            <!-- 5. Report Templates Library -->
+            <a href="/portals/templates.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#fbbf24] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-amber-400/50 min-h-[96px]">
+                <i class="fa-solid fa-bookmark text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Report Templates</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Store &amp; edit Ultrasound, X-Ray, ECG macros</div>
+                </div>
+            </a>
+
+            <!-- 6. Radiology Report History -->
+            <a href="/portals/report-history.php" class="group flex items-center gap-4 p-5 rounded-2xl bg-[#a5b4fc] text-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-indigo-300 min-h-[96px]">
+                <i class="fa-solid fa-folder-tree text-4xl text-slate-900 shrink-0 group-hover:scale-105 transition-transform"></i>
+                <div class="min-w-0">
+                    <div class="font-extrabold text-base text-slate-900 leading-tight">Radiology History</div>
+                    <div class="text-xs text-slate-900/80 font-medium truncate mt-0.5">Search past scans &amp; reprints</div>
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+    <!-- ==========================================
+         3. RECEPTION, BILLING & CLOSING BAR
+         ========================================== -->
+    <div class="p-5 bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-slate-900">Reception, Billing &amp; Financial Audits</h4>
+                <p class="text-xs text-slate-500">Token receipts, patient MR cards, daily counter closings, and accounting</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="/portals/receipt.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors">
+                <i class="fa-solid fa-receipt text-slate-600"></i> Patient Bill / Token
+            </a>
+            <a href="/portals/patients.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors">
+                <i class="fa-solid fa-users text-slate-600"></i> Patients Directory
+            </a>
+            <a href="/portals/financial-closing.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors">
+                <i class="fa-solid fa-calculator text-slate-600"></i> Daily Closing
+            </a>
+            <a href="/portals/summary-reports.php" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-200 transition-colors">
+                <i class="fa-solid fa-chart-pie text-amber-600"></i> Summary Reports Engine
+            </a>
         </div>
     </div>
 
