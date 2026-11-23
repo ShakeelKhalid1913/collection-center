@@ -741,14 +741,21 @@ foreach ($activeRows as $r) {
     $combinedName = strtolower($paramName . ' ' . $activeTest . ' ' . $rangeRaw);
     $activeCat = strtolower((string)($activeTestMeta['category'] ?? ''));
 
-    // Screening/Serology investigations (HIV, HBsAg, HCV, VDRL, H. Pylori, Malaria / MP) must always be Negative / Positive
-    $isScreeningInvestigation = preg_match('/hiv|hbsag|hbs\s*ag|hbeag|hbe\s*ag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening/i', $combinedName)
-        || in_array($activeCat, ['serology', 'immunology', 'rapid tests'], true);
+    $isCbcInvestigation = (bool)preg_match('/\b(cbc|complete blood|haematology|hematology)\b/i', $activeTest);
+    $hasNumericRange = preg_match('/^[0-9]/', $rangeRaw) || preg_match('/[0-9]+\s*[\-–]\s*[0-9]+/', $rangeRaw);
 
-    // Explicitly numeric investigations (HbA1c, vitamins, hormones, electrolytes, etc.) must always remain text/number input fields
-    $isExplicitlyNumeric = !$isScreeningInvestigation && (
-        ($testResultType === 'numeric')
-        || preg_match('/hba1c|glycated|\ba1c\b|sugar|glucose|cholesterol|triglyceride|urea|creatinine|uric|bilirubin|tsh|ft3|ft4|vitamin|ferritin|calcium/i', $combinedName)
+    // Screening/Serology investigations (HIV, HBsAg, HCV, VDRL, H. Pylori, Malaria / MP) must always be Negative / Positive
+    $isScreeningInvestigation = !$isCbcInvestigation && !$hasNumericRange && (
+        preg_match('/hiv|hbsag|hbs\s*ag|hbeag|hbe\s*ag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening/i', $combinedName)
+        || in_array($activeCat, ['serology', 'immunology', 'rapid tests'], true)
+    );
+
+    // Numeric investigations: CBC parameters, anything with numeric range, or explicit numeric tests
+    $isExplicitlyNumeric = $isCbcInvestigation || $hasNumericRange || (
+        !$isScreeningInvestigation && (
+            ($testResultType === 'numeric')
+            || preg_match('/hba1c|glycated|\ba1c\b|sugar|glucose|cholesterol|triglyceride|urea|creatinine|uric|bilirubin|tsh|ft3|ft4|vitamin|ferritin|calcium/i', $combinedName)
+        )
     );
 
     $isQualitative = !$isExplicitlyNumeric && (

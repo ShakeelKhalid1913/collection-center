@@ -532,7 +532,9 @@ class ResultRepository
                 parameter = CASE WHEN parameter IS NULL OR parameter = '' OR parameter = '—' THEN test ELSE parameter END,
                 reference_range = CASE WHEN reference_range IS NULL OR reference_range = '' OR reference_range = '—' OR reference_range = 'Non Reactive' OR reference_range = 'Non-Reactive' THEN 'Negative' ELSE reference_range END,
                 value = CASE WHEN value IS NULL OR value = '' OR LOWER(value) = 'pending' OR value = 'Non Reactive' OR value = 'Non-Reactive' THEN 'Negative' ELSE value END
-             WHERE lab_no = :lab_no AND (LOWER(test) LIKE '%hiv%' OR LOWER(test) LIKE '%hbsag%' OR LOWER(test) LIKE '%hcv%' OR LOWER(test) LIKE '%vdrl%' OR LOWER(test) LIKE '%pylori%' OR LOWER(test) LIKE '%malaria%' OR LOWER(test) LIKE '%mp%' OR LOWER(parameter) LIKE '%hiv%' OR LOWER(parameter) LIKE '%hbsag%' OR LOWER(parameter) LIKE '%hcv%' OR LOWER(parameter) LIKE '%pylori%' OR LOWER(parameter) LIKE '%malaria%')",
+             WHERE lab_no = :lab_no 
+               AND NOT (LOWER(test) LIKE '%cbc%' OR LOWER(test) LIKE '%complete%' OR LOWER(test) LIKE '%blood picture%' OR LOWER(test) LIKE '%haematology%' OR LOWER(test) LIKE '%hematology%' OR LOWER(test) LIKE '%urine%' OR LOWER(test) LIKE '%milk%')
+               AND (LOWER(test) LIKE '%hiv%' OR LOWER(test) LIKE '%hbsag%' OR LOWER(test) LIKE '%hcv%' OR LOWER(test) LIKE '%vdrl%' OR LOWER(test) LIKE '%pylori%' OR LOWER(test) LIKE '%malaria%' OR LOWER(test) = 'mp' OR LOWER(test) LIKE 'mp (%' OR LOWER(parameter) LIKE '%hiv%' OR LOWER(parameter) LIKE '%hbsag%' OR LOWER(parameter) LIKE '%hcv%' OR LOWER(parameter) LIKE '%pylori%' OR LOWER(parameter) LIKE '%malaria%')",
             ['lab_no' => $labNo]
         );
 

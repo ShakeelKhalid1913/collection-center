@@ -918,7 +918,9 @@ function load_document_context(?string $labNo, ?string $orgId = null): array
             $hasRef = $deptInfo['has_reference_ranges'];
 
             $refRange = $hasRef ? (($r['reference_range'] ?: ($r['normal_value'] ?? '')) ?: ($tObj['reference_value'] ?? $tObj['normal_value'] ?? $tObj['normal_range'] ?? '—')) : '';
-            $isScreening = preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tTitle . ' ' . $paramName);
+            $isCbcDoc = (bool)preg_match('/\b(cbc|complete blood|haematology|hematology)\b/i', $tTitle);
+            $hasNumRange = preg_match('/^[0-9]/', $refRange) || preg_match('/[0-9]+\s*[\-–]\s*[0-9]+/', $refRange);
+            $isScreening = !$isCbcDoc && !$hasNumRange && (bool)preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tTitle . ' ' . $paramName);
 
             // For screening tests like HIV, HBsAg, HCV, VDRL, H. Pylori, MP (Malaria):
             // Reference range must always be 'Negative', and default result is 'Negative'
@@ -1004,7 +1006,8 @@ function load_document_context(?string $labNo, ?string $orgId = null): array
 
                 $fallbackRange = $hasRef ? ($meta['range'] ?? '—') : '';
                 $fallbackRes = 'Pending';
-                if (preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tName)) {
+                $isCbcFallback = (bool)preg_match('/\b(cbc|complete blood|haematology|hematology)\b/i', $tName);
+                if (!$isCbcFallback && preg_match('/hiv|hbsag|hcv|vdrl|tpha|pylori|malaria|\bmp\b|screening|serology/i', $tName)) {
                     $fallbackRange = 'Negative';
                     $fallbackRes = 'Negative';
                 } elseif (preg_match('/negative/i', $fallbackRange)) {
