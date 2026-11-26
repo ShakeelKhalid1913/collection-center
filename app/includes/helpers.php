@@ -973,7 +973,7 @@ function render_narrative_markdown(string $rawText): string
         if ($trimmed === '') {
             if ($inUl) { $html[] = '</ul>'; $inUl = false; }
             if ($inOl) { $html[] = '</ol>'; $inOl = false; }
-            $html[] = '<div class="narrative-spacer" style="height: 10px; min-height: 10px;"></div>';
+            $html[] = '<div class="narrative-spacer" style="height: 3px; min-height: 3px;"></div>';
             continue;
         }
 
@@ -997,42 +997,42 @@ function render_narrative_markdown(string $rawText): string
             if ($inUl) { $html[] = '</ul>'; $inUl = false; }
             if ($inOl) { $html[] = '</ol>'; $inOl = false; }
             $hContent = preg_replace('/^###\s+/u', '', $lineSafe);
-            $html[] = '<div style="font-size: 1.05em; font-weight: 700; color: #1e293b; margin: 8px 0 3px 0;">' . $hContent . '</div>';
+            $html[] = '<div style="font-size: 1.0em; font-weight: 700; color: #1e293b; margin: 3px 0 1px 0;">' . $hContent . '</div>';
             continue;
         }
         if (preg_match('/^##\s+(.+)$/u', $trimmed, $m)) {
             if ($inUl) { $html[] = '</ul>'; $inUl = false; }
             if ($inOl) { $html[] = '</ol>'; $inOl = false; }
             $hContent = preg_replace('/^##\s+/u', '', $lineSafe);
-            $html[] = '<div style="font-size: 1.15em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin: 10px 0 4px 0; letter-spacing: 0.3px;">' . $hContent . '</div>';
+            $html[] = '<div style="font-size: 1.05em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin: 4px 0 2px 0; letter-spacing: 0.3px;">' . $hContent . '</div>';
             continue;
         }
         if (preg_match('/^#\s+(.+)$/u', $trimmed, $m)) {
             if ($inUl) { $html[] = '</ul>'; $inUl = false; }
             if ($inOl) { $html[] = '</ol>'; $inOl = false; }
             $hContent = preg_replace('/^#\s+/u', '', $lineSafe);
-            $html[] = '<div style="font-size: 1.25em; font-weight: 900; color: #0f172a; text-transform: uppercase; margin: 12px 0 5px 0; letter-spacing: 0.5px; border-bottom: 1.5px solid #0f172a; padding-bottom: 3px;">' . $hContent . '</div>';
+            $html[] = '<div style="font-size: 1.1em; font-weight: 900; color: #0f172a; text-transform: uppercase; margin: 5px 0 2px 0; letter-spacing: 0.5px; border-bottom: 1px solid #0f172a; padding-bottom: 2px;">' . $hContent . '</div>';
             continue;
         }
 
         // Bullet lists
         if (preg_match('/^[\-\*•]\s+(.+)$/u', $trimmed, $m)) {
             if ($inOl) { $html[] = '</ol>'; $inOl = false; }
-            if (!$inUl) { $html[] = '<ul style="margin: 4px 0 6px 0; padding-left: 20px; list-style-type: disc;">'; $inUl = true; }
+            if (!$inUl) { $html[] = '<ul style="margin: 2px 0 3px 0; padding-left: 16px; list-style-type: disc;">'; $inUl = true; }
             $itemContent = preg_replace('/^[\-\*•]\s+/u', '', $lineSafe);
             if (preg_match('/^([^:]+):\s+(.+)$/u', $itemContent, $im)) {
                 $itemContent = '<strong style="font-weight: 700; color: #0f172a;">' . $im[1] . ':</strong> ' . $im[2];
             }
-            $html[] = '<li style="margin-bottom: 3px;">' . $itemContent . '</li>';
+            $html[] = '<li style="margin-bottom: 1.5px;">' . $itemContent . '</li>';
             continue;
         }
 
         // Numbered lists
         if (preg_match('/^([0-9]+)[\.\)]\s+(.+)$/u', $trimmed, $m)) {
             if ($inUl) { $html[] = '</ul>'; $inUl = false; }
-            if (!$inOl) { $html[] = '<ol style="margin: 4px 0 6px 0; padding-left: 20px; list-style-type: decimal;">'; $inOl = true; }
+            if (!$inOl) { $html[] = '<ol style="margin: 2px 0 3px 0; padding-left: 16px; list-style-type: decimal;">'; $inOl = true; }
             $itemContent = preg_replace('/^[0-9]+[\.\)]\s+/u', '', $lineSafe);
-            $html[] = '<li style="margin-bottom: 3px;">' . $itemContent . '</li>';
+            $html[] = '<li style="margin-bottom: 1.5px;">' . $itemContent . '</li>';
             continue;
         }
 
@@ -1041,7 +1041,7 @@ function render_narrative_markdown(string $rawText): string
 
         // Prominent Impression / Conclusion block
         if (preg_match('/^(IMPRESSION|CONCLUSION|DIAGNOSTIC OPINION|RECOMMENDATIONS):/i', $trimmed)) {
-            $html[] = '<div style="font-size: 1.1em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-top: 14px; margin-bottom: 5px; border-top: 1.5px dashed #94a3b8; padding-top: 6px;">' . $lineSafe . '</div>';
+            $html[] = '<div style="font-size: 1.05em; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-top: 6px; margin-bottom: 2px; border-top: 1px dashed #94a3b8; padding-top: 3px;">' . $lineSafe . '</div>';
             continue;
         }
 
@@ -1050,9 +1050,9 @@ function render_narrative_markdown(string $rawText): string
             $sectionTitle = trim($hm[1]);
             $sectionBody = trim($hm[2]);
             if ($sectionBody === '') {
-                $html[] = '<div style="font-size: 1.05em; font-weight: 800; color: #0f172a; margin-top: 8px; margin-bottom: 3px;">' . $sectionTitle . ':</div>';
+                $html[] = '<div style="font-size: 1.0em; font-weight: 800; color: #0f172a; margin-top: 3px; margin-bottom: 1px;">' . $sectionTitle . ':</div>';
             } else {
-                $html[] = '<div style="margin-bottom: 3px;"><strong style="font-weight: 700; color: #0f172a;">' . $sectionTitle . ':</strong> ' . $sectionBody . '</div>';
+                $html[] = '<div style="margin-bottom: 1.5px;"><strong style="font-weight: 700; color: #0f172a;">' . $sectionTitle . ':</strong> ' . $sectionBody . '</div>';
             }
             continue;
         }

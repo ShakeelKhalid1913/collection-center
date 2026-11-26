@@ -239,7 +239,6 @@ class ResultRepository
             $sortOrder = max($sortOrder, ((int)($r['sort_order'] ?? 0)) + 1);
         }
 
-        $autoPage = 1;
         foreach ($resolvedTests as $rt) {
             $label = $rt['label'];
             $obj = $rt['obj'];
@@ -301,7 +300,7 @@ class ResultRepository
                 }
             }
 
-            $keepPage = $autoPage;
+            $keepPage = 1;
             if (isset($savedPages[$label])) {
                 $keepPage = max(1, (int)$savedPages[$label]);
             } else {
@@ -312,7 +311,6 @@ class ResultRepository
                     }
                 }
             }
-            $autoPage++;
 
             if (!empty($params)) {
                 // Multi-parameter test in catalog

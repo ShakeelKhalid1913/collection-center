@@ -8,7 +8,7 @@ declare(strict_types=1);
  */
 
 if (!function_exists('generate_barcode_svg')) {
-    function generate_barcode_svg(string $text, int $barHeight = 48, int $scale = 2): string
+    function generate_barcode_svg(string $text, int $barHeight = 48, int $scale = 2, bool $showText = true): string
     {
         $code128B = [
             ' ' => '212222', '!' => '222122', '"' => '222221', '#' => '121223', '$' => '121322',
@@ -84,14 +84,20 @@ if (!function_exists('generate_barcode_svg')) {
         }
 
         $totalWidth = $x + (10 * $scale);
-        $svgHeight = $barHeight + 16;
-        $textX = $totalWidth / 2;
-        $textY = $barHeight + 12;
+        if ($showText) {
+            $svgHeight = $barHeight + 16;
+            $textX = $totalWidth / 2;
+            $textY = $barHeight + 12;
+            $textNode = '<text x="' . $textX . '" y="' . $textY . '" font-family="monospace, monospace" font-size="11" font-weight="bold" text-anchor="middle" fill="#0f172a">' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</text>';
+        } else {
+            $svgHeight = $barHeight;
+            $textNode = '';
+        }
 
         return <<<SVG
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {$totalWidth} {$svgHeight}" width="100%" height="auto" style="max-height:{$svgHeight}px;display:block;margin:0 auto;">
             {$rects}
-            <text x="{$textX}" y="{$textY}" font-family="monospace, monospace" font-size="11" font-weight="bold" text-anchor="middle" fill="#0f172a">{$text}</text>
+            {$textNode}
         </svg>
         SVG;
     }

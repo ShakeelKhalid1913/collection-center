@@ -85,7 +85,7 @@ class LabEntryRepository
         }
     }
 
-    public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null): array
+    public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'lab_no_asc'): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         if (is_int($branchOrLimit)) {
@@ -93,7 +93,7 @@ class LabEntryRepository
             $branchId = null;
         } else {
             $branchId = $branchOrLimit;
-            $limit = $limit ?? 100;
+            $limit = $limit ?? 250;
         }
 
         $sql = "SELECT * FROM lab_entries WHERE organization_id = :org";
@@ -103,11 +103,21 @@ class LabEntryRepository
             $params['branch'] = $branchId;
             $params['branch2'] = $branchId;
         }
-        $sql .= " ORDER BY created_at DESC LIMIT " . (int)$limit;
+
+        $orderBy = match ($sort) {
+            'lab_no_desc' => "ORDER BY CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC, lab_no DESC, created_at DESC",
+            'date_desc' => "ORDER BY created_at DESC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC, lab_no DESC",
+            'date_asc' => "ORDER BY created_at ASC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC, lab_no ASC",
+            'patient_asc' => "ORDER BY patient_name ASC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC",
+            'patient_desc' => "ORDER BY patient_name DESC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC",
+            default => "ORDER BY CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC, lab_no ASC, created_at ASC",
+        };
+
+        $sql .= " " . $orderBy . " LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
     }
 
-    public function getEntriesWithPatients(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null): array
+    public function getEntriesWithPatients(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'date_desc'): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         if (is_int($branchOrLimit)) {
@@ -132,7 +142,14 @@ class LabEntryRepository
             $params['branch'] = $branchId;
             $params['branch2'] = $branchId;
         }
-        $sql .= " ORDER BY le.created_at DESC LIMIT " . (int)$limit;
+
+        $orderBy = match ($sort) {
+            'lab_no_asc' => "ORDER BY CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) ASC, le.lab_no ASC",
+            'lab_no_desc' => "ORDER BY CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) DESC, le.lab_no DESC",
+            default => "ORDER BY le.created_at DESC, CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) DESC, le.lab_no DESC",
+        };
+
+        $sql .= " " . $orderBy . " LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
     }
 
@@ -187,6 +204,54 @@ class LabEntryRepository
             ['exact' => $clean, 'suffix1' => $needle, 'suffix2' => $needle]
         );
         return $row ?: null;
+    }
+
+    public function renumberPendingEntries(string $orgId = 'ORG-001', int $startSeq = 5055): int
+    {
+        $settings = setting_repo()->getSettings($orgId);
+        $prefixPattern = !empty($settings['lab_no_prefix']) ? (string)$settings['lab_no_prefix'] : 'L-{YEAR}-';
+        $prefix = str_ireplace(['{year}', '{y}'], date('Y'), $prefixPattern);
+        $prefix = str_ireplace(['{month}', '{m}'], date('m'), $prefix);
+        if (strcasecmp(trim($prefixPattern), 'none') === 0) {
+            $prefix = '';
+        }
+
+        $pendingEntries = $this->db->fetchAll(
+            "SELECT id, lab_no, created_at FROM lab_entries 
+             WHERE organization_id = :org 
+               AND (status IN ('pending', 'collected', 'in_progress') OR sample_status IN ('pending', 'collected'))
+             ORDER BY created_at ASC, id ASC",
+            ['org' => $orgId]
+        );
+
+        $curSeq = $startSeq;
+        $count = 0;
+        foreach ($pendingEntries as $entry) {
+            $oldLabNo = (string)$entry['lab_no'];
+            $sep = ($prefix !== '' && !str_ends_with($prefix, '-') && !str_ends_with($prefix, '/')) ? '-' : '';
+            $newLabNo = ($prefix !== '') ? ($prefix . $sep . sprintf('%04d', $curSeq)) : (string)$curSeq;
+
+            if ($oldLabNo !== $newLabNo) {
+                try {
+                    $this->db->execute("UPDATE lab_entries SET lab_no = :new WHERE id = :id", ['new' => $newLabNo, 'id' => $entry['id']]);
+                    $this->db->execute("UPDATE results SET lab_no = :new WHERE lab_no = :old", ['new' => $newLabNo, 'old' => $oldLabNo]);
+                    $this->db->execute("UPDATE samples SET lab_no = :new WHERE lab_no = :old", ['new' => $newLabNo, 'old' => $oldLabNo]);
+                    $this->db->execute("UPDATE due_payments SET lab_no = :new WHERE lab_no = :old", ['new' => $newLabNo, 'old' => $oldLabNo]);
+                    $this->db->execute("UPDATE imaging_scans SET lab_no = :new WHERE lab_no = :old", ['new' => $newLabNo, 'old' => $oldLabNo]);
+                    $count++;
+                } catch (\Throwable $e) {}
+            }
+            $curSeq++;
+        }
+
+        try {
+            $this->db->execute(
+                "UPDATE lab_settings SET next_lab_seq = :nextSeq WHERE organization_id = :org",
+                ['nextSeq' => $curSeq, 'org' => $orgId]
+            );
+        } catch (\Throwable $e) {}
+
+        return $count;
     }
 
     public function generateNextLabNo(string $orgId = 'ORG-001', bool $peekOnly = false): string

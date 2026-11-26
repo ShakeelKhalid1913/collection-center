@@ -2180,15 +2180,15 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
             $imagingText = ($resultRaw !== '' && $resultRaw !== '-' && $resultRaw !== '—') ? $resultRaw : 'Clinical imaging study recorded. Interpretation / report pending.';
             $narrativeFontSize = (!empty($line['unit']) && preg_match('/^[0-9]+(?:\.[0-9]+)?px$/', (string)$line['unit']))
                 ? (string)$line['unit']
-                : '13.5px';
+                : '11.5px';
             $renderedNarrative = render_narrative_markdown($imagingText);
             $rows .= '<tr class="lab-report__imaging-row">
-                <td colspan="' . $colspan . '" style="padding: 16px 8px; border-bottom: none; vertical-align: top; text-align: left;">
-                    <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 16px;">
-                        <strong style="font-size: 18px; text-transform: uppercase; letter-spacing: 1.2px; color: #0f172a;">' . e($studyTitle) . '</strong>
-                        <div style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px;">' . e($deptBanner) . '</div>
+                <td colspan="' . $colspan . '" style="padding: 4px 4px 4px 4px; border-bottom: none; vertical-align: top; text-align: left;">
+                    <div style="text-align: center; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; margin-bottom: 6px;">
+                        <strong style="font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a;">' . e($studyTitle) . '</strong>
+                        <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 1px;">' . e($deptBanner) . '</div>
                     </div>
-                    <div class="lab-report__imaging-narrative" style="font-size: ' . $narrativeFontSize . '; line-height: 1.75; padding: 6px 4px; font-family: var(--report-body-font, inherit); color: #0f172a; min-height: 280px; text-align: left; word-break: break-word;">' . $renderedNarrative . '</div>
+                    <div class="lab-report__imaging-narrative" style="font-size: ' . $narrativeFontSize . '; line-height: 1.35; padding: 2px 2px; font-family: var(--report-body-font, inherit); color: #0f172a; text-align: left; word-break: break-word;">' . $renderedNarrative . '</div>
                 </td>
             </tr>';
             continue;
@@ -2772,12 +2772,35 @@ CSS;
 
     $tableHeadHtml = '';
     if (!$isAllImaging) {
+        $barcodeVal = $labNoRaw !== '' ? $labNoRaw : (string)($patient['id'] ?? 'SAMPLE');
+        $barcodeSvg = function_exists('generate_barcode_svg')
+            ? generate_barcode_svg($barcodeVal, 16, 1, false)
+            : '';
+        $repIso = $entry['reported_at'] ?? $entry['updated_at'] ?? $entry['created_at'] ?? null;
+        $repTs = $repIso ? strtotime((string)$repIso) : time();
+        $repDateTimeStr = date('d-M-y   g:i A', $repTs ?: time());
+
+        $resultHeaderBox = <<<RBOX
+        <div class="lab-report__result-box" style="border: 1.5px solid #000; background: #fff; text-align: center; margin: 0 auto; width: 100%; max-width: 140px;">
+            <div style="font-size: 10px; font-weight: 800; text-transform: capitalize; padding: 1px 0; border-bottom: 1px solid #000; line-height: 1.2; color: #000;">Result</div>
+            <div style="padding: 2px 3px 1px 3px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="width: 100%; max-width: 120px; display: flex; justify-content: center; align-items: center; overflow: hidden;">{$barcodeSvg}</div>
+                <div style="font-size: 8px; font-weight: 700; font-family: monospace, sans-serif; color: #000; line-height: 1.15; margin-top: 1px; letter-spacing: -0.01em;">{$repDateTimeStr}</div>
+            </div>
+        </div>
+RBOX;
+
         if ($isTwoColumn) {
             $tableHeadHtml = <<<THEAD
                 <thead>
                     <tr>
                         <th class="lab-report__th-test" style="width: 30%;">TEST / INVESTIGATION</th>
-                        <th class="lab-report__th-result" style="width: 70%; text-align: left;">OBSERVATION / RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
+                        <th class="lab-report__th-result" style="width: 70%; text-align: left;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <span style="font-weight: 800;">OBSERVATION / RESULT</span>
+                                <div style="min-width: 120px;">{$resultHeaderBox}</div>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
 THEAD;
@@ -2788,7 +2811,9 @@ THEAD;
                         <th class="lab-report__th-test">TEST</th>
                         <th class="lab-report__th-range">REFERENCE RANGE</th>
                         <th class="lab-report__th-unit">UNIT</th>
-                        <th class="lab-report__th-result">RESULT<br><span class="lab-report__result-date">{$resultDate}</span></th>
+                        <th class="lab-report__th-result" style="padding: 1px 2px !important; vertical-align: middle;">
+                            {$resultHeaderBox}
+                        </th>
                     </tr>
                 </thead>
 THEAD;

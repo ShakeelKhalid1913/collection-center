@@ -42,8 +42,14 @@ if ($isSuper) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // 1. Save branding & letterhead settings
-    $result = save_branding_request($orgId);
+    if (isset($_POST['renumber_pending'])) {
+        $startNum = (int)($_POST['next_lab_seq'] ?? 5055);
+        if ($startNum <= 0) $startNum = 5055;
+        $count = lab_repo()->renumberPendingEntries($orgId, $startNum);
+        $message = flash_success("Renumbered {$count} existing pending entries sequentially starting from {$startNum}.");
+    } else {
+        // 1. Save branding & letterhead settings
+        $result = save_branding_request($orgId);
 
     // 2. Save Laboratory Signatories
     if (isset($_POST['sig_name']) && is_array($_POST['sig_name'])) {
@@ -74,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $message = $result['ok']
         ? flash_success('Letterhead branding and doctor signatories saved successfully for ' . $currentOrgName . ' (' . $orgId . ').')
         : flash_error($result['message']);
+    }
 }
 
 $s = branding_settings($orgId);
@@ -609,6 +616,12 @@ $content = <<<HTML
                                 <input type="number" name="next_lab_seq" value="{$sNextLabSeq}" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg font-mono font-bold text-indigo-900 bg-white" placeholder="5055">
                                 <p class="text-[10px] text-slate-500 mt-1">Next booked patient will receive this number and increment automatically (e.g. 5055, 5056, 5057...).</p>
                             </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-indigo-200/80 flex flex-wrap items-center justify-between gap-2">
+                            <p class="text-[11px] text-slate-600">Want to renumber all existing pending entries in sequence starting from this number?</p>
+                            <button type="submit" name="renumber_pending" value="1" onclick="return confirm('Renumber all current pending entries to run in sequence starting from this number?');" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer">
+                                <i class="fa-solid fa-arrow-down-1-9 mr-1"></i> Renumber Pending Entries Now
+                            </button>
                         </div>
                     </div>
                 </div>

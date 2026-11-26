@@ -637,7 +637,7 @@ $docJsonMapEncoded = json_encode($allReportDoctors, JSON_HEX_TAG | JSON_HEX_APOS
 
 // Page grouping state (per test)
 $pageAssignments = [];
-$maxPage = 1;
+$maxPage = 4;
 foreach ($resultRows as $rr) {
     $tn = trim((string)($rr['test'] ?? 'Test'));
     $pg = max(1, (int)($rr['print_page'] ?? 1));
@@ -2400,8 +2400,8 @@ $modalHtml = <<<HTML
 </button>
 
 <!-- Free Page Grouping Modal Dialog -->
-<div id="pageGroupingModal" class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-    <div class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+<div id="pageGroupingModal" class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+    <div class="relative w-full max-w-7xl max-w-[96vw] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
             <div class="flex items-center gap-3">
@@ -2437,7 +2437,7 @@ $modalHtml = <<<HTML
         </div>
 
         <!-- Modal Body: Defined Pages Grid -->
-        <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-4" id="modal-pages-container">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-5 bg-slate-50/50" id="modal-pages-container">
             <!-- Dynamically populated by JS -->
         </div>
 
@@ -2468,7 +2468,7 @@ $content .= '<script>' . $modalJsInit . '</script>';
 $content .= <<<'MODALSCRIPT'
 <script>
 let groupingData = Array.isArray(window.__PAGE_GROUPING_TESTS__) ? window.__PAGE_GROUPING_TESTS__ : [];
-let groupingMaxPage = parseInt(window.__PAGE_GROUPING_MAX_PAGE__) || 1;
+let groupingMaxPage = Math.max(4, parseInt(window.__PAGE_GROUPING_MAX_PAGE__) || 4);
 
 function openPageGroupingModal() {
     const modal = document.getElementById('pageGroupingModal');
@@ -2489,7 +2489,7 @@ function renderPageGroupingGrid() {
     const container = document.getElementById('modal-pages-container');
     if (!container) return;
 
-    groupingMaxPage = Math.max(1, groupingData.reduce((max, t) => Math.max(max, parseInt(t.page) || 1), groupingMaxPage));
+    groupingMaxPage = Math.max(4, groupingData.reduce((max, t) => Math.max(max, parseInt(t.page) || 1), groupingMaxPage));
 
     const byPage = {};
     for (let p = 1; p <= groupingMaxPage; p++) {
@@ -2501,7 +2501,7 @@ function renderPageGroupingGrid() {
         byPage[p].push(t);
     });
 
-    let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+    let html = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">';
     for (let p = 1; p <= groupingMaxPage; p++) {
         const tests = byPage[p] || [];
         const testCount = tests.length;
@@ -2509,7 +2509,7 @@ function renderPageGroupingGrid() {
         
         let chipsHtml = '';
         if (tests.length === 0) {
-            chipsHtml = '<div class="p-4 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-slate-50/50">Empty page (drag or move tests here)</div>';
+            chipsHtml = '<div class="p-3 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-slate-50/50">Empty page (drag tests here)</div>';
         } else {
             tests.forEach((t) => {
                 let moveOptions = '';
@@ -2519,20 +2519,20 @@ function renderPageGroupingGrid() {
                 }
                 
                 chipsHtml += `
-                    <div class="modal-test-chip flex items-center justify-between gap-2 p-2.5 bg-white border border-slate-200/90 rounded-xl shadow-2xs hover:border-indigo-300 transition-all cursor-grab" draggable="true" data-test="${escapeHtmlModal(t.name)}">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-grip-vertical"></i></span>
+                    <div class="modal-test-chip flex items-center justify-between gap-1.5 p-2 bg-white border border-slate-200/90 rounded-xl shadow-2xs hover:border-indigo-400 transition-all cursor-grab active:cursor-grabbing select-none" draggable="true" data-test="${escapeHtmlModal(t.name)}">
+                        <div class="flex items-center gap-1.5 min-w-0 pointer-events-none">
+                            <span class="text-slate-400"><i class="fa-solid fa-grip-vertical"></i></span>
                             <div class="truncate">
-                                <div class="text-xs font-bold text-slate-800 truncate">${escapeHtmlModal(t.name)}</div>
-                                <span class="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">${escapeHtmlModal(t.department || 'Lab')}</span>
+                                <div class="text-xs font-bold text-slate-800 truncate leading-tight">${escapeHtmlModal(t.name)}</div>
+                                <span class="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1 py-0.2 rounded">${escapeHtmlModal(t.department || 'Lab')}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                            <select class="text-[11px] font-semibold border border-slate-300 rounded-lg px-2 py-1 bg-white text-slate-700 focus:ring-1 focus:ring-indigo-500 cursor-pointer" onchange="moveTestToPage('${escapeJsModal(t.name)}', this.value)">
+                        <div class="flex items-center gap-1 shrink-0">
+                            <select class="text-[10px] font-semibold border border-slate-300 rounded-lg px-1.5 py-1 bg-white text-slate-700 focus:ring-1 focus:ring-indigo-500 cursor-pointer" onchange="moveTestToPage('${escapeJsModal(t.name)}', this.value)">
                                 ${moveOptions}
                             </select>
-                            <button type="button" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded cursor-pointer" onclick="shiftTestOrder('${escapeJsModal(t.name)}', -1)" title="Move up"><i class="fa-solid fa-chevron-up text-[10px]"></i></button>
-                            <button type="button" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded cursor-pointer" onclick="shiftTestOrder('${escapeJsModal(t.name)}', 1)" title="Move down"><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+                            <button type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded cursor-pointer" onclick="shiftTestOrder('${escapeJsModal(t.name)}', -1)" title="Move up"><i class="fa-solid fa-chevron-up text-[9px]"></i></button>
+                            <button type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded cursor-pointer" onclick="shiftTestOrder('${escapeJsModal(t.name)}', 1)" title="Move down"><i class="fa-solid fa-chevron-down text-[9px]"></i></button>
                         </div>
                     </div>
                 `;
@@ -2540,19 +2540,19 @@ function renderPageGroupingGrid() {
         }
 
         html += `
-            <div class="modal-page-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between" data-modal-page="${p}">
+            <div class="modal-page-card bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex flex-col justify-between" data-modal-page="${p}">
                 <div>
-                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center">${p}</span>
+                    <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 font-black text-[11px] flex items-center justify-center">${p}</span>
                             <span class="text-xs font-extrabold text-slate-900">Page ${p}</span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${testCount > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-500'}">${testCountLabel}</span>
-                            ${testCount === 0 && groupingMaxPage > 1 ? `<button type="button" onclick="removeEmptyPage(${p})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded hover:bg-rose-50 cursor-pointer" title="Remove empty page"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${testCount > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-500'}">${testCountLabel}</span>
+                            ${testCount === 0 && p > 4 ? `<button type="button" onclick="removeEmptyPage(${p})" class="text-rose-500 hover:text-rose-700 text-xs px-1 py-0.5 rounded hover:bg-rose-50 cursor-pointer" title="Remove extra page"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                         </div>
                     </div>
-                    <div class="space-y-2 min-h-[60px]" data-modal-page-list="${p}">
+                    <div class="space-y-1.5 min-h-[60px]" data-modal-page-list="${p}">
                         ${chipsHtml}
                     </div>
                 </div>
@@ -2579,13 +2579,21 @@ function moveTestToPage(testName, newPage) {
 }
 
 function shiftTestOrder(testName, direction) {
-    const idx = groupingData.findIndex(item => item.name === testName);
-    if (idx < 0) return;
-    const targetIdx = idx + direction;
-    if (targetIdx >= 0 && targetIdx < groupingData.length) {
-        const temp = groupingData[idx];
-        groupingData[idx] = groupingData[targetIdx];
-        groupingData[targetIdx] = temp;
+    const item = groupingData.find(t => t.name === testName);
+    if (!item) return;
+    const pageNo = item.page;
+    const pageTests = groupingData.filter(t => t.page === pageNo);
+    const pIdx = pageTests.findIndex(t => t.name === testName);
+    if (pIdx < 0) return;
+    const targetPIdx = pIdx + direction;
+    if (targetPIdx < 0 || targetPIdx >= pageTests.length) return;
+    const otherTestName = pageTests[targetPIdx].name;
+    const idx1 = groupingData.findIndex(t => t.name === testName);
+    const idx2 = groupingData.findIndex(t => t.name === otherTestName);
+    if (idx1 >= 0 && idx2 >= 0) {
+        const temp = groupingData[idx1];
+        groupingData[idx1] = groupingData[idx2];
+        groupingData[idx2] = temp;
         renderPageGroupingGrid();
     }
 }
@@ -2601,7 +2609,7 @@ function removeEmptyPage(pageNo) {
             t.page--;
         }
     });
-    groupingMaxPage = Math.max(1, groupingMaxPage - 1);
+    groupingMaxPage = Math.max(4, groupingMaxPage - 1);
     renderPageGroupingGrid();
 }
 
@@ -2610,7 +2618,7 @@ function pageGroupingAction(action) {
         groupingData.forEach((t, i) => {
             t.page = i + 1;
         });
-        groupingMaxPage = groupingData.length;
+        groupingMaxPage = Math.max(4, groupingData.length);
     } else if (action === 'by_dept') {
         const depts = {};
         let currentP = 1;
@@ -2621,12 +2629,12 @@ function pageGroupingAction(action) {
             }
             t.page = depts[d];
         });
-        groupingMaxPage = currentP - 1;
+        groupingMaxPage = Math.max(4, currentP - 1);
     } else if (action === 'combine_all') {
         groupingData.forEach((t) => {
             t.page = 1;
         });
-        groupingMaxPage = 1;
+        groupingMaxPage = Math.max(4, 1);
     }
     renderPageGroupingGrid();
 }
@@ -2637,32 +2645,109 @@ function initModalDragDrop() {
     let draggedName = null;
 
     chips.forEach(chip => {
-        chip.addEventListener('dragstart', () => {
+        chip.addEventListener('dragstart', (e) => {
             draggedName = chip.getAttribute('data-test');
-            chip.classList.add('opacity-50');
+            e.dataTransfer.setData('text/plain', draggedName);
+            e.dataTransfer.effectAllowed = 'move';
+            chip.classList.add('opacity-40');
         });
+
         chip.addEventListener('dragend', () => {
-            chip.classList.remove('opacity-50');
+            chip.classList.remove('opacity-40');
+            document.querySelectorAll('.modal-test-chip').forEach(c => {
+                c.classList.remove('border-t-2', 'border-t-indigo-600', 'border-b-2', 'border-b-indigo-600');
+            });
+            document.querySelectorAll('.modal-page-card').forEach(pc => {
+                pc.classList.remove('ring-2', 'ring-indigo-400');
+            });
             draggedName = null;
+        });
+
+        chip.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            const rect = chip.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                chip.classList.add('border-t-2', 'border-t-indigo-600');
+                chip.classList.remove('border-b-2', 'border-b-indigo-600');
+            } else {
+                chip.classList.add('border-b-2', 'border-b-indigo-600');
+                chip.classList.remove('border-t-2', 'border-t-indigo-600');
+            }
+        });
+
+        chip.addEventListener('dragleave', () => {
+            chip.classList.remove('border-t-2', 'border-t-indigo-600', 'border-b-2', 'border-b-indigo-600');
+        });
+
+        chip.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            chip.classList.remove('border-t-2', 'border-t-indigo-600', 'border-b-2', 'border-b-indigo-600');
+            const targetName = chip.getAttribute('data-test');
+            if (!draggedName || draggedName === targetName) return;
+
+            const rect = chip.getBoundingClientRect();
+            const insertAfter = e.clientY >= rect.top + rect.height / 2;
+
+            const draggedIdx = groupingData.findIndex(t => t.name === draggedName);
+            if (draggedIdx < 0) return;
+            const draggedItem = groupingData.splice(draggedIdx, 1)[0];
+
+            const targetIdx = groupingData.findIndex(t => t.name === targetName);
+            if (targetIdx < 0) {
+                groupingData.push(draggedItem);
+            } else {
+                const targetItem = groupingData[targetIdx];
+                draggedItem.page = targetItem.page;
+                const insertIdx = insertAfter ? targetIdx + 1 : targetIdx;
+                groupingData.splice(insertIdx, 0, draggedItem);
+            }
+            renderPageGroupingGrid();
         });
     });
 
     lists.forEach(list => {
         const pageCard = list.closest('.modal-page-card');
-        const pageNo = parseInt(pageCard.getAttribute('data-modal-page'));
+        const pageNo = parseInt(pageCard.getAttribute('data-modal-page')) || 1;
 
         list.addEventListener('dragover', (e) => {
             e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
             pageCard.classList.add('ring-2', 'ring-indigo-400');
         });
-        list.addEventListener('dragleave', () => {
-            pageCard.classList.remove('ring-2', 'ring-indigo-400');
+
+        list.addEventListener('dragleave', (e) => {
+            if (!list.contains(e.relatedTarget)) {
+                pageCard.classList.remove('ring-2', 'ring-indigo-400');
+            }
         });
+
         list.addEventListener('drop', (e) => {
             e.preventDefault();
             pageCard.classList.remove('ring-2', 'ring-indigo-400');
             if (!draggedName) return;
-            moveTestToPage(draggedName, pageNo);
+
+            const draggedIdx = groupingData.findIndex(t => t.name === draggedName);
+            if (draggedIdx >= 0) {
+                const draggedItem = groupingData.splice(draggedIdx, 1)[0];
+                draggedItem.page = pageNo;
+                let lastPageTestIdx = -1;
+                for (let i = groupingData.length - 1; i >= 0; i--) {
+                    if (groupingData[i].page === pageNo) {
+                        lastPageTestIdx = i;
+                        break;
+                    }
+                }
+                if (lastPageTestIdx >= 0) {
+                    groupingData.splice(lastPageTestIdx + 1, 0, draggedItem);
+                } else {
+                    groupingData.push(draggedItem);
+                }
+                renderPageGroupingGrid();
+            }
         });
     });
 }
