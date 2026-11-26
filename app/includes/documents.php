@@ -1911,11 +1911,12 @@ function render_parameter_gauge(
         }
     }
 
-    // Flag overrides
-    if ($flagLower === 'h' || $flagLower === 'critical') {
+    // Flag & Reference Range Evaluation (prioritizes test's configured reference range)
+    $computedFlag = compute_result_flag((string)$numVal, $rangeStr);
+    if ($computedFlag === 'H' || $flagLower === 'h' || $flagLower === 'critical') {
         $isHigh = true;
         $isLow = false;
-    } elseif ($flagLower === 'l') {
+    } elseif ($computedFlag === 'L' || $flagLower === 'l') {
         $isLow = true;
         $isHigh = false;
     }
