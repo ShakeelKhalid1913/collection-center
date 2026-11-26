@@ -298,22 +298,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lab_no'])) {
             exit;
         }
 
-        // No more tests for this patient -> load next pending patient from queue
-        $nextPending = db()->fetchOne(
-            "SELECT lab_no FROM lab_entries 
-             WHERE organization_id = :org 
-               AND status NOT IN ('completed', 'verified', 'cancelled') 
-               AND lab_no != :cur 
-             ORDER BY created_at ASC LIMIT 1",
-            ['org' => $orgId, 'cur' => $postLabNo]
-        );
-        if (!empty($nextPending['lab_no'])) {
-            header('Location: /portals/results/entry.php?lab_no=' . urlencode($nextPending['lab_no']) . '&saved=1');
-            exit;
-        }
-
-        // No more pending patients in queue -> go to final report preview
-        header('Location: /portals/reports/preview.php?lab_no=' . urlencode($postLabNo) . '&saved=1');
+        // All tests for this patient completed -> DO NOT auto-advance to another patient.
+        // Stay on current patient and display completion banner so staff can verify or manually search next.
+        header('Location: /portals/results/entry.php?lab_no=' . urlencode($postLabNo) . '&test=' . urlencode($activeTest) . '&saved=1&patient_finished=1');
         exit;
     }
 
@@ -372,6 +359,9 @@ $testCount = count($testNames);
 $testIndex = max(0, array_search($activeTest, $testNames, true));
 $prevTest = $testIndex > 0 ? $testNames[$testIndex - 1] : null;
 $nextTest = $testIndex < $testCount - 1 ? $testNames[$testIndex + 1] : null;
+$saveAndNextBtnHtml = $nextTest
+    ? ('<i class="fa-solid fa-forward-step"></i> Save &amp; Next Test (' . e($nextTest) . ') &rarr;')
+    : ('<i class="fa-solid fa-check"></i> Save Patient Results');
 
 $baseUrl = '/portals/results/entry.php?lab_no=' . urlencode($labNo);
 $previewLink = '/portals/reports/preview.php?lab_no=' . urlencode($labNo);
@@ -934,6 +924,39 @@ if (isset($_GET['report_unlocked'])) {
     $message = flash_success('Diagnostic report has been unlocked by Admin.');
 }
 
+$patientFinishedBanner = '';
+if (!empty($_GET['patient_finished'])) {
+    $patientFinishedBanner = <<<HTML
+    <div class="mb-5 bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-lg border border-emerald-400/30 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 text-emerald-200 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <div class="text-xs font-black uppercase tracking-wider text-emerald-200 flex items-center gap-2">
+                    <span>Patient Results Completed &amp; Saved</span>
+                    <span class="bg-emerald-500/30 text-white px-2 py-0.5 rounded-full text-[10px]">Saved</span>
+                </div>
+                <div class="text-sm font-bold text-white mt-0.5">
+                    All results for <strong>{$patientName}</strong> (Lab No: <code class="bg-black/30 px-2 py-0.5 rounded text-emerald-300 font-mono">{$labNoSafe}</code>) have been saved successfully.
+                </div>
+                <div class="text-[11px] text-emerald-100/80 mt-0.5">
+                    Screen remains on this patient to avoid accidental entries. When ready, click below or search the next patient.
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2.5 flex-wrap flex-shrink-0">
+            <a href="{$previewLink}" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 font-bold text-xs shadow-md transition-all">
+                <i class="fa-solid fa-file-medical text-emerald-700"></i> View / Print Report &rarr;
+            </a>
+            <button type="button" onclick="focusPatientSearch()" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-black text-white font-bold text-xs border border-white/20 shadow-md transition-all cursor-pointer">
+                <i class="fa-solid fa-magnifying-glass text-[#c2f13c]"></i> Search Next Patient
+            </button>
+        </div>
+    </div>
+HTML;
+}
+
 $reportLockBannerHtml = '';
 if ($isReportLocked) {
     $unlockActionHtml = $isAdmin
@@ -979,7 +1002,7 @@ HTML;
         : '<button type="submit" name="toggle_report_lock" value="lock" onclick="return confirm(\'Lock this report? Once locked, test results can only be unlocked or edited from an Admin ID.\');" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 shadow-2xs transition-all" title="Lock report once reviewed to prevent any modifications by employees"><i class="fa-solid fa-lock mr-1 text-amber-600"></i> Lock Report</button>';
 
     $sidebarButtonsHtml = <<<HTML
-    <button type="submit" name="save_and_next" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all"><i class="fa-solid fa-forward-step"></i> Save &amp; Next &rarr;</button>
+    <button type="submit" name="save_and_next" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all">{$saveAndNextBtnHtml}</button>
     <button type="submit" name="goto_preview" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all"><i class="fa-solid fa-file-medical"></i> Save &amp; View Report &rarr;</button>
     <button type="submit" name="send_verify" value="1" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm transition-all"><i class="fa-solid fa-circle-check text-[#c2f13c]"></i> Save &amp; Verify</button>
     <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-300 shadow-2xs transition-all"><i class="fa-solid fa-floppy-disk text-slate-400"></i> Save as Draft</button>
@@ -1006,6 +1029,7 @@ $content .= page_header(
     '</div>'
 );
 $content .= $message;
+$content .= $patientFinishedBanner;
 $content .= $reportLockBannerHtml;
 
 $content .= <<<HTML
@@ -1532,7 +1556,7 @@ HTML;
         <div class="border-t border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap gap-2.5 items-center justify-between">
             <div class="flex flex-wrap gap-2">
                 <button type="submit" name="save_and_next" value="1" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all">
-                    <i class="fa-solid fa-forward-step"></i> Save &amp; Next &rarr;
+                    {$saveAndNextBtnHtml}
                 </button>
                 <button type="submit" class="btn btn-secondary text-xs"><i class="fa-solid fa-floppy-disk text-slate-400 mr-1"></i> Save as Draft</button>
                 <button type="submit" name="send_verify" value="1" class="btn btn-secondary text-xs"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Save &amp; Verify</button>
@@ -1579,6 +1603,15 @@ HTML;
 $content .= '<script>window.__LAB_SEARCH_VISITS__ = ' . $searchVisitsJson . ';</script>';
 $content .= <<<'SCRIPT'
 <script>
+window.focusPatientSearch = function() {
+    const el = document.getElementById('patient-search-input');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+        el.select();
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+};
 (function() {
     const visits = window.__LAB_SEARCH_VISITS__ || [];
     const container = document.getElementById('patient-search-container');

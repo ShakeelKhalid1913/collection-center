@@ -189,10 +189,74 @@ class LabEntryRepository
         return $row ?: null;
     }
 
+    public function generateNextLabNo(string $orgId = 'ORG-001', bool $peekOnly = false): string
+    {
+        $settings = setting_repo()->getSettings($orgId);
+        $prefixPattern = !empty($settings['lab_no_prefix']) ? (string)$settings['lab_no_prefix'] : 'L-{YEAR}-';
+        $prefix = str_ireplace(['{year}', '{y}'], date('Y'), $prefixPattern);
+        $prefix = str_ireplace(['{month}', '{m}'], date('m'), $prefix);
+        if (strcasecmp(trim($prefixPattern), 'none') === 0) {
+            $prefix = '';
+        }
+
+        $seq = null;
+        if (!empty($settings['next_lab_seq']) && (int)$settings['next_lab_seq'] > 0) {
+            $seq = (int)$settings['next_lab_seq'];
+        } else {
+            $recent = $this->db->fetchAll(
+                "SELECT lab_no FROM lab_entries WHERE organization_id = :org ORDER BY id DESC LIMIT 100",
+                ['org' => $orgId]
+            );
+            $maxNum = 5054;
+            foreach ($recent as $r) {
+                if (preg_match('/(\d+)$/', (string)$r['lab_no'], $matches)) {
+                    $n = (int)$matches[1];
+                    if ($n > $maxNum && $n < 999999) {
+                        $maxNum = $n;
+                    }
+                }
+            }
+            $seq = $maxNum + 1;
+        }
+
+        if ($prefix !== '') {
+            $sep = (str_ends_with($prefix, '-') || str_ends_with($prefix, '/')) ? '' : '-';
+            $labNo = $prefix . $sep . sprintf('%04d', $seq);
+        } else {
+            $labNo = (string)$seq;
+        }
+
+        if (!$peekOnly) {
+            try {
+                $this->db->execute(
+                    "UPDATE lab_settings SET next_lab_seq = :nextSeq WHERE organization_id = :org",
+                    ['nextSeq' => $seq + 1, 'org' => $orgId]
+                );
+            } catch (\Throwable $e) {}
+        }
+
+        return $labNo;
+    }
+
     public function create(array $data): array
     {
         $id = 'LAB-' . bin2hex(random_bytes(6));
-        $labNo = $data['lab_no'] ?? ('L-' . date('Y') . '-' . sprintf('%04d', rand(1000, 9999)));
+        $orgId = (string)($data['organization_id'] ?? 'ORG-001');
+        $rawLabNo = trim((string)($data['lab_no'] ?? ''));
+        if ($rawLabNo !== '') {
+            $labNo = $rawLabNo;
+            if (preg_match('/(\d+)$/', $rawLabNo, $m)) {
+                $subSeq = (int)$m[1];
+                try {
+                    $this->db->execute(
+                        "UPDATE lab_settings SET next_lab_seq = :nextSeq WHERE organization_id = :org AND (next_lab_seq IS NULL OR next_lab_seq <= :subSeq)",
+                        ['nextSeq' => $subSeq + 1, 'subSeq' => $subSeq, 'org' => $orgId]
+                    );
+                } catch (\Throwable $e) {}
+            }
+        } else {
+            $labNo = $this->generateNextLabNo($orgId, false);
+        }
         $createdAt = !empty($data['created_at'])
             ? date('Y-m-d H:i:s', strtotime((string)$data['created_at']))
             : (!empty($data['entry_time'])

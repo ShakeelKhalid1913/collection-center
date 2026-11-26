@@ -133,6 +133,8 @@ $showSingleHeadersChecked = !empty($s['show_single_test_headers']) ? ' checked' 
 $hidePendingTestsChecked = (!isset($s['hide_pending_tests']) || !empty($s['hide_pending_tests'])) ? ' checked' : '';
 $sReportHeadingTitle = e((string)($s['report_heading_title'] ?? 'DIAGNOSTIC REPORT'));
 $hideReportTitleBarChecked = !empty($s['hide_report_title_bar']) ? ' checked' : '';
+$sLabNoPrefix = e((string)($s['lab_no_prefix'] ?? 'L-{YEAR}-'));
+$sNextLabSeq = isset($s['next_lab_seq']) && $s['next_lab_seq'] !== null ? (int)$s['next_lab_seq'] : 5055;
 
 $currentReportParamSize = $s['report_param_size'] ?? '15px';
 $currentReportParamSizeNum = (float)str_replace('px', '', $currentReportParamSize);
@@ -581,6 +583,33 @@ $content = <<<HTML
                             <input type="checkbox" name="hide_report_title_bar" value="1" class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4"{$hideReportTitleBarChecked}>
                             <span class="text-xs font-semibold text-slate-700">Hide title bar completely (do not print any sub-heading bar below patient info)</span>
                         </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200 mt-4 space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                <i class="fa-solid fa-barcode text-indigo-600"></i>
+                                Sample Barcode &amp; Sequential Lab Numbering
+                            </label>
+                            <span class="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">Sample Tube Sequencing</span>
+                        </div>
+                        <p class="text-[11px] text-slate-600 mb-3">
+                            Configure automatic sequential numbers for lab entries and sample tube barcodes (e.g. 5055, 5056, 5057...). Each new booked patient will increment sequentially from this number.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Lab Number Prefix</label>
+                                <input type="text" name="lab_no_prefix" value="{$sLabNoPrefix}" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg font-mono font-semibold" placeholder="e.g. L-{YEAR}- or L- or none">
+                                <p class="text-[10px] text-slate-500 mt-1">Use <code>{YEAR}</code> for current year (e.g. <code>L-2026-</code>) or type <code>none</code> for pure numbers.</p>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Next Sequential Lab Number</label>
+                                <input type="number" name="next_lab_seq" value="{$sNextLabSeq}" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg font-mono font-bold text-indigo-900 bg-white" placeholder="5055">
+                                <p class="text-[10px] text-slate-500 mt-1">Next booked patient will receive this number and increment automatically (e.g. 5055, 5056, 5057...).</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

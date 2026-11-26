@@ -59,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = lab_repo()->create([
         'patient_id' => $patientId ?: 'WALK-IN',
         'patient_name' => $patientName,
+        'lab_no' => trim((string)($_POST['lab_no'] ?? '')),
         'tests' => $catalog['tests'],
         'doctor' => $doctor,
         'route' => $route,
@@ -160,6 +161,17 @@ if ($selectedPatient) {
 
 $patientNameHidden = '<input type="hidden" id="selected_patient_name" name="patient_name" value="' . e($prefilledName) . '">';
 
+$prefilledLabNo = e(lab_repo()->generateNextLabNo(current_user()['organization_id'] ?? 'ORG-001', true));
+$labNoField = <<<HTML
+<div class="sm:col-span-1">
+    <div class="flex items-center justify-between mb-1">
+        <label class="field-label mb-0" for="lab_no">Lab No (Sample ID)</label>
+        <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Sequential</span>
+    </div>
+    <input type="text" id="lab_no" name="lab_no" value="{$prefilledLabNo}" class="field text-sm font-mono font-bold bg-white text-slate-900 border-slate-300" placeholder="Auto-generated" title="Sample tube barcode & Lab Number">
+</div>
+HTML;
+
 $content = workflow_stepper('booking', null, $selectedPatientId);
 $content .= page_header(
     'Book Tests',
@@ -212,6 +224,7 @@ $content .= card(
     select_field('Patient', 'patient_id', $patientOpts, $selectedPatientId) .
     $patientNameHidden .
     form_field('Or MR / Patient ID', 'patient_scan', 'text', $prefilledMr, 'P-xxxxx', true) .
+    $labNoField .
     doctor_input_field('Referring doctor', 'doctor', $prefilledDoctor !== '' ? $prefilledDoctor : 'Walk-in / Self') .
     route_input_field('Route to', 'route', 'Laboratory — Pathology (HQ)') .
     form_field('Entry Date & Time', 'entry_time', 'datetime-local', date('Y-m-d\TH:i'), '', true) .

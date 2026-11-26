@@ -43,6 +43,8 @@ class SettingRepository
                         hide_report_title_bar,
                         report_param_size,
                         report_param_weight,
+                        next_lab_seq,
+                        lab_no_prefix,
                         CASE WHEN header_image IS NOT NULL AND LENGTH(header_image) > 0 THEN 1 ELSE 0 END AS has_header_image,
                         CASE WHEN footer_image IS NOT NULL AND LENGTH(footer_image) > 0 THEN 1 ELSE 0 END AS has_footer_image
                  FROM lab_settings WHERE organization_id = :org_id LIMIT 1",
@@ -76,6 +78,10 @@ class SettingRepository
                 if (!isset($row['hide_report_title_bar'])) {
                     $row['hide_report_title_bar'] = 0;
                 }
+                if (!isset($row['lab_no_prefix']) || $row['lab_no_prefix'] === '') {
+                    $row['lab_no_prefix'] = 'L-{YEAR}-';
+                }
+                $row['next_lab_seq'] = isset($row['next_lab_seq']) && $row['next_lab_seq'] !== null ? (int)$row['next_lab_seq'] : null;
                 if (isset($row['bill_footer_text']) && preg_match('/electronically verified|queries call reception/i', (string)$row['bill_footer_text'])) {
                     $row['bill_footer_text'] = 'Get well soon.';
                     try {
@@ -152,6 +158,10 @@ class SettingRepository
                 if (!isset($row['hide_report_title_bar'])) {
                     $row['hide_report_title_bar'] = 0;
                 }
+                if (!isset($row['lab_no_prefix']) || $row['lab_no_prefix'] === '') {
+                    $row['lab_no_prefix'] = 'L-{YEAR}-';
+                }
+                $row['next_lab_seq'] = isset($row['next_lab_seq']) && $row['next_lab_seq'] !== null ? (int)$row['next_lab_seq'] : null;
             }
             return $row;
         }
@@ -210,14 +220,16 @@ class SettingRepository
             'hide_report_title_bar' => !empty($data['hide_report_title_bar']) ? 1 : 0,
             'report_param_size' => (string)($data['report_param_size'] ?? $existing['report_param_size'] ?? '15px'),
             'report_param_weight' => (string)($data['report_param_weight'] ?? $existing['report_param_weight'] ?? '700'),
+            'next_lab_seq' => isset($data['next_lab_seq']) && $data['next_lab_seq'] !== '' ? (int)$data['next_lab_seq'] : ($existing['next_lab_seq'] ?? null),
+            'lab_no_prefix' => isset($data['lab_no_prefix']) ? (string)$data['lab_no_prefix'] : ($existing['lab_no_prefix'] ?? 'L-{YEAR}-'),
         ];
 
         $this->ensureHeaderImagePositionColumn();
 
         if ($existing === []) {
             $ok = $this->db->execute(
-                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, imaging_footer_text, imaging_disclaimer, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size, show_single_test_headers, hide_pending_tests, report_heading_title, hide_report_title_bar, report_param_size, report_param_weight)
-                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :imaging_footer_text, :imaging_disclaimer, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size, :show_single_test_headers, :hide_pending_tests, :report_heading_title, :hide_report_title_bar, :report_param_size, :report_param_weight)",
+                "INSERT INTO lab_settings (organization_id, lab_name, address, phone, email, header_text, footer_text, imaging_footer_text, imaging_disclaimer, logo_text, bill_header_text, bill_footer_text, header_image_position, header_layout_json, footer_layout_json, report_font, bill_font, report_font_size, bill_font_size, show_single_test_headers, hide_pending_tests, report_heading_title, hide_report_title_bar, report_param_size, report_param_weight, next_lab_seq, lab_no_prefix)
+                 VALUES (:org_id, :lab_name, :address, :phone, :email, :header_text, :footer_text, :imaging_footer_text, :imaging_disclaimer, :logo_text, :bill_header_text, :bill_footer_text, :header_image_position, :header_layout_json, :footer_layout_json, :report_font, :bill_font, :report_font_size, :bill_font_size, :show_single_test_headers, :hide_pending_tests, :report_heading_title, :hide_report_title_bar, :report_param_size, :report_param_weight, :next_lab_seq, :lab_no_prefix)",
                 $payload
             );
         } else {
@@ -246,7 +258,9 @@ class SettingRepository
                     report_heading_title = :report_heading_title,
                     hide_report_title_bar = :hide_report_title_bar,
                     report_param_size = :report_param_size,
-                    report_param_weight = :report_param_weight
+                    report_param_weight = :report_param_weight,
+                    next_lab_seq = :next_lab_seq,
+                    lab_no_prefix = :lab_no_prefix
                  WHERE organization_id = :org_id",
                 $payload
             );
@@ -453,6 +467,8 @@ class SettingRepository
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN report_param_weight VARCHAR(32) NOT NULL DEFAULT '700'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_footer_text TEXT NULL"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN imaging_disclaimer TEXT NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN next_lab_seq INT NULL"); } catch (\Throwable) {}
+            try { $pdo->exec("ALTER TABLE lab_settings ADD COLUMN lab_no_prefix VARCHAR(32) NOT NULL DEFAULT 'L-{YEAR}-'"); } catch (\Throwable) {}
             try { $pdo->exec("ALTER TABLE report_signatories ADD COLUMN department VARCHAR(32) NOT NULL DEFAULT 'laboratory'"); } catch (\Throwable) {}
         }
     }
