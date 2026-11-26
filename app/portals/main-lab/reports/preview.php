@@ -116,7 +116,7 @@ if (isset($_GET['report_locked'])) {
 }
 
 $qLab = urlencode($labNo);
-$content = workflow_stepper('report', $labNo !== '' ? $labNo : null, $ctx['patient']['id'] ?? null);
+$content = '<div class="no-print">' . workflow_stepper('report', $labNo !== '' ? $labNo : null, $ctx['patient']['id'] ?? null);
 $content .= $lockFlash;
 
 $reportLockBtnHtml = '';
@@ -274,7 +274,7 @@ HTML;
 
 $content .= '<div class="no-print mb-4">';
 $content .= report_actions($ctx['patient']['phone'] ?? '', $previewUrl, 'report-' . ($labNo !== '' ? $labNo : 'preview'), $format);
-$content .= '</div>';
+$content .= '</div></div>';
 $content .= render_report_document(
     $ctx['settings'],
     $ctx['patient'],
@@ -323,7 +323,7 @@ $testDetailsJson = json_encode($testDetailsForModal, JSON_HEX_TAG | JSON_HEX_APO
 $testCount = count($testNames);
 
 $modalHtml = <<<HTML
-<div id="pageGroupingModal" class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+<div id="pageGroupingModal" class="no-print fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
     <div class="relative w-full max-w-7xl max-w-[96vw] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
             <div class="flex items-center gap-3">

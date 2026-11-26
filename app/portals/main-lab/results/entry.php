@@ -2400,7 +2400,7 @@ $modalHtml = <<<HTML
 </button>
 
 <!-- Free Page Grouping Modal Dialog -->
-<div id="pageGroupingModal" class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+<div id="pageGroupingModal" class="no-print fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
     <div class="relative w-full max-w-7xl max-w-[96vw] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">

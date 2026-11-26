@@ -2180,15 +2180,15 @@ function build_report_result_rows(array $resultLines, bool $isTwoColumn = false,
             $imagingText = ($resultRaw !== '' && $resultRaw !== '-' && $resultRaw !== '—') ? $resultRaw : 'Clinical imaging study recorded. Interpretation / report pending.';
             $narrativeFontSize = (!empty($line['unit']) && preg_match('/^[0-9]+(?:\.[0-9]+)?px$/', (string)$line['unit']))
                 ? (string)$line['unit']
-                : '11.5px';
+                : '10.5px';
             $renderedNarrative = render_narrative_markdown($imagingText);
             $rows .= '<tr class="lab-report__imaging-row">
-                <td colspan="' . $colspan . '" style="padding: 4px 4px 4px 4px; border-bottom: none; vertical-align: top; text-align: left;">
-                    <div style="text-align: center; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; margin-bottom: 6px;">
-                        <strong style="font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a;">' . e($studyTitle) . '</strong>
-                        <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 1px;">' . e($deptBanner) . '</div>
+                <td colspan="' . $colspan . '" style="padding: 2px 4px; border-bottom: none; vertical-align: top; text-align: left;">
+                    <div style="text-align: center; border-bottom: 1.5px solid #0f172a; padding-bottom: 1px; margin-bottom: 3px;">
+                        <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #0f172a;">' . e($studyTitle) . '</strong>
+                        <div style="font-size: 8.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px;">' . e($deptBanner) . '</div>
                     </div>
-                    <div class="lab-report__imaging-narrative" style="font-size: ' . $narrativeFontSize . '; line-height: 1.35; padding: 2px 2px; font-family: var(--report-body-font, inherit); color: #0f172a; text-align: left; word-break: break-word;">' . $renderedNarrative . '</div>
+                    <div class="lab-report__imaging-narrative" style="font-size: ' . $narrativeFontSize . '; line-height: 1.25; padding: 1px 2px; font-family: var(--report-body-font, inherit); color: #0f172a; text-align: left; word-break: break-word;">' . $renderedNarrative . '</div>
                 </td>
             </tr>';
             continue;
@@ -2736,29 +2736,31 @@ function render_report_sheet(
 .lab-report .lab-report__imaging-row td {
     vertical-align: top !important;
     text-align: left !important;
-    padding: 14px 8px !important;
+    padding: 2px 4px !important;
 }
 .lab-report .lab-report__imaging-narrative {
     text-align: left !important;
     color: #0f172a !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
 }
 .lab-report .lab-report__imaging-narrative ul {
-    margin: 4px 0 6px 0 !important;
-    padding-left: 22px !important;
+    margin: 2px 0 2px 0 !important;
+    padding-left: 18px !important;
     list-style-type: disc !important;
 }
 .lab-report .lab-report__imaging-narrative ol {
-    margin: 4px 0 6px 0 !important;
-    padding-left: 22px !important;
+    margin: 2px 0 2px 0 !important;
+    padding-left: 18px !important;
     list-style-type: decimal !important;
 }
 .lab-report .lab-report__imaging-narrative li {
-    margin-bottom: 3px !important;
-    line-height: 1.65 !important;
+    margin-bottom: 1px !important;
+    line-height: 1.25 !important;
 }
 .lab-report .lab-report__imaging-narrative .narrative-spacer {
-    height: 10px !important;
-    min-height: 10px !important;
+    height: 2px !important;
+    min-height: 2px !important;
 }
 .lab-report .lab-report__disclaimer {
     font-size: 7.5px !important;
@@ -2826,6 +2828,9 @@ THEAD;
     }
     if ($totalPages === 1) {
         $denseClass .= ' lab-report--single-page';
+    }
+    if ($isAllImaging) {
+        $denseClass .= ' lab-report--imaging';
     }
 
     return <<<HTML

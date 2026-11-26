@@ -85,7 +85,7 @@ class LabEntryRepository
         }
     }
 
-    public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'lab_no_asc'): array
+    public function getAll(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'lab_no_desc'): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         if (is_int($branchOrLimit)) {
@@ -105,19 +105,32 @@ class LabEntryRepository
         }
 
         $orderBy = match ($sort) {
-            'lab_no_desc' => "ORDER BY CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC, lab_no DESC, created_at DESC",
-            'date_desc' => "ORDER BY created_at DESC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC, lab_no DESC",
-            'date_asc' => "ORDER BY created_at ASC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC, lab_no ASC",
-            'patient_asc' => "ORDER BY patient_name ASC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC",
-            'patient_desc' => "ORDER BY patient_name DESC, CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) DESC",
-            default => "ORDER BY CAST(REGEXP_SUBSTR(lab_no, '[0-9]+$') AS UNSIGNED) ASC, lab_no ASC, created_at ASC",
+            'lab_no_asc' => "ORDER BY CASE
+                WHEN lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END ASC, CAST(SUBSTRING_INDEX(lab_no, '-', -1) AS UNSIGNED) ASC, created_at ASC",
+            'lab_no_desc' => "ORDER BY CASE
+                WHEN lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END DESC, CAST(SUBSTRING_INDEX(lab_no, '-', -1) AS UNSIGNED) DESC, created_at DESC",
+            'date_desc' => "ORDER BY created_at DESC, lab_no DESC",
+            'date_asc' => "ORDER BY created_at ASC, lab_no ASC",
+            'patient_asc' => "ORDER BY patient_name ASC",
+            'patient_desc' => "ORDER BY patient_name DESC",
+            default => "ORDER BY CASE
+                WHEN lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END DESC, CAST(SUBSTRING_INDEX(lab_no, '-', -1) AS UNSIGNED) DESC, created_at DESC",
         };
 
         $sql .= " " . $orderBy . " LIMIT " . (int)$limit;
         return $this->db->fetchAll($sql, $params);
     }
 
-    public function getEntriesWithPatients(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'date_desc'): array
+    public function getEntriesWithPatients(?string $orgId = null, string|int|null $branchOrLimit = null, ?int $limit = null, string $sort = 'lab_no_desc'): array
     {
         $orgId = $orgId ?? (function_exists('current_org_id') ? current_org_id() : 'ORG-001');
         if (is_int($branchOrLimit)) {
@@ -144,9 +157,21 @@ class LabEntryRepository
         }
 
         $orderBy = match ($sort) {
-            'lab_no_asc' => "ORDER BY CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) ASC, le.lab_no ASC",
-            'lab_no_desc' => "ORDER BY CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) DESC, le.lab_no DESC",
-            default => "ORDER BY le.created_at DESC, CAST(REGEXP_SUBSTR(le.lab_no, '[0-9]+$') AS UNSIGNED) DESC, le.lab_no DESC",
+            'lab_no_asc' => "ORDER BY CASE
+                WHEN le.lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(le.lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN le.lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(le.lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END ASC, CAST(SUBSTRING_INDEX(le.lab_no, '-', -1) AS UNSIGNED) ASC",
+            'lab_no_desc' => "ORDER BY CASE
+                WHEN le.lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(le.lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN le.lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(le.lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END DESC, CAST(SUBSTRING_INDEX(le.lab_no, '-', -1) AS UNSIGNED) DESC",
+            default => "ORDER BY CASE
+                WHEN le.lab_no REGEXP '^[A-Za-z]+-[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(le.lab_no, '-', 2), '-', -1) AS UNSIGNED)
+                WHEN le.lab_no REGEXP '^[0-9]{4}-[0-9]+$' THEN CAST(SUBSTRING_INDEX(le.lab_no, '-', 1) AS UNSIGNED)
+                ELSE 0
+            END DESC, CAST(SUBSTRING_INDEX(le.lab_no, '-', -1) AS UNSIGNED) DESC, le.created_at DESC",
         };
 
         $sql .= " " . $orderBy . " LIMIT " . (int)$limit;

@@ -2969,12 +2969,15 @@ textarea.field {
   #app-shell > div,
   .lg\:pl-\[var\(--sidebar-width\)\],
   main,
-  .app-main {
+  .app-main,
+  .main-content-wrapper {
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     width: 100% !important;
     max-width: none !important;
+    min-height: 0 !important;
+    height: auto !important;
     display: block !important;
   }
 
@@ -3104,7 +3107,7 @@ textarea.field {
   .lab-report {
     width: 210mm !important;
     max-width: 210mm !important;
-    min-height: 268mm !important;
+    min-height: 270mm !important;
     box-sizing: border-box !important;
     padding: 1.5mm 6mm 1.5mm 6mm !important;
     margin: 0 auto !important;
@@ -3113,22 +3116,98 @@ textarea.field {
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    page-break-after: always !important;
-    break-after: page !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     overflow: visible !important;
     background: #fff !important;
   }
 
+  .lab-report.lab-report--page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .lab-report:first-child,
+  .lab-report:first-of-type {
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+
   .lab-report:only-child,
   .lab-report:last-child,
+  .lab-report:last-of-type,
   .lab-report--single-page {
     page-break-after: auto !important;
     break-after: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    max-height: 278mm !important;
+  }
+
+  /* Imaging / Radiology reports: compact typography to guarantee 1-page fit */
+  .lab-report--imaging .lab-report__header {
+    padding-bottom: 0.05rem !important;
+  }
+  .lab-report--imaging .lab-report__meta {
+    margin-bottom: 0.1rem !important;
+  }
+  .lab-report--imaging .lab-report__meta-cell {
+    padding: 0.5px 3px !important;
+    font-size: 10.5px !important;
+    line-height: 1.15 !important;
+  }
+  .lab-report--imaging .lab-report__body {
+    flex: 1 1 auto !important;
+  }
+  .lab-report--imaging .lab-report__imaging-row td {
+    padding: 1px 2px !important;
+  }
+  .lab-report--imaging .lab-report__imaging-narrative {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+    padding: 1px 2px !important;
+  }
+  .lab-report--imaging .lab-report__imaging-narrative * {
+    line-height: 1.25 !important;
+  }
+  .lab-report--imaging .lab-report__imaging-narrative p,
+  .lab-report--imaging .lab-report__imaging-narrative div {
+    margin-top: 1px !important;
+    margin-bottom: 1px !important;
+  }
+  .lab-report--imaging .lab-report__imaging-narrative ul,
+  .lab-report--imaging .lab-report__imaging-narrative ol {
+    margin-top: 1px !important;
+    margin-bottom: 1px !important;
+    padding-left: 15px !important;
+  }
+  .lab-report--imaging .lab-report__imaging-narrative li {
+    margin-bottom: 0.5px !important;
+    line-height: 1.25 !important;
+  }
+  .lab-report--imaging .lab-report__footer {
+    margin-top: auto !important;
+    padding-top: 0.05rem !important;
+  }
+  .lab-report--imaging .lab-report__signatory {
+    padding-top: 1px !important;
+  }
+  .lab-report--imaging .lab-report__signatory-name {
+    font-size: 9.5px !important;
+  }
+  .lab-report--imaging .lab-report__signatory-line {
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+  }
+  .lab-report--imaging .lab-report__disclaimer {
+    margin: 1px 0 !important;
+    font-size: 7px !important;
+  }
+  .lab-report--imaging .lab-report__contact-bar {
+    padding: 2px 4px !important;
+    font-size: 8.5px !important;
+    margin-top: 1px !important;
   }
 
   /* Dense mode for comprehensive tests like CBC, LFT, RFT to guarantee 1-page fit on Letter & A4 */
